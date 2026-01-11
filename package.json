@@ -1,0 +1,25 @@
+{
+  "name": "athk-extensions",
+  "version": "1.0.0",
+  "description": "AthK's extensions for Paperback 0.8",
+  "main": "index.js",
+  "repositoryName": "AthKExtensions",
+  "author": "AthK",
+  "scripts": {
+    "bundle": "paperback bundle",
+    "serve": "paperback serve",
+    "test": "paperback test"
+  },
+  "devDependencies": {
+    "@paperback/toolchain": "^0.8.0-alpha.47",
+    "@paperback/types": "^0.8.0-alpha.47",
+    "@typescript-eslint/eslint-plugin": "^4.25.0",
+    "@typescript-eslint/parser": "^4.25.0",
+    "eslint": "^7.27.0",
+    "typescript": "^4.3.2"
+  },
+  "dependencies": {
+    "@paperback/types": "^0.8.0-alpha.47",
+    "cheerio": "^1.0.0-rc.12"
+  }
+}
