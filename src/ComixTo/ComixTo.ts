@@ -39,7 +39,7 @@ export const ComixToInfo: SourceInfo = {
   version: "1.0.1",
   name: "ComixTo",
   icon: "icon.png",
-  author: "AthK (edited by acepilot147)",
+  author: "acepilot147",
   authorWebsite: "https://acepilot147.github.io/pb-extensions/0.8",
   description: "Comix.to Extension with advanced filters. Fork of AthK extensions for Paperback 0.8 (edited by acepilot147)",
   contentRating: ContentRating.EVERYONE,
