@@ -16,18 +16,22 @@ Should see logs such as:
 ```
 E:\GitHub\acepilot147-comix\pb-extensions>set GITHUB_REPOSITORY=acepilot147/pb-extensions    
 
-E:\GitHub\acepilot147-comix\pb-extensions>npx paperback bundle --folder 0.8
-[15:09:16:0155] Working directory: E:\GitHub\acepilot147-comix\pb-extensions
-[15:09:16:0156] 
-[15:09:16:0197] # Transpile and bundle time: 37ms
-[15:09:16:0197] 
-[15:09:16:0203] # Versioning File: 5ms
-[15:09:16:0203]
-[15:09:16:0204] - Generating the repository homepage
-[15:09:16:0205] Using base URL deducted from GITHUB_REPOSITORY environment variable: https://acepilot147.github.io/pb-extensions/0.8
-[15:09:16:0273] # Homepage Generation: 69ms
-[15:09:16:0273] 
-[15:09:16:0273] # Execution time: 116ms
+E:\GitHub\acepilot147-comix\pb-extensions>npm run bundle      
+
+> acepilot147-extensions@1.0.2 bundle
+> paperback bundle --folder 0.8
+
+[15:22:40:0884] Working directory: E:\GitHub\acepilot147-comix\pb-extensions
+[15:22:40:0885] 
+[15:22:40:0944] # Transpile and bundle time: 55ms
+[15:22:40:0944] 
+[15:22:40:0950] # Versioning File: 5ms
+[15:22:40:0950]
+[15:22:40:0951] - Generating the repository homepage
+[15:22:40:0952] Using base URL deducted from GITHUB_REPOSITORY environment variable: https://acepilot147.github.io/pb-extensions/0.8
+[15:22:41:0024] # Homepage Generation: 73ms
+[15:22:41:0024] 
+[15:22:41:0024] # Execution time: 138ms
 ```
 
 # 2. Deploy to GitHub Pages
