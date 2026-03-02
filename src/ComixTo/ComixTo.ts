@@ -75,7 +75,8 @@ export class ComixTo
       interceptRequest: async (request: Request): Promise<Request> => {
         request.headers = {
           ...(request.headers ?? {}),
-          Referer: `${DOMAIN}/`
+          "Referer": `${DOMAIN}/`,
+          "User-Agent": await this.requestManager.getDefaultUserAgent()
         };
         return request;
       },
@@ -456,12 +457,13 @@ export class ComixTo
     });
   }
 
-  getCloudflareBypassRequest(): Request {
+  async getCloudflareBypassRequestAsync(): Promise<Request> {
     return App.createRequest({
       url: DOMAIN,
       method: "GET",
       headers: {
-        Referer: `${DOMAIN}/`
+        "Referer": `${DOMAIN}/`,
+        "User-Agent": await this.requestManager.getDefaultUserAgent()
       },
     });
   }

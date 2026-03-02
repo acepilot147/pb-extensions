@@ -6,7 +6,7 @@
   "repositoryName": "AceExtensions",
   "author": "acepilot147",
   "scripts": {
-    "bundle": "paperback bundle",
+    "bundle": "paperback bundle --folder 0.8",
     "serve": "paperback serve",
     "test": "paperback test"
   },
