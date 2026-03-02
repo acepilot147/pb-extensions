@@ -36,12 +36,12 @@ import {
 import { resetSettings } from "./Settings";
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.0.0",
+  version: "1.0.1",
   name: "ComixTo",
   icon: "icon.png",
-  author: "AthK",
-  authorWebsite: "https://pb.athk.eu.org",
-  description: "Comix.to Extension with advanced filters",
+  author: "AthK (edited by acepilot147)",
+  authorWebsite: "https://acepilot147.github.io/pb-extensions/0.8",
+  description: "Comix.to Extension with advanced filters. Fork of AthK extensions for Paperback 0.8 (edited by acepilot147)",
   contentRating: ContentRating.EVERYONE,
   websiteBaseURL: DOMAIN,
   sourceTags: [
@@ -75,9 +75,7 @@ export class ComixTo
       interceptRequest: async (request: Request): Promise<Request> => {
         request.headers = {
           ...(request.headers ?? {}),
-          Referer: `${DOMAIN}/`,
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+          Referer: `${DOMAIN}/`
         };
         return request;
       },
@@ -463,9 +461,7 @@ export class ComixTo
       url: DOMAIN,
       method: "GET",
       headers: {
-        Referer: `${DOMAIN}/`,
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+        Referer: `${DOMAIN}/`
       },
     });
   }
