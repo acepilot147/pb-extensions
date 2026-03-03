@@ -4,7 +4,7 @@ import {
     SourceStateManager
 } from '@paperback/types'
 
-export const TRENDING_OPTIONS = [
+export const TRENDING_OPTIONS =[
   { id: "1", label: "1 day" },
   { id: "7", label: "7 days" },
   { id: "30", label: "1 month" },
@@ -12,6 +12,16 @@ export const TRENDING_OPTIONS = [
   { id: "180", label: "6 months" },
   { id: "365", label: "1 year" },
 ];
+
+// Helper to prevent JS GC from destroying UI closures before iOS runs them
+const uiKeepAlive: any[] =[];
+export const keepAlive = <T>(obj: T): T => {
+    uiKeepAlive.push(obj);
+    if (uiKeepAlive.length > 50) {
+        uiKeepAlive.shift();
+    }
+    return obj;
+}
 
 // --- HELPERS: DISCOVER & NSFW ---
 export const getIsNsfw = async (stateManager: SourceStateManager): Promise<boolean> => {
@@ -38,7 +48,7 @@ export const getStrictNameMatching = async (stateManager: SourceStateManager): P
 }
 
 export const getUploaders = async (stateManager: SourceStateManager): Promise<string[]> => {
-    return (await stateManager.retrieve('uploaders') as string[]) ?? [];
+    return (await stateManager.retrieve('uploaders') as string[]) ??[];
 }
 
 export const getUploaderInput = async (stateManager: SourceStateManager): Promise<string> => {
@@ -46,24 +56,24 @@ export const getUploaderInput = async (stateManager: SourceStateManager): Promis
 }
 
 export const getSelectedUploaders = async (stateManager: SourceStateManager): Promise<string[]> => {
-    return (await stateManager.retrieve('uploaders_selected') as string[]) ?? [];
+    return (await stateManager.retrieve('uploaders_selected') as string[]) ??[];
 }
 
 // --- MENUS ---
 
 export const contentSettings = (stateManager: SourceStateManager): DUINavigationButton => {
-    return App.createDUINavigationButton({
+    return keepAlive(App.createDUINavigationButton({
         id: 'content_settings',
         label: 'Extension Settings',
         form: App.createDUIForm({
-            sections: async () => [
+            sections: async () => keepAlive([
                 // 1. Home Page Settings
                 App.createDUISection({
                     id: 'home_settings',
                     header: 'Discover Page Settings',
                     footer: 'Adjust the time range for trending media on the Discover page.',
                     isHidden: false,
-                    rows: async () => [
+                    rows: async () => keepAlive([
                         App.createDUISelect({
                             id: 'trending_limit',
                             label: 'Trending Timeframe',
@@ -77,14 +87,14 @@ export const contentSettings = (stateManager: SourceStateManager): DUINavigation
                                 return TRENDING_OPTIONS.find(opt => opt.id === value)?.label ?? value;
                             }
                         })
-                    ]
+                    ])
                 }),
                 // 2. Content Filtering
                 App.createDUISection({
                     id: 'nsfw_settings',
                     header: 'Content Filtering',
                     isHidden: false,
-                    rows: async () => [
+                    rows: async () => keepAlive([
                         App.createDUISwitch({
                             id: 'is_nsfw',
                             label: 'Show NSFW Content',
@@ -93,25 +103,25 @@ export const contentSettings = (stateManager: SourceStateManager): DUINavigation
                                 set: async (newValue) => await stateManager.store('is_nsfw', newValue)
                             })
                         })
-                    ]
+                    ])
                 })
-            ]
+            ])
         })
-    })
+    }))
 }
 
 export const groupSettings = (stateManager: SourceStateManager): DUINavigationButton => {
-    return App.createDUINavigationButton({
+    return keepAlive(App.createDUINavigationButton({
         id: 'group_settings',
         label: 'Scanlation Group Settings',
         form: App.createDUIForm({
-            sections: async () => [
+            sections: async () => keepAlive([
                 App.createDUISection({
                     id: 'filtering_settings',
                     header: 'Filtering Settings',
                     footer: 'By default, listed groups are excluded from chapter lists (blacklist mode). Turn off Strict Matching to catch partial names.',
                     isHidden: false,
-                    rows: async () => [
+                    rows: async () => keepAlive([
                         App.createDUISwitch({
                             id: 'toggle_uploaders_filtering',
                             label: 'Enable Group Filtering',
@@ -136,95 +146,100 @@ export const groupSettings = (stateManager: SourceStateManager): DUINavigationBu
                                 set: async (newValue: boolean) => await stateManager.store('strict_name_matching', newValue)
                             })
                         })
-                    ]
+                    ])
                 }),
                 App.createDUISection({
                     id: 'manage_groups',
                     header: 'Manage Groups',
                     isHidden: false,
-                    rows: async () => [
-                        App.createDUISelect({
-                            id: 'uploaders_list',
-                            label: 'Currently Saved Groups',
-                            options: await getUploaders(stateManager),
-                            value: App.createDUIBinding({
-                                get: async () => await getSelectedUploaders(stateManager),
-                                set: async (newValue: string[]) => await stateManager.store('uploaders_selected', newValue)
+                    rows: async () => {
+                        const uploaders = await getUploaders(stateManager);
+                        // Prevent empty array crashes natively in Paperback 0.8
+                        const options = uploaders.length > 0 ? uploaders :['_empty_'];
+                        
+                        return keepAlive([
+                            App.createDUISelect({
+                                id: 'uploaders_list',
+                                label: 'Currently Saved Groups',
+                                options: options,
+                                value: App.createDUIBinding({
+                                    get: async () => await getSelectedUploaders(stateManager),
+                                    set: async (newValue: string[]) => await stateManager.store('uploaders_selected', newValue)
+                                }),
+                                labelResolver: async (value) => value === '_empty_' ? 'No groups added' : value,
+                                allowsMultiselect: true
                             }),
-                            labelResolver: async (value) => value,
-                            allowsMultiselect: true
-                        }),
-                        App.createDUIInputField({
-                            id: 'uploader_input',
-                            label: 'Group Name',
-                            value: App.createDUIBinding({
-                                get: async () => await getUploaderInput(stateManager),
-                                set: async (newValue: string) => await stateManager.store('uploader_input', newValue)
+                            App.createDUIInputField({
+                                id: 'uploader_input',
+                                label: 'Group Name',
+                                value: App.createDUIBinding({
+                                    get: async () => await getUploaderInput(stateManager),
+                                    set: async (newValue: string) => await stateManager.store('uploader_input', newValue)
+                                })
+                            }),
+                            App.createDUIButton({
+                                id: 'add_uploader',
+                                label: 'Add Group',
+                                onTap: async () => {
+                                    const targetUploader = await getUploaderInput(stateManager);
+                                    if (!targetUploader || targetUploader.trim() === '') {
+                                        throw new Error('Group name cannot be empty!');
+                                    }
+
+                                    const uploadersList = await getUploaders(stateManager);
+                                    if (uploadersList.includes(targetUploader)) {
+                                        throw new Error(`Group "${targetUploader}" is already in the list!`);
+                                    } 
+                                    
+                                    uploadersList.push(targetUploader);
+                                    await stateManager.store('uploaders', uploadersList);
+                                    await stateManager.store('uploader_input', ''); // Bypass the binding, update state directly
+                                }
+                            }),
+                            App.createDUIButton({
+                                id: 'remove_uploader',
+                                label: 'Remove Group',
+                                onTap: async () => {
+                                    const targetUploader = await getUploaderInput(stateManager);
+                                    if (!targetUploader || targetUploader.trim() === '') {
+                                        throw new Error('Group name cannot be empty!');
+                                    }
+
+                                    const uploadersList = await getUploaders(stateManager);
+                                    const index = uploadersList.indexOf(targetUploader);
+                                    
+                                    if (index !== -1) {
+                                        uploadersList.splice(index, 1);
+                                        await stateManager.store('uploaders', uploadersList);
+                                    } else {
+                                        throw new Error(`Group "${targetUploader}" is not in the list!`);
+                                    }
+
+                                    await stateManager.store('uploader_input', ''); // Bypass the binding, update state directly
+                                }
                             })
-                        }),
-                        App.createDUIButton({
-                            id: 'add_uploader',
-                            label: 'Add Group',
-                            onTap: async () => {
-                                const targetUploader = await getUploaderInput(stateManager);
-                                if (!targetUploader || targetUploader.trim() === '') {
-                                    throw new Error('Group name cannot be empty!');
-                                }
-
-                                const uploaders = await getUploaders(stateManager);
-                                if (uploaders.includes(targetUploader)) {
-                                    throw new Error(`Group "${targetUploader}" is already in the list!`);
-                                } 
-                                
-                                uploaders.push(targetUploader);
-                                await stateManager.store('uploaders', uploaders);
-                                await stateManager.store('uploader_input', ''); // Bypass the binding, update state directly
-                            }
-                        }),
-                        App.createDUIButton({
-                            id: 'remove_uploader',
-                            label: 'Remove Group',
-                            onTap: async () => {
-                                const targetUploader = await getUploaderInput(stateManager);
-                                if (!targetUploader || targetUploader.trim() === '') {
-                                    throw new Error('Group name cannot be empty!');
-                                }
-
-                                const uploaders = await getUploaders(stateManager);
-                                const index = uploaders.indexOf(targetUploader);
-                                
-                                if (index !== -1) {
-                                    uploaders.splice(index, 1);
-                                    await stateManager.store('uploaders', uploaders);
-                                } else {
-                                    throw new Error(`Group "${targetUploader}" is not in the list!`);
-                                }
-
-                                await stateManager.store('uploader_input', ''); // Bypass the binding, update state directly
-                            }
-                        })
-                    ]
+                        ]);
+                    }
                 })
-            ]
+            ])
         })
-    })
+    }))
 }
 
 export const resetSettings = (stateManager: SourceStateManager): DUIButton => {
-    return App.createDUIButton({
+    return keepAlive(App.createDUIButton({
         id: 'reset',
         label: 'Reset All Settings to Default',
         onTap: async () => {
-            await Promise.all([
-                stateManager.store('trending_limit', null),
-                stateManager.store('is_nsfw', null),
-                stateManager.store('uploaders', null),
-                stateManager.store('uploaders_selected', null), // Included selected groups state
-                stateManager.store('uploaders_whitelisted', null),
-                stateManager.store('uploaders_toggled', null),
-                stateManager.store('uploader_input', null),
-                stateManager.store('strict_name_matching', null)
-            ])
+            // Await sequentially to avoid Swift bridge Promise.all flooding race conditions
+            await stateManager.store('trending_limit', null);
+            await stateManager.store('is_nsfw', null);
+            await stateManager.store('uploaders', null);
+            await stateManager.store('uploaders_selected', null);
+            await stateManager.store('uploaders_whitelisted', null);
+            await stateManager.store('uploaders_toggled', null);
+            await stateManager.store('uploader_input', null);
+            await stateManager.store('strict_name_matching', null);
         }
-    })
+    }))
 }
