@@ -33,10 +33,10 @@ import {
   CONTENT_TYPES,
   PUBLICATION_STATUS,
 } from "./Common";
-import { getIsNsfw, contentSettings, resetSettings } from "./Settings";
+import { resetSettings, contentSettings, getIsNsfw, getTrendingLimit } from "./Settings";
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.1.0",
+  version: "1.1.1",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -175,12 +175,13 @@ export class ComixTo
   async getHomePageSections(
     sectionCallback: (section: HomeSection) => void,
   ): Promise<void> {
-    const limit = "30"; // Hardcoded default
+    const limitArray = await getTrendingLimit(this.stateManager);
+    const limit = limitArray[0] ?? "30"; // Fallback to "30" just in case
 
     const sections = [
       App.createHomeSection({
         id: "trending",
-        title: "Popular (Monthly)",
+        title: "Popular (Trending)",
         containsMoreItems: true,
         type: HomeSectionType.featured,
       }),
@@ -269,7 +270,8 @@ export class ComixTo
     metadata: any,
   ): Promise<PagedResults> {
     const page = metadata?.page ?? 1;
-    const limit = "30"; // Hardcoded default
+    const limitArray = await getTrendingLimit(this.stateManager);
+    const limit = limitArray[0] ?? "30";
     let url = "";
 
     // Added &includes[]=author to all requests

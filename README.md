@@ -8,6 +8,8 @@ Ensure you are checked out to your main working branch (e.g., 0.8) and your term
 
 Run the following commands in the Windows Command Prompt (CMD) to set the repository path and build the bundle:
 ```
+mkdir \bundles\0.8
+npm install
 set GITHUB_REPOSITORY=acepilot147/pb-extensions/0.8
 npm run bundle
 ```
