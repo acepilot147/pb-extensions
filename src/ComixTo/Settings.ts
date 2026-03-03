@@ -101,11 +101,6 @@ export const contentSettings = (stateManager: SourceStateManager): DUINavigation
 }
 
 export const groupSettings = (stateManager: SourceStateManager): DUINavigationButton => {
-    const uploaderInputBinding = App.createDUIBinding({
-        get: async () => await getUploaderInput(stateManager),
-        set: async (newValue: string) => await stateManager.store('uploader_input', newValue)
-    });
-
     return App.createDUINavigationButton({
         id: 'group_settings',
         label: 'Scanlation Group Settings',
@@ -162,7 +157,10 @@ export const groupSettings = (stateManager: SourceStateManager): DUINavigationBu
                         App.createDUIInputField({
                             id: 'uploader_input',
                             label: 'Group Name',
-                            value: uploaderInputBinding
+                            value: App.createDUIBinding({
+                                get: async () => await getUploaderInput(stateManager),
+                                set: async (newValue: string) => await stateManager.store('uploader_input', newValue)
+                            })
                         }),
                         App.createDUIButton({
                             id: 'add_uploader',
@@ -180,7 +178,7 @@ export const groupSettings = (stateManager: SourceStateManager): DUINavigationBu
                                 
                                 uploaders.push(targetUploader);
                                 await stateManager.store('uploaders', uploaders);
-                                await uploaderInputBinding.set(''); 
+                                await stateManager.store('uploader_input', ''); // Bypass the binding, update state directly
                             }
                         }),
                         App.createDUIButton({
@@ -202,7 +200,7 @@ export const groupSettings = (stateManager: SourceStateManager): DUINavigationBu
                                     throw new Error(`Group "${targetUploader}" is not in the list!`);
                                 }
 
-                                await uploaderInputBinding.set(''); 
+                                await stateManager.store('uploader_input', ''); // Bypass the binding, update state directly
                             }
                         })
                     ]
@@ -221,6 +219,7 @@ export const resetSettings = (stateManager: SourceStateManager): DUIButton => {
                 stateManager.store('trending_limit', null),
                 stateManager.store('is_nsfw', null),
                 stateManager.store('uploaders', null),
+                stateManager.store('uploaders_selected', null), // Included selected groups state
                 stateManager.store('uploaders_whitelisted', null),
                 stateManager.store('uploaders_toggled', null),
                 stateManager.store('uploader_input', null),
