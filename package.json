@@ -1,6 +1,6 @@
 {
   "name": "acepilot147-extensions",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "acepilot147's extensions for Paperback 0.8, forked from AthK's extension of Comix",
   "main": "index.js",
   "repositoryName": "AceExtensions",

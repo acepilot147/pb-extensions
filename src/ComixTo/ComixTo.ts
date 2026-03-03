@@ -33,10 +33,20 @@ import {
   CONTENT_TYPES,
   PUBLICATION_STATUS,
 } from "./Common";
-import { resetSettings, contentSettings, getIsNsfw, getTrendingLimit } from "./Settings";
+import { 
+    resetSettings, 
+    contentSettings, 
+    groupSettings,
+    getIsNsfw, 
+    getTrendingLimit,
+    getUploadersFiltering, 
+    getUploadersWhitelisted, 
+    getStrictNameMatching, 
+    getUploaders 
+} from "./Settings";
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.1.1",
+  version: "1.2.0",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -100,6 +110,7 @@ export class ComixTo
       isHidden: false,
       rows: async () => [
         contentSettings(this.stateManager), 
+        groupSettings(this.stateManager),
         resetSettings(this.stateManager)
       ],
     });
@@ -149,7 +160,14 @@ export class ComixTo
       page++;
     } while (page <= lastPage);
 
-    return this.parser.parseChapters(chapters);
+    const [isFiltering, isWhitelist, isStrict, savedGroups] = await Promise.all([
+      getUploadersFiltering(this.stateManager),
+      getUploadersWhitelisted(this.stateManager),
+      getStrictNameMatching(this.stateManager),
+      getUploaders(this.stateManager)
+    ]);
+
+    return this.parser.parseChapters(chapters, isFiltering, isWhitelist, isStrict, savedGroups);
   }
 
   async getChapterDetails(
