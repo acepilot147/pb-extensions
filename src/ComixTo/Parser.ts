@@ -64,15 +64,20 @@ export class Parser {
     });
   }
 
-  parseMangaList(items: APIMangaItem[]): PartialSourceManga[] {
+  parseMangaList(items: APIMangaItem[], showNsfw: boolean): PartialSourceManga[] {
     const mangaList: PartialSourceManga[] = [];
+    
     for (const item of items) {
+      if (!showNsfw && item.is_nsfw) {
+        continue;
+      }
+
       mangaList.push(
         App.createPartialSourceManga({
           mangaId: item.hash_id,
           image:
-            item.poster.large ||
-            item.poster.medium ||
+            item.poster?.large ||
+            item.poster?.medium ||
             "https://comix.to/images/no-poster.png",
           title: item.title,
           subtitle: item.latest_chapter
