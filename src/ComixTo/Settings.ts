@@ -45,6 +45,9 @@ export const getUploaderInput = async (stateManager: SourceStateManager): Promis
     return (await stateManager.retrieve('uploader_input') as string) ?? '';
 }
 
+export const getSelectedUploaders = async (stateManager: SourceStateManager): Promise<string[]> => {
+    return (await stateManager.retrieve('uploaders_selected') as string[]) ?? [];
+}
 
 // --- MENUS ---
 
@@ -150,8 +153,8 @@ export const groupSettings = (stateManager: SourceStateManager): DUINavigationBu
                             label: 'Currently Saved Groups',
                             options: await getUploaders(stateManager),
                             value: App.createDUIBinding({
-                                get: async () => [],
-                                set: async () => {} 
+                                get: async () => await getSelectedUploaders(stateManager),
+                                set: async (newValue: string[]) => await stateManager.store('uploaders_selected', newValue)
                             }),
                             labelResolver: async (value) => value,
                             allowsMultiselect: true

@@ -46,7 +46,7 @@ import {
 } from "./Settings";
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.2.0",
+  version: "1.2.1",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -225,7 +225,7 @@ export class ComixTo
 
     const promises: Promise<void>[] = [];
 
-    // 0: "Popular (Monthly)"
+    // 0: "Popular (Trending)"
     promises.push(
       this.fetchHomeData(
         `${API_BASE}/top?type=trending&days=${limit}&limit=15&includes[]=author`,
