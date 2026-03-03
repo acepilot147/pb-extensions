@@ -34,6 +34,7 @@ import {
   PUBLICATION_STATUS,
 } from "./Common";
 import { 
+    keepAlive,
     resetSettings, 
     contentSettings, 
     groupSettings,
@@ -46,7 +47,7 @@ import {
 } from "./Settings";
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.2.3",
+  version: "1.2.4",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -103,17 +104,18 @@ export class ComixTo
   }
 
   // -- Settings Menu --
+// -- Settings Menu --
   async getSourceMenu(): Promise<DUISection> {
-    return App.createDUISection({
+    return keepAlive(App.createDUISection({
       id: "main",
       header: "Source Settings",
       isHidden: false,
-      rows: async () => [
+      rows: async () => keepAlive([
         contentSettings(this.stateManager), 
         groupSettings(this.stateManager),
         resetSettings(this.stateManager)
-      ],
-    });
+      ]),
+    }));
   }
 
   getMangaShareUrl(mangaId: string): string {
