@@ -33,23 +33,21 @@ import {
   CONTENT_TYPES,
   PUBLICATION_STATUS,
 } from "./Common";
-import {
+import { 
     keepAlive,
-    resetSettings,
-    contentSettings,
+    resetSettings, 
+    contentSettings, 
     groupSettings,
-    getIsNsfw,
+    getIsNsfw, 
     getTrendingLimit,
-    getUploadersFiltering,
-    getUploadersWhitelisted,
-    getStrictNameMatching,
-    getUploaders,
-    getSelectedUploaders,
-    getUploaderInput
+    getUploadersFiltering, 
+    getUploadersWhitelisted, 
+    getStrictNameMatching, 
+    getUploaders 
 } from "./Settings";
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.2.7",
+  version: "1.2.8",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -107,18 +105,6 @@ export class ComixTo
 
   // -- Settings Menu --
   async getSourceMenu(): Promise<DUISection> {
-    // Sequential pre-warm: Paperback must await this before rendering any buttons,
-    // so the user cannot tap sub-forms until all keys are read at least once.
-    // Prevents cold-start crash from concurrent binding reads on first form render.
-    await getUploadersFiltering(this.stateManager);
-    await getUploadersWhitelisted(this.stateManager);
-    await getStrictNameMatching(this.stateManager);
-    await getUploaders(this.stateManager);
-    await getSelectedUploaders(this.stateManager);
-    await getUploaderInput(this.stateManager);
-    await getIsNsfw(this.stateManager);
-    await getTrendingLimit(this.stateManager);
-
     return keepAlive(App.createDUISection({
       id: "main",
       header: "Source Settings",
