@@ -20,15 +20,6 @@ export const keepAlive = <T>(obj: T): T => {
     return obj;
 }
 
-// Serialize all stateManager operations to prevent concurrent Swift bridge calls from crashing the app.
-// Each retrieve/store is queued and run one at a time.
-let _smQueue: Promise<void> = Promise.resolve();
-const smSerial = <T>(fn: () => Promise<T>): Promise<T> => {
-    const result = _smQueue.then(fn);
-    _smQueue = result.then(() => {}, () => {});
-    return result;
-};
-
 // One-shot warm-up: runs once on first groupSettings render, skipped on all subsequent re-renders.
 // Pre-loads all values so the form renders with real data immediately.
 let groupSettingsWarmUp: Promise<void> | null = null;
@@ -48,38 +39,38 @@ const warmUpGroupSettings = (stateManager: SourceStateManager): Promise<void> =>
 
 // --- HELPERS: DISCOVER & NSFW ---
 export const getIsNsfw = async (stateManager: SourceStateManager): Promise<boolean> => {
-    const val = await smSerial(() => stateManager.retrieve('is_nsfw'));
+    const val = await stateManager.retrieve('is_nsfw');
     return val !== null ? (val as boolean) : true;
 }
 
-export const getTrendingLimit = async (stateManager: SourceStateManager): Promise<string[]> => {
-    const val = await smSerial(() => stateManager.retrieve('trending_limit')) as string[];
-    return val ?? ["30"];
+export const getTrendingLimit = async (stateManager: SourceStateManager): Promise<string> => {
+    const val = await stateManager.retrieve('trending_limit') as string;
+    return val ?? "30";
 }
 
 // --- HELPERS: GROUP FILTERING ---
 export const getUploadersFiltering = async (stateManager: SourceStateManager): Promise<boolean> => {
-    return (await smSerial(() => stateManager.retrieve('uploaders_toggled')) as boolean) ?? false;
+    return (await stateManager.retrieve('uploaders_toggled') as boolean) ?? false;
 }
 
 export const getUploadersWhitelisted = async (stateManager: SourceStateManager): Promise<boolean> => {
-    return (await smSerial(() => stateManager.retrieve('uploaders_whitelisted')) as boolean) ?? false;
+    return (await stateManager.retrieve('uploaders_whitelisted') as boolean) ?? false;
 }
 
 export const getStrictNameMatching = async (stateManager: SourceStateManager): Promise<boolean> => {
-    return (await smSerial(() => stateManager.retrieve('strict_name_matching')) as boolean) ?? false;
+    return (await stateManager.retrieve('strict_name_matching') as boolean) ?? false;
 }
 
 export const getUploaders = async (stateManager: SourceStateManager): Promise<string[]> => {
-    return (await smSerial(() => stateManager.retrieve('uploaders')) as string[]) ??[];
+    return (await stateManager.retrieve('uploaders') as string[]) ??[];
 }
 
 export const getUploaderInput = async (stateManager: SourceStateManager): Promise<string> => {
-    return (await smSerial(() => stateManager.retrieve('uploader_input')) as string) ?? '';
+    return (await stateManager.retrieve('uploader_input') as string) ?? '';
 }
 
 export const getSelectedUploaders = async (stateManager: SourceStateManager): Promise<string[]> => {
-    return (await smSerial(() => stateManager.retrieve('uploaders_selected')) as string[]) ??[];
+    return (await stateManager.retrieve('uploaders_selected') as string[]) ??[];
 }
 
 // --- MENUS ---
@@ -103,7 +94,7 @@ export const contentSettings = (stateManager: SourceStateManager): DUINavigation
                             options: TRENDING_OPTIONS.map(opt => opt.id),
                             value: App.createDUIBinding({
                                 get: async () => await getTrendingLimit(stateManager),
-                                set: async (newValue) => await smSerial(() => stateManager.store('trending_limit', newValue))
+                                set: async (newValue) => await stateManager.store('trending_limit', newValue)
                             }),
                             allowsMultiselect: false,
                             labelResolver: async (value: string) => {
@@ -123,7 +114,7 @@ export const contentSettings = (stateManager: SourceStateManager): DUINavigation
                             label: 'Show NSFW Content',
                             value: App.createDUIBinding({
                                 get: async () => await getIsNsfw(stateManager),
-                                set: async (newValue) => await smSerial(() => stateManager.store('is_nsfw', newValue))
+                                set: async (newValue) => await stateManager.store('is_nsfw', newValue)
                             })
                         })
                     ])
@@ -153,7 +144,7 @@ export const groupSettings = (stateManager: SourceStateManager): DUINavigationBu
                             label: 'Enable Group Filtering',
                             value: App.createDUIBinding({
                                 get: async () => await getUploadersFiltering(stateManager),
-                                set: async (newValue: boolean) => await smSerial(() => stateManager.store('uploaders_toggled', newValue))
+                                set: async (newValue: boolean) => await stateManager.store('uploaders_toggled', newValue)
                             })
                         }),
                         App.createDUISwitch({
@@ -161,7 +152,7 @@ export const groupSettings = (stateManager: SourceStateManager): DUINavigationBu
                             label: 'Enable Whitelist Mode',
                             value: App.createDUIBinding({
                                 get: async () => await getUploadersWhitelisted(stateManager),
-                                set: async (newValue: boolean) => await smSerial(() => stateManager.store('uploaders_whitelisted', newValue))
+                                set: async (newValue: boolean) => await stateManager.store('uploaders_whitelisted', newValue)
                             })
                         }),
                         App.createDUISwitch({
@@ -169,7 +160,7 @@ export const groupSettings = (stateManager: SourceStateManager): DUINavigationBu
                             label: 'Strict Group Name Matching',
                             value: App.createDUIBinding({
                                 get: async () => await getStrictNameMatching(stateManager),
-                                set: async (newValue: boolean) => await smSerial(() => stateManager.store('strict_name_matching', newValue))
+                                set: async (newValue: boolean) => await stateManager.store('strict_name_matching', newValue)
                             })
                         })
                     ])
@@ -188,7 +179,7 @@ export const groupSettings = (stateManager: SourceStateManager): DUINavigationBu
                                 options: uploaders,
                                 value: App.createDUIBinding({
                                     get: async () => await getSelectedUploaders(stateManager),
-                                    set: async (newValue: string[]) => await smSerial(() => stateManager.store('uploaders_selected', newValue))
+                                    set: async (newValue: string[]) => await stateManager.store('uploaders_selected', newValue)
                                 }),
                                 labelResolver: async (value) => value,
                                 allowsMultiselect: true
@@ -198,7 +189,7 @@ export const groupSettings = (stateManager: SourceStateManager): DUINavigationBu
                                 label: 'Group Name',
                                 value: App.createDUIBinding({
                                     get: async () => await getUploaderInput(stateManager),
-                                    set: async (newValue: string) => await smSerial(() => stateManager.store('uploader_input', newValue))
+                                    set: async (newValue: string) => await stateManager.store('uploader_input', newValue)
                                 })
                             }),
                             App.createDUIButton({
@@ -216,8 +207,8 @@ export const groupSettings = (stateManager: SourceStateManager): DUINavigationBu
                                     }
 
                                     uploadersList.push(targetUploader);
-                                    await smSerial(() => stateManager.store('uploaders', uploadersList));
-                                    await smSerial(() => stateManager.store('uploader_input', ''));
+                                    await stateManager.store('uploaders', uploadersList);
+                                    await stateManager.store('uploader_input', '');
                                 }
                             }),
                             App.createDUIButton({
@@ -234,15 +225,15 @@ export const groupSettings = (stateManager: SourceStateManager): DUINavigationBu
 
                                     if (index !== -1) {
                                         uploadersList.splice(index, 1);
-                                        await smSerial(() => stateManager.store('uploaders', uploadersList));
+                                        await stateManager.store('uploaders', uploadersList);
                                         const selectedList = await getSelectedUploaders(stateManager);
                                         const newSelected = selectedList.filter((s: string) => s !== targetUploader);
-                                        await smSerial(() => stateManager.store('uploaders_selected', newSelected));
+                                        await stateManager.store('uploaders_selected', newSelected);
                                     } else {
                                         throw new Error(`Group "${targetUploader}" is not in the list!`);
                                     }
 
-                                    await smSerial(() => stateManager.store('uploader_input', ''));
+                                    await stateManager.store('uploader_input', '');
                                 }
                             })
                         ]);
@@ -259,14 +250,15 @@ export const resetSettings = (stateManager: SourceStateManager): DUIButton => {
         id: 'reset',
         label: 'Reset All Settings to Default',
         onTap: async () => {
-            await smSerial(() => stateManager.store('trending_limit', null));
-            await smSerial(() => stateManager.store('is_nsfw', null));
-            await smSerial(() => stateManager.store('uploaders', null));
-            await smSerial(() => stateManager.store('uploaders_selected', null));
-            await smSerial(() => stateManager.store('uploaders_whitelisted', null));
-            await smSerial(() => stateManager.store('uploaders_toggled', null));
-            await smSerial(() => stateManager.store('uploader_input', null));
-            await smSerial(() => stateManager.store('strict_name_matching', null));
+            // Await sequentially to avoid Swift bridge Promise.all flooding race conditions
+            await stateManager.store('trending_limit', null);
+            await stateManager.store('is_nsfw', null);
+            await stateManager.store('uploaders', null);
+            await stateManager.store('uploaders_selected', null);
+            await stateManager.store('uploaders_whitelisted', null);
+            await stateManager.store('uploaders_toggled', null);
+            await stateManager.store('uploader_input', null);
+            await stateManager.store('strict_name_matching', null);
         }
     }))
 }
