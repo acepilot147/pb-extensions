@@ -43,9 +43,9 @@ export const getIsNsfw = async (stateManager: SourceStateManager): Promise<boole
     return val !== null ? (val as boolean) : true;
 }
 
-export const getTrendingLimit = async (stateManager: SourceStateManager): Promise<string> => {
-    const val = await stateManager.retrieve('trending_limit') as string;
-    return val ?? "30";
+export const getTrendingLimit = async (stateManager: SourceStateManager): Promise<string[]> => {
+    const val = await stateManager.retrieve('trending_limit') as string[];
+    return val ?? ["30"];
 }
 
 // --- HELPERS: GROUP FILTERING ---
