@@ -115,17 +115,7 @@ export const groupSettings = (stateManager: SourceStateManager): DUINavigationBu
         id: 'group_settings',
         label: 'Scanlation Group Settings',
         form: App.createDUIForm({
-            sections: async () => {
-                // Sequential pre-warm: read every key this form will use before
-                // the native side starts calling binding.get concurrently on first render.
-                await getUploadersFiltering(stateManager);
-                await getUploadersWhitelisted(stateManager);
-                await getStrictNameMatching(stateManager);
-                await getUploaders(stateManager);
-                await getSelectedUploaders(stateManager);
-                await getUploaderInput(stateManager);
-
-                return keepAlive([
+            sections: async () => keepAlive([
                 App.createDUISection({
                     id: 'filtering_settings',
                     header: 'Filtering Settings',
@@ -221,6 +211,9 @@ export const groupSettings = (stateManager: SourceStateManager): DUINavigationBu
                                     if (index !== -1) {
                                         uploadersList.splice(index, 1);
                                         await stateManager.store('uploaders', uploadersList);
+                                        const selectedList = await getSelectedUploaders(stateManager);
+                                        const newSelected = selectedList.filter((s: string) => s !== targetUploader);
+                                        await stateManager.store('uploaders_selected', newSelected);
                                     } else {
                                         throw new Error(`Group "${targetUploader}" is not in the list!`);
                                     }
@@ -231,8 +224,7 @@ export const groupSettings = (stateManager: SourceStateManager): DUINavigationBu
                         ]);
                     }
                 })
-            ]);
-            }
+            ])
         })
     }))
 }
