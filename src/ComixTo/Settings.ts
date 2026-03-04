@@ -20,6 +20,23 @@ export const keepAlive = <T>(obj: T): T => {
     return obj;
 }
 
+// One-shot warm-up: runs once on first groupSettings render, skipped on all subsequent re-renders.
+// Prevents concurrent stateManager reads during cold start, and avoids piling up retrieves on spam presses.
+let groupSettingsWarmUp: Promise<void> | null = null;
+const warmUpGroupSettings = (stateManager: SourceStateManager): Promise<void> => {
+    if (!groupSettingsWarmUp) {
+        groupSettingsWarmUp = (async () => {
+            await getUploadersFiltering(stateManager);
+            await getUploadersWhitelisted(stateManager);
+            await getStrictNameMatching(stateManager);
+            await getUploaders(stateManager);
+            await getSelectedUploaders(stateManager);
+            await getUploaderInput(stateManager);
+        })();
+    }
+    return groupSettingsWarmUp;
+}
+
 // --- HELPERS: DISCOVER & NSFW ---
 export const getIsNsfw = async (stateManager: SourceStateManager): Promise<boolean> => {
     const val = await stateManager.retrieve('is_nsfw');
@@ -113,14 +130,7 @@ export const groupSettings = (stateManager: SourceStateManager): DUINavigationBu
         label: 'Scanlation Group Settings',
         form: App.createDUIForm({
             sections: async () => {
-                // Sequential pre-warm: read every key this form will use before
-                // the native side starts calling binding.get concurrently on first render.
-                await getUploadersFiltering(stateManager);
-                await getUploadersWhitelisted(stateManager);
-                await getStrictNameMatching(stateManager);
-                await getUploaders(stateManager);
-                await getSelectedUploaders(stateManager);
-                await getUploaderInput(stateManager);
+                await warmUpGroupSettings(stateManager);
 
                 return keepAlive([
                 App.createDUISection({
