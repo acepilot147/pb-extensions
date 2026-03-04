@@ -115,7 +115,17 @@ export const groupSettings = (stateManager: SourceStateManager): DUINavigationBu
         id: 'group_settings',
         label: 'Scanlation Group Settings',
         form: App.createDUIForm({
-            sections: async () => keepAlive([
+            sections: async () => {
+                // Sequential pre-warm: read every key this form will use before
+                // the native side starts calling binding.get concurrently on first render.
+                await getUploadersFiltering(stateManager);
+                await getUploadersWhitelisted(stateManager);
+                await getStrictNameMatching(stateManager);
+                await getUploaders(stateManager);
+                await getSelectedUploaders(stateManager);
+                await getUploaderInput(stateManager);
+
+                return keepAlive([
                 App.createDUISection({
                     id: 'filtering_settings',
                     header: 'Filtering Settings',
@@ -221,7 +231,8 @@ export const groupSettings = (stateManager: SourceStateManager): DUINavigationBu
                         ]);
                     }
                 })
-            ])
+            ]);
+            }
         })
     }))
 }
