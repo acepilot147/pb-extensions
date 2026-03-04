@@ -47,7 +47,7 @@ import {
 } from "./Settings";
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.2.4",
+  version: "1.2.5",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -104,8 +104,13 @@ export class ComixTo
   }
 
   // -- Settings Menu --
-// -- Settings Menu --
   async getSourceMenu(): Promise<DUISection> {
+    // Warm up stateManager on cold start — prevents crash when navigating directly
+    // to Scanlation Group Settings before any stateManager.retrieve() has completed.
+    // The filtering_settings section fires 3 concurrent binding reads on first render;
+    // without warm-up, the cold Swift/JSC bridge cannot handle them and the app crashes.
+    await this.stateManager.retrieve('_init');
+
     return keepAlive(App.createDUISection({
       id: "main",
       header: "Source Settings",
