@@ -17,9 +17,6 @@ export const TRENDING_OPTIONS =[
 const uiKeepAlive: any[] =[];
 export const keepAlive = <T>(obj: T): T => {
     uiKeepAlive.push(obj);
-    if (uiKeepAlive.length > 50) {
-        uiKeepAlive.shift();
-    }
     return obj;
 }
 
@@ -164,19 +161,17 @@ export const groupSettings = (stateManager: SourceStateManager): DUINavigationBu
                     isHidden: false,
                     rows: async () => {
                         const uploaders = await getUploaders(stateManager);
-                        // Prevent empty array crashes natively in Paperback 0.8
-                        const options = uploaders.length > 0 ? uploaders :['_empty_'];
-                        
+
                         return keepAlive([
                             App.createDUISelect({
                                 id: 'uploaders_list',
                                 label: 'Currently Saved Groups',
-                                options: options,
+                                options: uploaders,
                                 value: App.createDUIBinding({
                                     get: async () => await getSelectedUploaders(stateManager),
                                     set: async (newValue: string[]) => await stateManager.store('uploaders_selected', newValue)
                                 }),
-                                labelResolver: async (value) => value === '_empty_' ? 'No groups added' : value,
+                                labelResolver: async (value) => value,
                                 allowsMultiselect: true
                             }),
                             App.createDUIInputField({
