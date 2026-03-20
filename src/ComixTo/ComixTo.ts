@@ -75,7 +75,8 @@ export class ComixTo
       interceptRequest: async (request: Request): Promise<Request> => {
         request.headers = {
           ...(request.headers ?? {}),
-          Referer: `${DOMAIN}/`
+          Referer: `${DOMAIN}/`,
+          "User-Agent": await this.requestManager.getDefaultUserAgent(),
         };
         return request;
       },
@@ -97,7 +98,25 @@ export class ComixTo
       id: "main",
       header: "Source Settings",
       isHidden: false,
-      rows: async () => [resetSettings(this.stateManager)],
+      rows: async () => [
+        App.createDUILink({
+          id: "solve_cloudflare",
+          label: "Solve Cloudflare",
+          value: "Solve Cloudflare",
+          onTap: async () => {
+              await (this as any).openWebView(DOMAIN);
+          }
+        }),
+        App.createDUILink({
+          id: "open_website",
+          label: "Open Website",
+          value: "Open Website",
+          onTap: async () => {
+              await (this as any).openWebView(DOMAIN);
+          }
+        }),
+        resetSettings(this.stateManager)
+      ],
     });
   }
 
@@ -461,7 +480,8 @@ export class ComixTo
       url: DOMAIN,
       method: "GET",
       headers: {
-        Referer: `${DOMAIN}/`
+        Referer: `${DOMAIN}/`,
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
       },
     });
   }
