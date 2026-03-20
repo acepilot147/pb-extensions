@@ -32,9 +32,46 @@ export class Parser {
     });
   }
 
-  parseChapters(data: APIChapterItem[]): Chapter[] {
+parseChapters(
+    data: APIChapterItem[], 
+    isFiltering: boolean, 
+    isWhitelist: boolean, 
+    isStrict: boolean, 
+    savedGroups: string[]
+  ): Chapter[] {
     const chapters: Chapter[] = [];
+
     for (const chap of data) {
+      const groupName = chap.scanlation_group?.name || "";
+
+      // 1. Apply filtering logic if enabled and groups exist
+      if (isFiltering && savedGroups.length > 0) {
+        let matchFound = false;
+
+        for (const savedGroup of savedGroups) {
+          if (isStrict) {
+            // Exact match (case-insensitive)
+            if (groupName.toLowerCase() === savedGroup.toLowerCase()) {
+              matchFound = true;
+              break;
+            }
+          } else {
+            // Partial match
+            if (groupName.toLowerCase().includes(savedGroup.toLowerCase())) {
+              matchFound = true;
+              break;
+            }
+          }
+        }
+
+        // Whitelist mode: if we didn't find the group in the list, skip this chapter
+        if (isWhitelist && !matchFound) continue;
+
+        // Blacklist mode (default): if we DID find the group in the list, skip this chapter
+        if (!isWhitelist && matchFound) continue;
+      }
+
+      // 2. If it passes the filter, build and add the chapter
       chapters.push(
         App.createChapter({
           id: chap.chapter_id.toString(),
@@ -42,12 +79,13 @@ export class Parser {
           name: chap.name ? `${chap.name}` : `Chapter ${chap.number}`,
           langCode: chap.language || "en",
           volume: chap.volume,
-          group: chap.scanlation_group?.name || "",
+          group: groupName,
           time: new Date(chap.updated_at * 1000),
           sortingIndex: chap.number,
         }),
       );
     }
+    
     return chapters;
   }
 
@@ -64,15 +102,20 @@ export class Parser {
     });
   }
 
-  parseMangaList(items: APIMangaItem[]): PartialSourceManga[] {
+  parseMangaList(items: APIMangaItem[], showNsfw: boolean): PartialSourceManga[] {
     const mangaList: PartialSourceManga[] = [];
+    
     for (const item of items) {
+      if (!showNsfw && item.is_nsfw) {
+        continue;
+      }
+
       mangaList.push(
         App.createPartialSourceManga({
           mangaId: item.hash_id,
           image:
-            item.poster.large ||
-            item.poster.medium ||
+            item.poster?.large ||
+            item.poster?.medium ||
             "https://comix.to/images/no-poster.png",
           title: item.title,
           subtitle: item.latest_chapter

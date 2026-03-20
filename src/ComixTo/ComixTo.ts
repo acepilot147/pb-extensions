@@ -33,10 +33,21 @@ import {
   CONTENT_TYPES,
   PUBLICATION_STATUS,
 } from "./Common";
-import { resetSettings } from "./Settings";
+import { 
+    keepAlive,
+    resetSettings, 
+    contentSettings, 
+    groupSettings,
+    getIsNsfw, 
+    getTrendingLimit,
+    getUploadersFiltering, 
+    getUploadersWhitelisted, 
+    getStrictNameMatching, 
+    getUploaders 
+} from "./Settings";
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.0.1",
+  version: "1.3.0",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -75,8 +86,7 @@ export class ComixTo
       interceptRequest: async (request: Request): Promise<Request> => {
         request.headers = {
           ...(request.headers ?? {}),
-          Referer: `${DOMAIN}/`,
-          "User-Agent": await this.requestManager.getDefaultUserAgent(),
+
         };
         return request;
       },
@@ -94,30 +104,11 @@ export class ComixTo
 
   // -- Settings Menu --
   async getSourceMenu(): Promise<DUISection> {
-    return App.createDUISection({
+    return keepAlive(App.createDUISection({
       id: "main",
       header: "Source Settings",
       isHidden: false,
-      rows: async () => [
-        App.createDUILink({
-          id: "solve_cloudflare",
-          label: "Solve Cloudflare",
-          value: "Solve Cloudflare",
-          onTap: async () => {
-              await (this as any).openWebView(DOMAIN);
-          }
-        }),
-        App.createDUILink({
-          id: "open_website",
-          label: "Open Website",
-          value: "Open Website",
-          onTap: async () => {
-              await (this as any).openWebView(DOMAIN);
-          }
-        }),
-        resetSettings(this.stateManager)
-      ],
-    });
+
   }
 
   getMangaShareUrl(mangaId: string): string {
@@ -164,7 +155,14 @@ export class ComixTo
       page++;
     } while (page <= lastPage);
 
-    return this.parser.parseChapters(chapters);
+    const [isFiltering, isWhitelist, isStrict, savedGroups] = await Promise.all([
+      getUploadersFiltering(this.stateManager),
+      getUploadersWhitelisted(this.stateManager),
+      getStrictNameMatching(this.stateManager),
+      getUploaders(this.stateManager)
+    ]);
+
+    return this.parser.parseChapters(chapters, isFiltering, isWhitelist, isStrict, savedGroups);
   }
 
   async getChapterDetails(
@@ -190,12 +188,13 @@ export class ComixTo
   async getHomePageSections(
     sectionCallback: (section: HomeSection) => void,
   ): Promise<void> {
-    const limit = "30"; // Hardcoded default
+    const limitArray = await getTrendingLimit(this.stateManager);
+    const limit = limitArray[0] ?? "30"; // Fallback to "30" just in case
 
     const sections = [
       App.createHomeSection({
         id: "trending",
-        title: "Popular (Monthly)",
+        title: "Popular (Trending)",
         containsMoreItems: true,
         type: HomeSectionType.featured,
       }),
@@ -221,6 +220,7 @@ export class ComixTo
 
     const promises: Promise<void>[] = [];
 
+    // 0: "Popular (Trending)"
     promises.push(
       this.fetchHomeData(
         `${API_BASE}/top?type=trending&days=${limit}&limit=15&includes[]=author`,
@@ -229,25 +229,28 @@ export class ComixTo
       ),
     );
 
-    // Changed to use /manga endpoint for reliable All-Time follows
+    // 1: "Latest Updates"
     promises.push(
       this.fetchHomeData(
-        `${API_BASE}/manga?order[followed_count]=desc&limit=15&includes[]=author`,
+        `${API_BASE}/manga?order[chapter_updated_at]=desc&limit=15&scope=hot&includes[]=author`,
         sections[1],
         sectionCallback,
       ),
     );
 
+    // 2: "Recently Added"
     promises.push(
       this.fetchHomeData(
-        `${API_BASE}/manga?order[chapter_updated_at]=desc&limit=15&scope=hot&includes[]=author`,
+        `${API_BASE}/manga?order[created_at]=desc&limit=15&includes[]=author`,
         sections[2],
         sectionCallback,
       ),
     );
+
+    // 3: "Most Followed"
     promises.push(
       this.fetchHomeData(
-        `${API_BASE}/manga?order[created_at]=desc&limit=15&includes[]=author`,
+        `${API_BASE}/manga?order[follows_total]=desc&limit=15&includes[]=author`,
         sections[3],
         sectionCallback,
       ),
@@ -264,12 +267,13 @@ export class ComixTo
     const request = App.createRequest({ url, method: "GET" });
     const response = await this.requestManager.schedule(request, 1);
     this.checkResponseError(response);
-    const json = JSON.parse(
-      response.data ?? "{}",
-    ) as APIResponse<APIMangaResult>;
+    const json = JSON.parse(response.data ?? "{}") as APIResponse<APIMangaResult>;
+
+    // 🟢 Fetch setting and pass it to the parser
+    const showNsfw = await getIsNsfw(this.stateManager);
 
     if (json.result && json.result.items) {
-      section.items = this.parser.parseMangaList(json.result.items);
+      section.items = this.parser.parseMangaList(json.result.items, showNsfw);
     }
     callback(section);
   }
@@ -279,7 +283,8 @@ export class ComixTo
     metadata: any,
   ): Promise<PagedResults> {
     const page = metadata?.page ?? 1;
-    const limit = "30"; // Hardcoded default
+    const limitArray = await getTrendingLimit(this.stateManager);
+    const limit = limitArray[0] ?? "30";
     let url = "";
 
     // Added &includes[]=author to all requests
@@ -289,7 +294,7 @@ export class ComixTo
         break;
       case "follows":
         // Updated to match homepage change
-        url = `${API_BASE}/manga?order[followed_count]=desc&limit=20&page=${page}&includes[]=author`;
+        url = `${API_BASE}/manga?order[follows_total]=desc&limit=20&page=${page}&includes[]=author`;
         break;
       case "latest":
         url = `${API_BASE}/manga?order[chapter_updated_at]=desc&scope=hot&limit=20&page=${page}&includes[]=author`;
@@ -307,7 +312,8 @@ export class ComixTo
       response.data ?? "{}",
     ) as APIResponse<APIMangaResult>;
 
-    const items = this.parser.parseMangaList(json.result.items);
+    const showNsfw = await getIsNsfw(this.stateManager);
+    const items = this.parser.parseMangaList(json.result.items, showNsfw);
     const hasNext = items.length > 0;
 
     return App.createPagedResults({
@@ -460,7 +466,8 @@ export class ComixTo
     const json = JSON.parse(
       response.data ?? "{}",
     ) as APIResponse<APIMangaResult>;
-    const items = this.parser.parseMangaList(json.result.items);
+    const showNsfw = await getIsNsfw(this.stateManager);
+    const items = this.parser.parseMangaList(json.result.items, showNsfw);
 
     let nextPage = undefined;
     if (json.result.pagination && json.result.pagination.last_page > page) {
@@ -475,13 +482,12 @@ export class ComixTo
     });
   }
 
-  getCloudflareBypassRequest(): Request {
+  async getCloudflareBypassRequestAsync(): Promise<Request> {
     return App.createRequest({
       url: DOMAIN,
       method: "GET",
       headers: {
-        Referer: `${DOMAIN}/`,
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+
       },
     });
   }
