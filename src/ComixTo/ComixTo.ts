@@ -47,7 +47,7 @@ import {
 } from "./Settings";
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.3.0",
+  version: "1.3.1",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -238,7 +238,7 @@ export class ComixTo
     // 1: "Latest Updates"
     promises.push(
       this.fetchHomeData(
-        `${API_BASE}/manga?order[chapter_updated_at]=desc&limit=15&scope=hot&includes[]=author`,
+        `${API_BASE}/manga?order[chapter_updated_at]=desc&limit=15&includes[]=author`,
         sections[1],
         sectionCallback,
       ),
@@ -303,7 +303,7 @@ export class ComixTo
         url = `${API_BASE}/manga?order[follows_total]=desc&limit=20&page=${page}&includes[]=author`;
         break;
       case "latest":
-        url = `${API_BASE}/manga?order[chapter_updated_at]=desc&scope=hot&limit=20&page=${page}&includes[]=author`;
+        url = `${API_BASE}/manga?order[chapter_updated_at]=desc&limit=20&page=${page}&includes[]=author`;
         break;
       case "new":
         url = `${API_BASE}/manga?order[created_at]=desc&limit=20&page=${page}&includes[]=author`;

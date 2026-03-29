@@ -36,7 +36,29 @@ E:\GitHub\acepilot147-comix\pb-extensions>npm run bundle
 [15:22:41:0024] # Execution time: 138ms
 ```
 
-# 2. Deploy to GitHub Pages
+# 2. Local Testing with Paperback v0.8
+
+To test changes locally without deploying, use the dev server.
+
+Start the server (add `-w` to auto-rebuild on file changes):
+```
+npm run serve -- -w
+```
+
+Find your Wi-Fi IP address:
+```
+ipconfig
+```
+Look for **Wireless LAN adapter Wi-Fi → IPv4 Address** (e.g. `192.168.0.215`). Ignore any `192.168.56.x` addresses — those are VirtualBox virtual adapters and are not reachable from your phone.
+
+In Paperback v0.8, add a new repository using:
+```
+http://<your-wifi-ip>:8080
+```
+
+Your phone and PC must be on the same Wi-Fi network. HTTP only — HTTPS will not work for a local server.
+
+# 3. Deploy to GitHub Pages
 
 The compiled files must be moved to the gh-pages branch to go live.
 
