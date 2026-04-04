@@ -22,6 +22,7 @@ import {
 } from "@paperback/types";
 
 import { Parser } from "./Parser";
+import { signUrl } from "./ComixHash";
 import {
   API_BASE,
   DOMAIN,
@@ -123,7 +124,7 @@ export class ComixTo
 
   async getMangaDetails(mangaId: string): Promise<SourceManga> {
     const request = App.createRequest({
-      url: `${API_BASE}/manga/${mangaId}?includes[]=author&includes[]=artist`,
+      url: signUrl(`${API_BASE}/manga/${mangaId}?includes[]=author&includes[]=artist`),
       method: "GET",
     });
 
@@ -143,7 +144,7 @@ export class ComixTo
 
     do {
       const request = App.createRequest({
-        url: `${API_BASE}/manga/${mangaId}/chapters?page=${page}&limit=100&order[number]=desc`,
+        url: signUrl(`${API_BASE}/manga/${mangaId}/chapters?page=${page}&limit=100&order[number]=desc`),
         method: "GET",
       });
 
@@ -176,7 +177,7 @@ export class ComixTo
     chapterId: string,
   ): Promise<ChapterDetails> {
     const request = App.createRequest({
-      url: `${API_BASE}/chapters/${chapterId}`,
+      url: signUrl(`${API_BASE}/chapters/${chapterId}`),
       method: "GET",
     });
 
@@ -270,7 +271,7 @@ export class ComixTo
     section: HomeSection,
     callback: (section: HomeSection) => void,
   ) {
-    const request = App.createRequest({ url, method: "GET" });
+    const request = App.createRequest({ url: signUrl(url), method: "GET" });
     const response = await this.requestManager.schedule(request, 1);
     this.checkResponseError(response);
     const json = JSON.parse(response.data ?? "{}") as APIResponse<APIMangaResult>;
@@ -312,7 +313,7 @@ export class ComixTo
         return App.createPagedResults({ results: [], metadata: undefined });
     }
 
-    const request = App.createRequest({ url, method: "GET" });
+    const request = App.createRequest({ url: signUrl(url), method: "GET" });
     const response = await this.requestManager.schedule(request, 1);
     const json = JSON.parse(
       response.data ?? "{}",
@@ -333,7 +334,7 @@ export class ComixTo
   async getSearchTags(): Promise<TagSection[]> {
     const fetchTags = async (type: string) => {
       const req = App.createRequest({
-        url: `${API_BASE}/terms?type=${type}&limit=100`,
+        url: signUrl(`${API_BASE}/terms?type=${type}&limit=100`),
         method: "GET",
       });
       const res = await this.requestManager.schedule(req, 1);
@@ -465,7 +466,7 @@ export class ComixTo
       }
     }
 
-    const request = App.createRequest({ url, method: "GET" });
+    const request = App.createRequest({ url: signUrl(url), method: "GET" });
     const response = await this.requestManager.schedule(request, 1);
     this.checkResponseError(response);
 
