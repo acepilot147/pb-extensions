@@ -48,7 +48,7 @@ import {
 } from "./Settings";
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.3.2",
+  version: "1.3.3",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -132,7 +132,7 @@ export class ComixTo
     this.checkResponseError(response);
 
     const json = JSON.parse(response.data ?? "{}");
-    if (json.status !== 200) throw new Error("Failed to fetch manga details");
+    if (json.status !== 200) throw new Error(`Failed to fetch manga details (API ${json.status}: ${json.message ?? "no message"})`);
 
     return this.parser.parseMangaDetails(json.result, mangaId);
   }
@@ -154,7 +154,7 @@ export class ComixTo
       const json = JSON.parse(
         response.data ?? "{}",
       ) as APIResponse<APIChapterResult>;
-      if (json.status !== 200) break;
+      if (json.status !== 200) throw new Error(`Failed to fetch chapters (page ${page}) (API ${json.status}: ${json.message ?? "no message"})`);
 
       chapters.push(...json.result.items);
 
@@ -187,7 +187,7 @@ export class ComixTo
     const json = JSON.parse(
       response.data ?? "{}",
     ) as APIResponse<APIPagesResult>;
-    if (json.status !== 200) throw new Error("Failed to fetch chapter pages");
+    if (json.status !== 200) throw new Error(`Failed to fetch chapter pages (API ${json.status}: ${json.message ?? "no message"})`);
 
     return this.parser.parseChapterDetails(json.result, mangaId, chapterId);
   }
@@ -315,6 +315,7 @@ export class ComixTo
 
     const request = App.createRequest({ url: signUrl(url), method: "GET" });
     const response = await this.requestManager.schedule(request, 1);
+    this.checkResponseError(response);
     const json = JSON.parse(
       response.data ?? "{}",
     ) as APIResponse<APIMangaResult>;
@@ -338,6 +339,7 @@ export class ComixTo
         method: "GET",
       });
       const res = await this.requestManager.schedule(req, 1);
+      this.checkResponseError(res);
       const json = JSON.parse(res.data ?? "{}") as APIResponse<APIGenreResult>;
       return json.result?.items ?? [];
     };
@@ -505,7 +507,15 @@ export class ComixTo
       throw new Error("Cloudflare Bypass Required");
     }
     if (response.status < 200 || response.status >= 300) {
-      console.log(`[ComixTo] HTTP ${response.status} — raw response: ${response.data}`);
+      const preview = (response.data ?? "").substring(0, 300);
+      console.log(`[ComixTo] HTTP ${response.status} — response preview: ${preview}`);
+      throw new Error(`HTTP ${response.status}: Unexpected response from server`);
+    }
+    // Warn if server returned HTML instead of JSON (e.g. Cloudflare challenge slipped through)
+    const data = response.data ?? "";
+    if (data.trimStart().startsWith("<")) {
+      console.log(`[ComixTo] WARNING: Response looks like HTML, not JSON. Preview: ${data.substring(0, 300)}`);
+      throw new Error("Cloudflare Bypass Required");
     }
   }
 }
