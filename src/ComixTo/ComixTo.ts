@@ -48,7 +48,7 @@ import {
 } from "./Settings";
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.3.1",
+  version: "1.3.2",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -503,6 +503,9 @@ export class ComixTo
   checkResponseError(response: Response): void {
     if (response.status === 403 || response.status === 503) {
       throw new Error("Cloudflare Bypass Required");
+    }
+    if (response.status < 200 || response.status >= 300) {
+      console.log(`[ComixTo] HTTP ${response.status} — raw response: ${response.data}`);
     }
   }
 }
