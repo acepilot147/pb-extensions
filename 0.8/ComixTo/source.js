@@ -729,6 +729,36 @@ var _Sources = (() => {
   });
   var import_types = __toESM(require_lib());
 
+  // src/ComixTo/Common.ts
+  var API_BASE = "https://comix.to/api/v2";
+  var DOMAIN = "https://comix.to";
+  function normalizeString(str) {
+    return str.replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'").replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"');
+  }
+  var CONTENT_TYPES = [
+    { id: "manga", label: "Manga" },
+    { id: "manhwa", label: "Manhwa" },
+    { id: "manhua", label: "Manhua" },
+    { id: "other", label: "Other" }
+  ];
+  var PUBLICATION_STATUS = [
+    { id: "finished", label: "Finished" },
+    { id: "releasing", label: "Releasing" },
+    { id: "on_hiatus", label: "On Hiatus" },
+    { id: "discontinued", label: "Discontinued" },
+    { id: "not_yet_released", label: "Not Yet Released" }
+  ];
+  var ORDER_OPTIONS = [
+    { id: "relevance", label: "Best Match" },
+    { id: "chapter_updated_at", label: "Updated Date" },
+    { id: "created_at", label: "Created Date" },
+    { id: "views_7d", label: "Most Views (7 Days)" },
+    { id: "views_30d", label: "Most Views (1 Month)" },
+    { id: "views_90d", label: "Most Views (3 Months)" },
+    { id: "views_total", label: "Total Views" },
+    { id: "follows_total", label: "Most Follows" }
+  ];
+
   // src/ComixTo/Parser.ts
   var Parser = class {
     parseMangaDetails(data, mangaId) {
@@ -754,14 +784,16 @@ var _Sources = (() => {
         const groupName = chap.scanlation_group?.name || "";
         if (isFiltering && savedGroups.length > 0) {
           let matchFound = false;
+          const normalizedGroupName = normalizeString(groupName).toLowerCase();
           for (const savedGroup of savedGroups) {
+            const normalizedSaved = normalizeString(savedGroup).toLowerCase();
             if (isStrict) {
-              if (groupName.toLowerCase() === savedGroup.toLowerCase()) {
+              if (normalizedGroupName === normalizedSaved) {
                 matchFound = true;
                 break;
               }
             } else {
-              if (groupName.toLowerCase().includes(savedGroup.toLowerCase())) {
+              if (normalizedGroupName.includes(normalizedSaved)) {
                 matchFound = true;
                 break;
               }
@@ -793,11 +825,26 @@ var _Sources = (() => {
         pages
       });
     }
-    parseMangaList(items, showNsfw) {
+    parseMangaList(items, showNsfw, filteredTermIds = /* @__PURE__ */ new Set(), tagWhitelistMode = false, typeFilter = /* @__PURE__ */ new Set(), tagAndMode = false) {
       const mangaList = [];
       for (const item of items) {
         if (!showNsfw && item.is_nsfw) {
           continue;
+        }
+        if (filteredTermIds.size > 0 || typeFilter.size > 0) {
+          let hasMatch;
+          if (tagAndMode) {
+            const tagsAllMatch = filteredTermIds.size === 0 || [...filteredTermIds].every((id) => item.term_ids?.includes(id) ?? false);
+            const typeMatches = typeFilter.size === 0 || item.type != null && typeFilter.has(item.type);
+            hasMatch = tagsAllMatch && typeMatches;
+          } else {
+            const hasTagMatch = filteredTermIds.size > 0 && (item.term_ids?.some((id) => filteredTermIds.has(id)) ?? false);
+            const hasTypeMatch = typeFilter.size > 0 && item.type != null && typeFilter.has(item.type);
+            hasMatch = hasTagMatch || hasTypeMatch;
+          }
+          if (tagWhitelistMode ? !hasMatch : hasMatch) {
+            continue;
+          }
         }
         mangaList.push(
           App.createPartialSourceManga({
@@ -1192,23 +1239,6 @@ var _Sources = (() => {
     return `${url}${sep}time=1&_=${token}`;
   }
 
-  // src/ComixTo/Common.ts
-  var API_BASE = "https://comix.to/api/v2";
-  var DOMAIN = "https://comix.to";
-  var CONTENT_TYPES = [
-    { id: "manga", label: "Manga" },
-    { id: "manhwa", label: "Manhwa" },
-    { id: "manhua", label: "Manhua" },
-    { id: "other", label: "Other" }
-  ];
-  var PUBLICATION_STATUS = [
-    { id: "finished", label: "Finished" },
-    { id: "releasing", label: "Releasing" },
-    { id: "on_hiatus", label: "On Hiatus" },
-    { id: "discontinued", label: "Discontinued" },
-    { id: "not_yet_released", label: "Not Yet Released" }
-  ];
-
   // src/ComixTo/Settings.ts
   var TRENDING_OPTIONS = [
     { id: "1", label: "1 day" },
@@ -1424,6 +1454,171 @@ var _Sources = (() => {
       })
     }));
   };
+  var getCachedTags = async (stateManager) => {
+    const cached = await stateManager.retrieve("tag_cache");
+    if (!cached) return null;
+    try {
+      return JSON.parse(cached);
+    } catch {
+      return null;
+    }
+  };
+  var getTagBlacklist = async (stateManager) => {
+    return await stateManager.retrieve("tag_blacklist") ?? [];
+  };
+  var getTagFilterEnabled = async (stateManager) => {
+    return await stateManager.retrieve("tag_filter_enabled") ?? false;
+  };
+  var getTagWhitelistMode = async (stateManager) => {
+    return await stateManager.retrieve("tag_whitelist_mode") ?? false;
+  };
+  var getTagAndMode = async (stateManager) => {
+    return await stateManager.retrieve("tag_and_mode") ?? false;
+  };
+  var getTypeFilter = async (stateManager) => {
+    return await stateManager.retrieve("type_filter") ?? [];
+  };
+  var tagCacheWarmUp = null;
+  var resetTagCacheWarmUp = () => {
+    tagCacheWarmUp = null;
+  };
+  var warmUpTagCache = (stateManager, requestManager) => {
+    if (!tagCacheWarmUp) {
+      tagCacheWarmUp = (async () => {
+        const existing = await getCachedTags(stateManager);
+        if (existing) return existing;
+        try {
+          const fetchTerms = async (type) => {
+            const req = App.createRequest({
+              url: signUrl(`${API_BASE}/terms?type=${type}&limit=100`),
+              method: "GET"
+            });
+            const res = await requestManager.schedule(req, 1);
+            const json = JSON.parse(res.data ?? "{}");
+            return json.result?.items ?? [];
+          };
+          const [genre, theme, format, demographic] = await Promise.all([
+            fetchTerms("genre"),
+            fetchTerms("theme"),
+            fetchTerms("format"),
+            fetchTerms("demographic")
+          ]);
+          const cache = { genre, theme, format, demographic };
+          await stateManager.store("tag_cache", JSON.stringify(cache));
+          return cache;
+        } catch {
+          return null;
+        }
+      })();
+    }
+    return tagCacheWarmUp;
+  };
+  var tagFilterSettings = (stateManager, requestManager) => {
+    return keepAlive(App.createDUINavigationButton({
+      id: "tag_filter_settings",
+      label: "Tag Filter",
+      form: App.createDUIForm({
+        sections: async () => {
+          const cache = await warmUpTagCache(stateManager, requestManager);
+          if (!cache) {
+            return keepAlive([
+              App.createDUISection({
+                id: "tag_filter_error",
+                header: "Tag Filter",
+                footer: "Failed to load tags. Please close and re-open this menu to retry.",
+                isHidden: false,
+                rows: async () => keepAlive([])
+              })
+            ]);
+          }
+          const makeSelect = (categoryId, label, items) => {
+            const options = items.map((x) => String(x.term_id));
+            const labelMap = new Map(items.map((x) => [String(x.term_id), x.title]));
+            return keepAlive(App.createDUISelect({
+              id: `tag_filter_select_${categoryId}`,
+              label,
+              options,
+              value: App.createDUIBinding({
+                get: async () => {
+                  const all = await getTagBlacklist(stateManager);
+                  return all.filter((id) => options.includes(id));
+                },
+                set: async (newValue) => {
+                  const all = await getTagBlacklist(stateManager);
+                  const others = all.filter((id) => !options.includes(id));
+                  await stateManager.store("tag_blacklist", [...others, ...newValue]);
+                }
+              }),
+              labelResolver: async (value) => labelMap.get(value) ?? value,
+              allowsMultiselect: true
+            }));
+          };
+          return keepAlive([
+            App.createDUISection({
+              id: "tag_filter_mode",
+              header: "Tag Filter Settings",
+              footer: "Blacklist (default): hide titles that match any checked item. Whitelist: show only titles that match. AND Mode: require all checked tags to match instead of any.",
+              isHidden: false,
+              rows: async () => keepAlive([
+                App.createDUISwitch({
+                  id: "tag_filter_enabled",
+                  label: "Enable Tag Filter",
+                  value: App.createDUIBinding({
+                    get: async () => await getTagFilterEnabled(stateManager),
+                    set: async (newValue) => await stateManager.store("tag_filter_enabled", newValue)
+                  })
+                }),
+                App.createDUISwitch({
+                  id: "tag_whitelist_mode",
+                  label: "Enable Whitelist Mode",
+                  value: App.createDUIBinding({
+                    get: async () => await getTagWhitelistMode(stateManager),
+                    set: async (newValue) => await stateManager.store("tag_whitelist_mode", newValue)
+                  })
+                }),
+                App.createDUISwitch({
+                  id: "tag_and_mode",
+                  label: "AND Mode",
+                  value: App.createDUIBinding({
+                    get: async () => await getTagAndMode(stateManager),
+                    set: async (newValue) => await stateManager.store("tag_and_mode", newValue)
+                  })
+                }),
+                App.createDUILabel({
+                  id: "tag_load_status",
+                  label: "Tag Status",
+                  value: "Loaded"
+                })
+              ])
+            }),
+            App.createDUISection({
+              id: "tag_categories",
+              header: "Tag Categories",
+              footer: "Checked items will be filtered from Discovery and Search results per the mode above.",
+              isHidden: false,
+              rows: async () => keepAlive([
+                keepAlive(App.createDUISelect({
+                  id: "type_filter_select",
+                  label: "Content Type",
+                  options: CONTENT_TYPES.map((x) => x.id),
+                  value: App.createDUIBinding({
+                    get: async () => await getTypeFilter(stateManager),
+                    set: async (newValue) => await stateManager.store("type_filter", newValue)
+                  }),
+                  labelResolver: async (value) => CONTENT_TYPES.find((x) => x.id === value)?.label ?? value,
+                  allowsMultiselect: true
+                })),
+                makeSelect("genre", "Genres", cache.genre),
+                makeSelect("theme", "Themes", cache.theme),
+                makeSelect("format", "Formats", cache.format),
+                makeSelect("demographic", "Demographics", cache.demographic)
+              ])
+            })
+          ]);
+        }
+      })
+    }));
+  };
   var resetSettings = (stateManager) => {
     return keepAlive(App.createDUIButton({
       id: "reset",
@@ -1437,13 +1632,20 @@ var _Sources = (() => {
         await stateManager.store("uploaders_toggled", null);
         await stateManager.store("uploader_input", null);
         await stateManager.store("strict_name_matching", null);
+        await stateManager.store("tag_cache", null);
+        await stateManager.store("tag_blacklist", null);
+        await stateManager.store("tag_filter_enabled", null);
+        await stateManager.store("tag_whitelist_mode", null);
+        await stateManager.store("tag_and_mode", null);
+        await stateManager.store("type_filter", null);
+        resetTagCacheWarmUp();
       }
     }));
   };
 
   // src/ComixTo/ComixTo.ts
   var ComixToInfo = {
-    version: "1.3.3",
+    version: "1.4.0",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
@@ -1495,9 +1697,28 @@ var _Sources = (() => {
         rows: async () => keepAlive([
           contentSettings(this.stateManager),
           groupSettings(this.stateManager),
+          tagFilterSettings(this.stateManager, this.requestManager),
           resetSettings(this.stateManager)
         ])
       }));
+    }
+    async getTagFilterState() {
+      const enabled = await getTagFilterEnabled(this.stateManager);
+      if (!enabled) {
+        return { filteredTermIds: /* @__PURE__ */ new Set(), tagWhitelistMode: false, tagAndMode: false, typeFilter: /* @__PURE__ */ new Set() };
+      }
+      const [blacklist, whitelistMode, andMode, typeFilterList] = await Promise.all([
+        getTagBlacklist(this.stateManager),
+        getTagWhitelistMode(this.stateManager),
+        getTagAndMode(this.stateManager),
+        getTypeFilter(this.stateManager)
+      ]);
+      return {
+        filteredTermIds: new Set(blacklist.map((id) => parseInt(id, 10))),
+        tagWhitelistMode: whitelistMode,
+        tagAndMode: andMode,
+        typeFilter: new Set(typeFilterList)
+      };
     }
     getMangaShareUrl(mangaId) {
       return `${DOMAIN}/title/${mangaId}`;
@@ -1618,9 +1839,12 @@ var _Sources = (() => {
       const response = await this.requestManager.schedule(request, 1);
       this.checkResponseError(response);
       const json = JSON.parse(response.data ?? "{}");
-      const showNsfw = await getIsNsfw(this.stateManager);
+      const [showNsfw, { filteredTermIds, tagWhitelistMode, tagAndMode, typeFilter }] = await Promise.all([
+        getIsNsfw(this.stateManager),
+        this.getTagFilterState()
+      ]);
       if (json.result && json.result.items) {
-        section.items = this.parser.parseMangaList(json.result.items, showNsfw);
+        section.items = this.parser.parseMangaList(json.result.items, showNsfw, filteredTermIds, tagWhitelistMode, typeFilter, tagAndMode);
       }
       callback(section);
     }
@@ -1651,8 +1875,11 @@ var _Sources = (() => {
       const json = JSON.parse(
         response.data ?? "{}"
       );
-      const showNsfw = await getIsNsfw(this.stateManager);
-      const items = this.parser.parseMangaList(json.result.items, showNsfw);
+      const [showNsfw, { filteredTermIds, tagWhitelistMode, tagAndMode, typeFilter }] = await Promise.all([
+        getIsNsfw(this.stateManager),
+        this.getTagFilterState()
+      ]);
+      const items = this.parser.parseMangaList(json.result.items, showNsfw, filteredTermIds, tagWhitelistMode, typeFilter, tagAndMode);
       const hasNext = items.length > 0;
       return App.createPagedResults({
         results: items,
@@ -1689,6 +1916,15 @@ var _Sources = (() => {
       );
       sections.push(
         App.createTagSection({
+          id: "order",
+          label: "Order (pick one, default: Best Match)",
+          tags: ORDER_OPTIONS.map(
+            (x) => App.createTag({ id: `order-${x.id}`, label: x.label })
+          )
+        })
+      );
+      sections.push(
+        App.createTagSection({
           id: "status",
           label: "Status",
           tags: PUBLICATION_STATUS.map(
@@ -1715,9 +1951,11 @@ var _Sources = (() => {
     }
     async getSearchResults(query, metadata) {
       const page = metadata?.page ?? 1;
-      let url = `${API_BASE}/manga?order[relevance]=desc&page=${page}&limit=20`;
+      const orderTag = (query.includedTags ?? []).find((t) => t.id.startsWith("order-"));
+      const orderKey = orderTag ? orderTag.id.replace("order-", "") : "relevance";
+      let url = `${API_BASE}/manga?order[${orderKey}]=desc&page=${page}&limit=20`;
       if (query.title) {
-        url += `&keyword=${encodeURIComponent(query.title)}`;
+        url += `&keyword=${encodeURIComponent(normalizeString(query.title))}`;
       }
       let genresMode = "and";
       if (query.includedTags && query.includedTags.some((t) => t.id === "logic-mode")) {
@@ -1728,7 +1966,7 @@ var _Sources = (() => {
       }
       url += `&genres_mode=${genresMode}`;
       const allTags = [...query.includedTags ?? []].filter(
-        (t) => t.id !== "logic-mode"
+        (t) => t.id !== "logic-mode" && !t.id.startsWith("order-")
       );
       const excludedTags = [...query.excludedTags ?? []].filter(
         (t) => t.id !== "logic-mode"
@@ -1770,8 +2008,11 @@ var _Sources = (() => {
       const json = JSON.parse(
         response.data ?? "{}"
       );
-      const showNsfw = await getIsNsfw(this.stateManager);
-      const items = this.parser.parseMangaList(json.result.items, showNsfw);
+      const [showNsfw, { filteredTermIds, tagWhitelistMode, tagAndMode, typeFilter }] = await Promise.all([
+        getIsNsfw(this.stateManager),
+        this.getTagFilterState()
+      ]);
+      const items = this.parser.parseMangaList(json.result.items, showNsfw, filteredTermIds, tagWhitelistMode, typeFilter, tagAndMode);
       let nextPage = void 0;
       if (json.result.pagination && json.result.pagination.last_page > page) {
         nextPage = { page: page + 1 };
