@@ -80,3 +80,19 @@ git add 0.8/
 git commit -m "Deploy updated extension bundle to 0.8"
 git push origin gh-pages
 ```
+
+# Troubleshooting
+
+### Paperback can't reach local server (AsyncOperationTimedOutError)
+
+If Paperback throws `AsyncOperationTimedOutError` when browsing the local repository and the app logs show:
+
+```
+_NSURLErrorNWPathKey=unsatisfied (Local network prohibited)
+```
+
+iOS is blocking Paperback from accessing the local network. This is an iOS 14+ privacy restriction — third-party apps must be explicitly granted permission to talk to local network addresses, even on the same Wi-Fi. Safari and the browser are exempt so the URL loads fine there but Paperback silently fails.
+
+Fix: **iOS Settings → Privacy & Security → Local Network → Paperback → Enable**
+
+This permission can be silently revoked by iOS updates or after reinstalling the app, so if local testing stops working for no obvious reason, check here first.

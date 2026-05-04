@@ -397,6 +397,17 @@ export class ComixTo
       }),
     );
 
+    // 2. Order (just under Content Type)
+    sections.push(
+      App.createTagSection({
+        id: "order",
+        label: "Order (pick one, default: Best Match)",
+        tags: ORDER_OPTIONS.map((x) =>
+          App.createTag({ id: `order-${x.id}`, label: x.label }),
+        ),
+      }),
+    );
+
     sections.push(
       App.createTagSection({
         id: "status",
@@ -407,20 +418,9 @@ export class ComixTo
       }),
     );
 
-    // 2. Dynamic Filters (Middle)
+    // 3. Dynamic Filters (Middle)
     sections.push(
       ...this.parser.parseTagSections(genres, themes, formats, demographics),
-    );
-
-    // 3. Order (second to last)
-    sections.push(
-      App.createTagSection({
-        id: "order",
-        label: "Order (pick one, default: Best Match)",
-        tags: ORDER_OPTIONS.map((x) =>
-          App.createTag({ id: `order-${x.id}`, label: x.label }),
-        ),
-      }),
     );
 
     // 4. The Hacky Logic Tag (Bottom)
