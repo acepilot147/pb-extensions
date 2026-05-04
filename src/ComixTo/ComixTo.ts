@@ -33,22 +33,30 @@ import {
   APIGenreResult,
   CONTENT_TYPES,
   PUBLICATION_STATUS,
+  ORDER_OPTIONS,
+  normalizeString,
 } from "./Common";
-import { 
+import {
     keepAlive,
-    resetSettings, 
-    contentSettings, 
+    resetSettings,
+    contentSettings,
     groupSettings,
-    getIsNsfw, 
+    tagFilterSettings,
+    getIsNsfw,
     getTrendingLimit,
-    getUploadersFiltering, 
-    getUploadersWhitelisted, 
-    getStrictNameMatching, 
-    getUploaders 
+    getUploadersFiltering,
+    getUploadersWhitelisted,
+    getStrictNameMatching,
+    getUploaders,
+    getTagFilterEnabled,
+    getTagBlacklist,
+    getTagWhitelistMode,
+    getTagAndMode,
+    getTypeFilter,
 } from "./Settings";
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.3.3",
+  version: "1.4.0",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -111,11 +119,31 @@ export class ComixTo
       header: "Source Settings",
       isHidden: false,
       rows: async () => keepAlive([
-        contentSettings(this.stateManager), 
+        contentSettings(this.stateManager),
         groupSettings(this.stateManager),
+        tagFilterSettings(this.stateManager, this.requestManager),
         resetSettings(this.stateManager)
       ]),
     }));
+  }
+
+  private async getTagFilterState(): Promise<{ filteredTermIds: Set<number>; tagWhitelistMode: boolean; typeFilter: Set<string>; tagAndMode: boolean }> {
+    const enabled = await getTagFilterEnabled(this.stateManager);
+    if (!enabled) {
+      return { filteredTermIds: new Set(), tagWhitelistMode: false, tagAndMode: false, typeFilter: new Set() };
+    }
+    const [blacklist, whitelistMode, andMode, typeFilterList] = await Promise.all([
+      getTagBlacklist(this.stateManager),
+      getTagWhitelistMode(this.stateManager),
+      getTagAndMode(this.stateManager),
+      getTypeFilter(this.stateManager),
+    ]);
+    return {
+      filteredTermIds: new Set(blacklist.map(id => parseInt(id, 10))),
+      tagWhitelistMode: whitelistMode,
+      tagAndMode: andMode,
+      typeFilter: new Set(typeFilterList),
+    };
   }
 
   getMangaShareUrl(mangaId: string): string {
@@ -276,11 +304,13 @@ export class ComixTo
     this.checkResponseError(response);
     const json = JSON.parse(response.data ?? "{}") as APIResponse<APIMangaResult>;
 
-    // 🟢 Fetch setting and pass it to the parser
-    const showNsfw = await getIsNsfw(this.stateManager);
+    const [showNsfw, { filteredTermIds, tagWhitelistMode, tagAndMode, typeFilter }] = await Promise.all([
+      getIsNsfw(this.stateManager),
+      this.getTagFilterState(),
+    ]);
 
     if (json.result && json.result.items) {
-      section.items = this.parser.parseMangaList(json.result.items, showNsfw);
+      section.items = this.parser.parseMangaList(json.result.items, showNsfw, filteredTermIds, tagWhitelistMode, typeFilter, tagAndMode);
     }
     callback(section);
   }
@@ -320,8 +350,11 @@ export class ComixTo
       response.data ?? "{}",
     ) as APIResponse<APIMangaResult>;
 
-    const showNsfw = await getIsNsfw(this.stateManager);
-    const items = this.parser.parseMangaList(json.result.items, showNsfw);
+    const [showNsfw, { filteredTermIds, tagWhitelistMode, tagAndMode, typeFilter }] = await Promise.all([
+      getIsNsfw(this.stateManager),
+      this.getTagFilterState(),
+    ]);
+    const items = this.parser.parseMangaList(json.result.items, showNsfw, filteredTermIds, tagWhitelistMode, typeFilter, tagAndMode);
     const hasNext = items.length > 0;
 
     return App.createPagedResults({
@@ -379,7 +412,18 @@ export class ComixTo
       ...this.parser.parseTagSections(genres, themes, formats, demographics),
     );
 
-    // 3. The Hacky Logic Tag (Bottom)
+    // 3. Order (second to last)
+    sections.push(
+      App.createTagSection({
+        id: "order",
+        label: "Order (pick one, default: Best Match)",
+        tags: ORDER_OPTIONS.map((x) =>
+          App.createTag({ id: `order-${x.id}`, label: x.label }),
+        ),
+      }),
+    );
+
+    // 4. The Hacky Logic Tag (Bottom)
     sections.push(
       App.createTagSection({
         id: "mode",
@@ -402,10 +446,13 @@ export class ComixTo
   ): Promise<PagedResults> {
     const page = metadata?.page ?? 1;
 
-    let url = `${API_BASE}/manga?order[relevance]=desc&page=${page}&limit=20`;
+    // --- Order ---
+    const orderTag = (query.includedTags ?? []).find((t) => t.id.startsWith("order-"));
+    const orderKey = orderTag ? orderTag.id.replace("order-", "") : "relevance";
+    let url = `${API_BASE}/manga?order[${orderKey}]=desc&page=${page}&limit=20`;
 
     if (query.title) {
-      url += `&keyword=${encodeURIComponent(query.title)}`;
+      url += `&keyword=${encodeURIComponent(normalizeString(query.title))}`;
     }
 
     // --- Logic Mode Hack ---
@@ -427,7 +474,7 @@ export class ComixTo
     url += `&genres_mode=${genresMode}`;
 
     const allTags = [...(query.includedTags ?? [])].filter(
-      (t) => t.id !== "logic-mode",
+      (t) => t.id !== "logic-mode" && !t.id.startsWith("order-"),
     );
     const excludedTags = [...(query.excludedTags ?? [])].filter(
       (t) => t.id !== "logic-mode",
@@ -475,8 +522,11 @@ export class ComixTo
     const json = JSON.parse(
       response.data ?? "{}",
     ) as APIResponse<APIMangaResult>;
-    const showNsfw = await getIsNsfw(this.stateManager);
-    const items = this.parser.parseMangaList(json.result.items, showNsfw);
+    const [showNsfw, { filteredTermIds, tagWhitelistMode, tagAndMode, typeFilter }] = await Promise.all([
+      getIsNsfw(this.stateManager),
+      this.getTagFilterState(),
+    ]);
+    const items = this.parser.parseMangaList(json.result.items, showNsfw, filteredTermIds, tagWhitelistMode, typeFilter, tagAndMode);
 
     let nextPage = undefined;
     if (json.result.pagination && json.result.pagination.last_page > page) {

@@ -12,6 +12,7 @@ import {
   APIPagesResult,
   APIGenreItem,
   DOMAIN,
+  normalizeString,
 } from "./Common";
 
 export class Parser {
@@ -48,16 +49,18 @@ parseChapters(
       if (isFiltering && savedGroups.length > 0) {
         let matchFound = false;
 
+        const normalizedGroupName = normalizeString(groupName).toLowerCase();
         for (const savedGroup of savedGroups) {
+          const normalizedSaved = normalizeString(savedGroup).toLowerCase();
           if (isStrict) {
             // Exact match (case-insensitive)
-            if (groupName.toLowerCase() === savedGroup.toLowerCase()) {
+            if (normalizedGroupName === normalizedSaved) {
               matchFound = true;
               break;
             }
           } else {
             // Partial match
-            if (groupName.toLowerCase().includes(savedGroup.toLowerCase())) {
+            if (normalizedGroupName.includes(normalizedSaved)) {
               matchFound = true;
               break;
             }
@@ -102,12 +105,30 @@ parseChapters(
     });
   }
 
-  parseMangaList(items: APIMangaItem[], showNsfw: boolean): PartialSourceManga[] {
+  parseMangaList(items: APIMangaItem[], showNsfw: boolean, filteredTermIds: Set<number> = new Set(), tagWhitelistMode: boolean = false, typeFilter: Set<string> = new Set(), tagAndMode: boolean = false): PartialSourceManga[] {
     const mangaList: PartialSourceManga[] = [];
-    
+
     for (const item of items) {
       if (!showNsfw && item.is_nsfw) {
         continue;
+      }
+
+      if (filteredTermIds.size > 0 || typeFilter.size > 0) {
+        let hasMatch: boolean;
+        if (tagAndMode) {
+          // AND: every selected term ID must appear in the item, AND type must match if type filter is set
+          const tagsAllMatch = filteredTermIds.size === 0 || [...filteredTermIds].every(id => item.term_ids?.includes(id) ?? false);
+          const typeMatches = typeFilter.size === 0 || (item.type != null && typeFilter.has(item.type));
+          hasMatch = tagsAllMatch && typeMatches;
+        } else {
+          // OR: any selected term ID or type is sufficient
+          const hasTagMatch = filteredTermIds.size > 0 && (item.term_ids?.some(id => filteredTermIds.has(id)) ?? false);
+          const hasTypeMatch = typeFilter.size > 0 && item.type != null && typeFilter.has(item.type);
+          hasMatch = hasTagMatch || hasTypeMatch;
+        }
+        if (tagWhitelistMode ? !hasMatch : hasMatch) {
+          continue;
+        }
       }
 
       mangaList.push(

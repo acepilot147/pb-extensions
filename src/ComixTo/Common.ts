@@ -1,6 +1,17 @@
 export const API_BASE = "https://comix.to/api/v2";
 export const DOMAIN = "https://comix.to";
 
+/**
+ * Normalizes iOS smart quotes/apostrophes to their ASCII equivalents.
+ * iOS autocorrect replaces ' with ' (U+2019), " with " / " (U+201C/U+201D),
+ * which breaks search queries and string comparisons against API data.
+ */
+export function normalizeString(str: string): string {
+  return str
+    .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'") // smart single quotes → '
+    .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"'); // smart double quotes → "
+}
+
 export interface APIResponse<T> {
   status: number;
   message?: string;
@@ -25,6 +36,7 @@ export interface APIMangaItem {
   created_at: number;
   rated_avg: number;
   is_nsfw: boolean;
+  type?: string;
   author?: { title: string }[];
   artist?: { title: string }[];
   term_ids: number[];
@@ -87,6 +99,17 @@ export const PUBLICATION_STATUS = [
   { id: "on_hiatus", label: "On Hiatus" },
   { id: "discontinued", label: "Discontinued" },
   { id: "not_yet_released", label: "Not Yet Released" },
+];
+
+export const ORDER_OPTIONS = [
+  { id: "relevance",          label: "Best Match" },
+  { id: "chapter_updated_at", label: "Updated Date" },
+  { id: "created_at",         label: "Created Date" },
+  { id: "views_7d",           label: "Most Views (7 Days)" },
+  { id: "views_30d",          label: "Most Views (1 Month)" },
+  { id: "views_90d",          label: "Most Views (3 Months)" },
+  { id: "views_total",        label: "Total Views" },
+  { id: "follows_total",      label: "Most Follows" },
 ];
 
 /*
