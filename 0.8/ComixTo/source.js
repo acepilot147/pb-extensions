@@ -730,10 +730,28 @@ var _Sources = (() => {
   var import_types = __toESM(require_lib());
 
   // src/ComixTo/Common.ts
-  var API_BASE = "https://comix.to/api/v2";
+  var API_BASE = "https://comix.to/api/v1";
   var DOMAIN = "https://comix.to";
   function normalizeString(str) {
     return str.replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'").replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"');
+  }
+  function parseRelativeTime(s) {
+    if (!s) return /* @__PURE__ */ new Date();
+    const m = s.match(/^(\d+)\s*(s|m|h|d|w|mos|mo|y)\b/i);
+    if (!m) return /* @__PURE__ */ new Date();
+    const n = parseInt(m[1], 10);
+    const unit = m[2].toLowerCase();
+    const ms = {
+      s: 1e3,
+      m: 6e4,
+      h: 60 * 6e4,
+      d: 24 * 60 * 6e4,
+      w: 7 * 24 * 60 * 6e4,
+      mo: 30 * 24 * 60 * 6e4,
+      mos: 30 * 24 * 60 * 6e4,
+      y: 365 * 24 * 60 * 6e4
+    };
+    return new Date(Date.now() - n * (ms[unit] ?? 0));
   }
   var CONTENT_TYPES = [
     { id: "manga", label: "Manga" },
@@ -760,28 +778,42 @@ var _Sources = (() => {
   ];
 
   // src/ComixTo/Parser.ts
+  var NO_POSTER = "https://comix.to/images/no-poster.png";
+  var isNsfw = (rating) => rating != null && rating !== "safe";
   var Parser = class {
     parseMangaDetails(data, mangaId) {
+      const buildSection = (id, label, items) => items && items.length ? App.createTagSection({
+        id,
+        label,
+        tags: items.map(
+          (t) => App.createTag({ id: `${id}-${t.id}`, label: t.title })
+        )
+      }) : null;
+      const sections = [
+        buildSection("genre", "Genres", data.genres),
+        buildSection("tag", "Tags", data.tags),
+        buildSection("demographic", "Demographics", data.demographics),
+        buildSection("format", "Formats", data.formats)
+      ].filter((s) => s !== null);
       return App.createSourceManga({
         id: mangaId,
         mangaInfo: App.createMangaInfo({
-          titles: [data.title, ...data.alt_titles],
-          image: data.poster.large || "https://comix.to/images/no-poster.png",
+          titles: [data.title, ...data.altTitles ?? []],
+          image: data.poster?.large || data.poster?.medium || NO_POSTER,
           status: data.status,
           desc: data.synopsis,
-          author: data.author?.map((a) => a.title).join(", ") ?? "",
-          artist: data.artist?.map((a) => a.title).join(", ") ?? "",
-          rating: data.rated_avg ? data.rated_avg / 2 : 0,
-          hentai: data.is_nsfw,
-          tags: []
-          // Detailed tags usually require a separate fetch or mapping from term_ids
+          author: data.authors?.map((a) => a.title).join(", ") ?? "",
+          artist: data.artists?.map((a) => a.title).join(", ") ?? "",
+          rating: data.ratedAvg ? data.ratedAvg / 2 : 0,
+          hentai: isNsfw(data.contentRating),
+          tags: sections
         })
       });
     }
     parseChapters(data, isFiltering, isWhitelist, isStrict, savedGroups) {
       const chapters = [];
       for (const chap of data) {
-        const groupName = chap.scanlation_group?.name || "";
+        const groupName = chap.group?.name || "";
         if (isFiltering && savedGroups.length > 0) {
           let matchFound = false;
           const normalizedGroupName = normalizeString(groupName).toLowerCase();
@@ -804,13 +836,13 @@ var _Sources = (() => {
         }
         chapters.push(
           App.createChapter({
-            id: chap.chapter_id.toString(),
+            id: chap.id.toString(),
             chapNum: chap.number,
             name: chap.name ? `${chap.name}` : `Chapter ${chap.number}`,
             langCode: chap.language || "en",
             volume: chap.volume,
             group: groupName,
-            time: new Date(chap.updated_at * 1e3),
+            time: parseRelativeTime(chap.createdAtFormatted),
             sortingIndex: chap.number
           })
         );
@@ -818,7 +850,7 @@ var _Sources = (() => {
       return chapters;
     }
     parseChapterDetails(data, mangaId, chapterId) {
-      const pages = data.images.map((img) => img.url);
+      const pages = data.pages.map((p) => p.url);
       return App.createChapterDetails({
         id: chapterId,
         mangaId,
@@ -828,17 +860,24 @@ var _Sources = (() => {
     parseMangaList(items, showNsfw, filteredTermIds = /* @__PURE__ */ new Set(), tagWhitelistMode = false, typeFilter = /* @__PURE__ */ new Set(), tagAndMode = false) {
       const mangaList = [];
       for (const item of items) {
-        if (!showNsfw && item.is_nsfw) {
+        if (!showNsfw && isNsfw(item.contentRating)) {
           continue;
         }
         if (filteredTermIds.size > 0 || typeFilter.size > 0) {
+          const itemTagIds = /* @__PURE__ */ new Set([
+            ...(item.genres ?? []).map((t) => t.id),
+            ...(item.demographics ?? []).map((t) => t.id),
+            ...(item.formats ?? []).map((t) => t.id),
+            ...(item.tags ?? []).map((t) => t.id)
+          ]);
+          const filteredIdsArr = Array.from(filteredTermIds);
           let hasMatch;
           if (tagAndMode) {
-            const tagsAllMatch = filteredTermIds.size === 0 || [...filteredTermIds].every((id) => item.term_ids?.includes(id) ?? false);
+            const tagsAllMatch = filteredIdsArr.length === 0 || filteredIdsArr.every((id) => itemTagIds.has(id));
             const typeMatches = typeFilter.size === 0 || item.type != null && typeFilter.has(item.type);
             hasMatch = tagsAllMatch && typeMatches;
           } else {
-            const hasTagMatch = filteredTermIds.size > 0 && (item.term_ids?.some((id) => filteredTermIds.has(id)) ?? false);
+            const hasTagMatch = filteredIdsArr.length > 0 && filteredIdsArr.some((id) => itemTagIds.has(id));
             const hasTypeMatch = typeFilter.size > 0 && item.type != null && typeFilter.has(item.type);
             hasMatch = hasTagMatch || hasTypeMatch;
           }
@@ -848,29 +887,26 @@ var _Sources = (() => {
         }
         mangaList.push(
           App.createPartialSourceManga({
-            mangaId: item.hash_id,
-            image: item.poster?.large || item.poster?.medium || "https://comix.to/images/no-poster.png",
+            mangaId: item.hid,
+            image: item.poster?.large || item.poster?.medium || NO_POSTER,
             title: item.title,
-            subtitle: item.latest_chapter ? `Ch. ${item.latest_chapter}` : void 0
+            subtitle: item.latestChapter ? `Ch. ${item.latestChapter}` : void 0
           })
         );
       }
       return mangaList;
     }
-    // Helper to organize raw API terms into Paperback TagSections
     parseTagSections(genres, themes, formats, demographics) {
-      const createSection = (id, label, items) => {
-        return App.createTagSection({
-          id,
-          label,
-          tags: items.map(
-            (x) => App.createTag({ id: `${id}-${x.term_id}`, label: x.title })
-          )
-        });
-      };
+      const createSection = (id, label, items) => App.createTagSection({
+        id,
+        label,
+        tags: items.map(
+          (x) => App.createTag({ id: `${id}-${x.id}`, label: x.label })
+        )
+      });
       return [
         createSection("genre", "Genres", genres),
-        createSection("theme", "Themes", themes),
+        createSection("tag", "Tags", themes),
         createSection("format", "Formats", formats),
         createSection("demographic", "Demographics", demographics)
       ];
@@ -1218,9 +1254,8 @@ var _Sources = (() => {
     }
     return out;
   }
-  function generateHash(path, bodySize, time) {
-    const baseString = `${path}:${bodySize}:${time}`;
-    const encoded = encodeURIComponent(baseString).replace(/[!'()*]/g, (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase());
+  function generateHash(path) {
+    const encoded = encodeURIComponent(path).replace(/[!'()*]/g, (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase());
     let data = [];
     for (let i = 0; i < encoded.length; i++) {
       data.push(encoded.charCodeAt(i) & 255);
@@ -1233,10 +1268,10 @@ var _Sources = (() => {
     return b64UrlEncode(data);
   }
   function signUrl(url) {
-    const path = url.replace("https://comix.to/api/v2", "").split("?")[0];
-    const token = generateHash(path, 0, 1);
+    const path = url.replace("https://comix.to/api/v1", "").split("?")[0];
+    const token = generateHash(path);
     const sep = url.includes("?") ? "&" : "?";
-    return `${url}${sep}time=1&_=${token}`;
+    return `${url}${sep}_=${token}`;
   }
 
   // src/ComixTo/Settings.ts
@@ -1455,7 +1490,7 @@ var _Sources = (() => {
     }));
   };
   var getCachedTags = async (stateManager) => {
-    const cached = await stateManager.retrieve("tag_cache");
+    const cached = await stateManager.retrieve("tag_cache_v1");
     if (!cached) return null;
     try {
       return JSON.parse(cached);
@@ -1490,21 +1525,22 @@ var _Sources = (() => {
         try {
           const fetchTerms = async (type) => {
             const req = App.createRequest({
-              url: signUrl(`${API_BASE}/terms?type=${type}&limit=100`),
+              // /tags/search caps at limit=50 in v1; >50 returns 422.
+              url: signUrl(`${API_BASE}/tags/search?type=${type}&limit=50`),
               method: "GET"
             });
             const res = await requestManager.schedule(req, 1);
             const json = JSON.parse(res.data ?? "{}");
-            return json.result?.items ?? [];
+            return Array.isArray(json.result) ? json.result : [];
           };
           const [genre, theme, format, demographic] = await Promise.all([
             fetchTerms("genre"),
-            fetchTerms("theme"),
+            fetchTerms("tag"),
             fetchTerms("format"),
             fetchTerms("demographic")
           ]);
           const cache = { genre, theme, format, demographic };
-          await stateManager.store("tag_cache", JSON.stringify(cache));
+          await stateManager.store("tag_cache_v1", JSON.stringify(cache));
           return cache;
         } catch {
           return null;
@@ -1532,8 +1568,8 @@ var _Sources = (() => {
             ]);
           }
           const makeSelect = (categoryId, label, items) => {
-            const options = items.map((x) => String(x.term_id));
-            const labelMap = new Map(items.map((x) => [String(x.term_id), x.title]));
+            const options = items.map((x) => String(x.id));
+            const labelMap = new Map(items.map((x) => [String(x.id), x.label]));
             return keepAlive(App.createDUISelect({
               id: `tag_filter_select_${categoryId}`,
               label,
@@ -1632,7 +1668,7 @@ var _Sources = (() => {
         await stateManager.store("uploaders_toggled", null);
         await stateManager.store("uploader_input", null);
         await stateManager.store("strict_name_matching", null);
-        await stateManager.store("tag_cache", null);
+        await stateManager.store("tag_cache_v1", null);
         await stateManager.store("tag_blacklist", null);
         await stateManager.store("tag_filter_enabled", null);
         await stateManager.store("tag_whitelist_mode", null);
@@ -1645,7 +1681,7 @@ var _Sources = (() => {
 
   // src/ComixTo/ComixTo.ts
   var ComixToInfo = {
-    version: "1.4.0",
+    version: "1.5.0",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
@@ -1731,7 +1767,7 @@ var _Sources = (() => {
       const response = await this.requestManager.schedule(request, 1);
       this.checkResponseError(response);
       const json = JSON.parse(response.data ?? "{}");
-      if (json.status !== 200) throw new Error(`Failed to fetch manga details (API ${json.status}: ${json.message ?? "no message"})`);
+      if (json.status !== "ok") throw new Error(`Failed to fetch manga details (API ${json.status}: ${json.message ?? "no message"})`);
       return this.parser.parseMangaDetails(json.result, mangaId);
     }
     async getChapters(mangaId) {
@@ -1748,9 +1784,9 @@ var _Sources = (() => {
         const json = JSON.parse(
           response.data ?? "{}"
         );
-        if (json.status !== 200) throw new Error(`Failed to fetch chapters (page ${page}) (API ${json.status}: ${json.message ?? "no message"})`);
+        if (json.status !== "ok") throw new Error(`Failed to fetch chapters (page ${page}) (API ${json.status}: ${json.message ?? "no message"})`);
         chapters.push(...json.result.items);
-        lastPage = json.result.pagination.last_page;
+        lastPage = json.result.meta?.last_page ?? 1;
         page++;
       } while (page <= lastPage);
       const [isFiltering, isWhitelist, isStrict, savedGroups] = await Promise.all([
@@ -1771,7 +1807,7 @@ var _Sources = (() => {
       const json = JSON.parse(
         response.data ?? "{}"
       );
-      if (json.status !== 200) throw new Error(`Failed to fetch chapter pages (API ${json.status}: ${json.message ?? "no message"})`);
+      if (json.status !== "ok") throw new Error(`Failed to fetch chapter pages (API ${json.status}: ${json.message ?? "no message"})`);
       return this.parser.parseChapterDetails(json.result, mangaId, chapterId);
     }
     async getHomePageSections(sectionCallback) {
@@ -1806,7 +1842,7 @@ var _Sources = (() => {
       const promises = [];
       promises.push(
         this.fetchHomeData(
-          `${API_BASE}/top?type=trending&days=${limit}&limit=15&includes[]=author`,
+          `${API_BASE}/manga?type=trending&days=${limit}&limit=15&includes[]=author`,
           sections[0],
           sectionCallback
         )
@@ -1855,7 +1891,7 @@ var _Sources = (() => {
       let url = "";
       switch (homepageSectionId) {
         case "trending":
-          url = `${API_BASE}/top?type=trending&days=${limit}&limit=20&page=${page}&includes[]=author`;
+          url = `${API_BASE}/manga?type=trending&days=${limit}&limit=20&page=${page}&includes[]=author`;
           break;
         case "follows":
           url = `${API_BASE}/manga?order[follows_total]=desc&limit=20&page=${page}&includes[]=author`;
@@ -1889,18 +1925,23 @@ var _Sources = (() => {
     // -- Advanced Search --
     async getSearchTags() {
       const fetchTags = async (type) => {
-        const req = App.createRequest({
-          url: signUrl(`${API_BASE}/terms?type=${type}&limit=100`),
-          method: "GET"
-        });
-        const res = await this.requestManager.schedule(req, 1);
-        this.checkResponseError(res);
-        const json = JSON.parse(res.data ?? "{}");
-        return json.result?.items ?? [];
+        try {
+          const req = App.createRequest({
+            // /tags/search caps at limit=50 in v1; >50 returns 422.
+            url: signUrl(`${API_BASE}/tags/search?type=${type}&limit=50`),
+            method: "GET"
+          });
+          const res = await this.requestManager.schedule(req, 1);
+          if (res.status < 200 || res.status >= 300) return [];
+          const json = JSON.parse(res.data ?? "{}");
+          return Array.isArray(json.result) ? json.result : [];
+        } catch {
+          return [];
+        }
       };
       const [genres, themes, formats, demographics] = await Promise.all([
         fetchTags("genre"),
-        fetchTags("theme"),
+        fetchTags("tag"),
         fetchTags("format"),
         fetchTags("demographic")
       ]);
@@ -1952,19 +1993,21 @@ var _Sources = (() => {
     async getSearchResults(query, metadata) {
       const page = metadata?.page ?? 1;
       const orderTag = (query.includedTags ?? []).find((t) => t.id.startsWith("order-"));
-      const orderKey = orderTag ? orderTag.id.replace("order-", "") : "relevance";
-      let url = `${API_BASE}/manga?order[${orderKey}]=desc&page=${page}&limit=20`;
+      const hasExplicitOrder = orderTag != null;
+      let url = `${API_BASE}/manga?page=${page}&limit=20`;
+      if (hasExplicitOrder) {
+        const orderKey = orderTag.id.replace("order-", "");
+        url += `&order[${orderKey}]=desc`;
+      } else if (!query.title) {
+        url += `&order[relevance]=desc`;
+      }
       if (query.title) {
         url += `&keyword=${encodeURIComponent(normalizeString(query.title))}`;
       }
       let genresMode = "and";
-      if (query.includedTags && query.includedTags.some((t) => t.id === "logic-mode")) {
-        genresMode = "and";
-      }
-      if (query.excludedTags && query.excludedTags.some((t) => t.id === "logic-mode")) {
+      if (query.excludedTags?.some((t) => t.id === "logic-mode")) {
         genresMode = "or";
       }
-      url += `&genres_mode=${genresMode}`;
       const allTags = [...query.includedTags ?? []].filter(
         (t) => t.id !== "logic-mode" && !t.id.startsWith("order-")
       );
@@ -1978,8 +2021,8 @@ var _Sources = (() => {
       for (const tag of allTags) {
         if (tag.id.startsWith("genre-")) {
           genreIds.push(tag.id.replace("genre-", ""));
-        } else if (tag.id.startsWith("theme-")) {
-          genreIds.push(tag.id.replace("theme-", ""));
+        } else if (tag.id.startsWith("tag-")) {
+          genreIds.push(tag.id.replace("tag-", ""));
         } else if (tag.id.startsWith("format-")) {
           genreIds.push(tag.id.replace("format-", ""));
         } else if (tag.id.startsWith("demographic-")) {
@@ -1996,11 +2039,14 @@ var _Sources = (() => {
       for (const id of demographicIds) url += `&demographics[]=${id}`;
       if (excludedTags.length > 0) {
         for (const tag of excludedTags) {
-          if (tag.id.startsWith("genre-") || tag.id.startsWith("theme-")) {
-            const cleanId = tag.id.replace(/^(genre-|theme-)/, "");
+          if (tag.id.startsWith("genre-") || tag.id.startsWith("tag-")) {
+            const cleanId = tag.id.replace(/^(genre-|tag-)/, "");
             url += `&genres[]=-${cleanId}`;
           }
         }
+      }
+      if (genreIds.length > 0 || excludedTags.some((t) => t.id.startsWith("genre-") || t.id.startsWith("tag-"))) {
+        url += `&genres_mode=${genresMode}`;
       }
       const request = App.createRequest({ url: signUrl(url), method: "GET" });
       const response = await this.requestManager.schedule(request, 1);
@@ -2014,7 +2060,7 @@ var _Sources = (() => {
       ]);
       const items = this.parser.parseMangaList(json.result.items, showNsfw, filteredTermIds, tagWhitelistMode, typeFilter, tagAndMode);
       let nextPage = void 0;
-      if (json.result.pagination && json.result.pagination.last_page > page) {
+      if (json.result.meta?.last_page && json.result.meta.last_page > page) {
         nextPage = { page: page + 1 };
       } else if (items.length >= 20) {
         nextPage = { page: page + 1 };
