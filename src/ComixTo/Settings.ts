@@ -258,7 +258,7 @@ export const groupSettings = (stateManager: SourceStateManager): DUINavigationBu
 
 // --- HELPERS: TAG BLACKLIST ---
 export const getCachedTags = async (stateManager: SourceStateManager): Promise<TagCache | null> => {
-    const cached = await stateManager.retrieve('tag_cache') as string | null;
+    const cached = await stateManager.retrieve('tag_cache_v1') as string | null;
     if (!cached) return null;
     try { return JSON.parse(cached) as TagCache; } catch { return null; }
 }
@@ -299,23 +299,25 @@ const warmUpTagCache = (stateManager: SourceStateManager, requestManager: Reques
             try {
                 const fetchTerms = async (type: string): Promise<APIGenreItem[]> => {
                     const req = App.createRequest({
-                        url: signUrl(`${API_BASE}/terms?type=${type}&limit=100`),
+                        // /tags/search caps at limit=50 in v1; >50 returns 422.
+                        url: signUrl(`${API_BASE}/tags/search?type=${type}&limit=50`),
                         method: 'GET',
                     });
                     const res = await requestManager.schedule(req, 1);
                     const json = JSON.parse(res.data ?? '{}') as APIResponse<APIGenreResult>;
-                    return json.result?.items ?? [];
+                    return Array.isArray(json.result) ? json.result : [];
                 };
 
+                // v1 renamed type=theme → type=tag.
                 const [genre, theme, format, demographic] = await Promise.all([
                     fetchTerms('genre'),
-                    fetchTerms('theme'),
+                    fetchTerms('tag'),
                     fetchTerms('format'),
                     fetchTerms('demographic'),
                 ]);
 
                 const cache: TagCache = { genre, theme, format, demographic };
-                await stateManager.store('tag_cache', JSON.stringify(cache));
+                await stateManager.store('tag_cache_v1', JSON.stringify(cache));
                 return cache;
             } catch {
                 return null;
@@ -348,8 +350,8 @@ export const tagFilterSettings = (stateManager: SourceStateManager, requestManag
                 }
 
                 const makeSelect = (categoryId: string, label: string, items: APIGenreItem[]) => {
-                    const options = items.map(x => String(x.term_id));
-                    const labelMap = new Map(items.map(x => [String(x.term_id), x.title]));
+                    const options = items.map(x => String(x.id));
+                    const labelMap = new Map(items.map(x => [String(x.id), x.label]));
                     return keepAlive(App.createDUISelect({
                         id: `tag_filter_select_${categoryId}`,
                         label,
@@ -451,7 +453,7 @@ export const resetSettings = (stateManager: SourceStateManager): DUIButton => {
             await stateManager.store('uploaders_toggled', null);
             await stateManager.store('uploader_input', null);
             await stateManager.store('strict_name_matching', null);
-            await stateManager.store('tag_cache', null);
+            await stateManager.store('tag_cache_v1', null);
             await stateManager.store('tag_blacklist', null);
             await stateManager.store('tag_filter_enabled', null);
             await stateManager.store('tag_whitelist_mode', null);

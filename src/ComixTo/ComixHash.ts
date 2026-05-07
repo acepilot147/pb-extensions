@@ -1,16 +1,15 @@
 /**
- * Port of ComixHash.kt from the Mihon/Tachiyomi extension.
+ * Generates the `_=` query-parameter token required by the comix.to /api/v1.
  *
- * Generates the `_=` query-parameter token required by the comix.to API.
- * The token is produced by URL-encoding "$path:$bodySize:$time", then running
- * the result through 5 rounds of RC4 + byte-mutation, and finally outputting
- * base64url (URL-safe alphabet, no padding).
+ * The token is produced by URL-encoding the path, then running the result
+ * through 5 rounds of RC4 + byte-mutation, and finally outputting base64url
+ * (URL-safe alphabet, no padding).
  *
  * IMPORTANT – path convention:
- *   Pass the path **relative to the API base** (i.e. without the leading "/api/v2").
- *   Example: "/manga/55kym/chapters", NOT "/api/v2/manga/55kym/chapters".
- *   Verification: generateHash("/manga/55kym/chapters", 0, 1) must equal
- *   "xQm9tJfLwGhz_0Eq8S_YAHYkwp-q1PLfm50W5QJnyd1NnNYpAjXjyCoAzoOLru8aI60xWS0NeDGz_rNrbqBjLLP1H9qi"
+ *   Pass the path **relative to /api/v1** (i.e. without the leading "/api/v1").
+ *   Example: "/manga/ll172/chapters", NOT "/api/v1/manga/ll172/chapters".
+ *   Verification: generateHash("/manga/ll172/chapters") must equal
+ *   "xQm9tJfLwGhz_0Eq8S_YAHYkwp-q1PLfm50W5QJnyd1NnNYpAjXjyCoAzoOL-EXkCToxWS0NeDGz_rNrbg"
  */
 
 // Pure-JS base64 helpers — no Buffer, no atob/btoa (neither exist in Paperback's JSC)
@@ -237,18 +236,12 @@ function round5(data: number[]): number[] {
 }
 
 /**
- * Generate the comix.to API `_=` token.
+ * Generate the comix.to /api/v1 `_=` token.
  *
- * @param path     API path **relative to `/api/v2`** — e.g. "/manga/55kym/chapters"
- * @param bodySize encodeURIComponent(body).length for POST requests; 0 for GET
- * @param time     Use 1 for GET requests; use Date.now() for POST requests
+ * @param path API path **relative to `/api/v1`** — e.g. "/manga/ll172/chapters"
  */
-export function generateHash(path: string, bodySize: number, time: number): string {
-    const baseString = `${path}:${bodySize}:${time}`;
-
-    // Match Java URLEncoder + Kotlin replacements:
-    //   encodeURIComponent covers most chars; additionally encode !'()* which JS leaves raw.
-    const encoded = encodeURIComponent(baseString)
+export function generateHash(path: string): string {
+    const encoded = encodeURIComponent(path)
         .replace(/[!'()*]/g, c => "%" + c.charCodeAt(0).toString(16).toUpperCase());
 
     let data: number[] = [];
@@ -266,12 +259,12 @@ export function generateHash(path: string, bodySize: number, time: number): stri
 }
 
 /**
- * Append `time=1&_=<token>` to a comix.to API URL.
- * Strips the `https://comix.to/api/v2` prefix to derive the path passed to generateHash.
+ * Append `_=<token>` to a comix.to /api/v1 URL.
+ * Strips the `https://comix.to/api/v1` prefix to derive the path passed to generateHash.
  */
 export function signUrl(url: string): string {
-    const path = url.replace("https://comix.to/api/v2", "").split("?")[0];
-    const token = generateHash(path, 0, 1);
+    const path = url.replace("https://comix.to/api/v1", "").split("?")[0];
+    const token = generateHash(path);
     const sep = url.includes("?") ? "&" : "?";
-    return `${url}${sep}time=1&_=${token}`;
+    return `${url}${sep}_=${token}`;
 }

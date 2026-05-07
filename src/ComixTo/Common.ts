@@ -1,4 +1,4 @@
-export const API_BASE = "https://comix.to/api/v2";
+export const API_BASE = "https://comix.to/api/v1";
 export const DOMAIN = "https://comix.to";
 
 /**
@@ -13,76 +13,97 @@ export function normalizeString(str: string): string {
 }
 
 export interface APIResponse<T> {
-  status: number;
+  status: string; // "ok" | "error"
   message?: string;
+  code?: number;
   result: T;
 }
 
 export interface APIMangaItem {
-  manga_id: number;
-  hash_id: string;
+  id: number;
+  hid: string;
   title: string;
-  alt_titles: string[];
+  altTitles?: string[];
   synopsis: string;
-  slug: string;
   poster: {
-    small: string;
     medium: string;
     large: string;
   };
   status: string;
-  latest_chapter: number;
-  chapter_updated_at: number;
-  created_at: number;
-  rated_avg: number;
-  is_nsfw: boolean;
+  latestChapter: number;
+  ratedAvg: number;
+  contentRating: string; // "safe" | "suggestive" | "erotica"
   type?: string;
-  author?: { title: string }[];
-  artist?: { title: string }[];
-  term_ids: number[];
+  authors?: { id: number; title: string; slug?: string }[];
+  artists?: { id: number; title: string; slug?: string }[];
+  genres?: { id: number; title: string; slug?: string }[];
+  demographics?: { id: number; title: string; slug?: string }[];
+  formats?: { id: number; title: string; slug?: string }[];
+  tags?: { id: number; title: string; slug?: string }[];
+}
+
+export interface APIMeta {
+  current_page?: number;
+  last_page?: number;
+  total?: number;
+  per_page?: number;
 }
 
 export interface APIMangaResult {
   items: APIMangaItem[];
-  pagination?: {
-    last_page: number;
-  };
+  meta?: APIMeta;
 }
 
 export interface APIChapterItem {
-  chapter_id: number;
-  manga_id: number;
+  id: number;
+  mangaId: number;
   number: number;
   name: string;
   language: string;
   volume: number;
-  created_at: number;
-  updated_at: number;
-  scanlation_group?: { name: string };
+  createdAtFormatted?: string;
+  group?: { id: number; name: string };
 }
 
 export interface APIChapterResult {
   items: APIChapterItem[];
-  pagination: {
-    last_page: number;
-    current_page: number;
-  };
+  meta?: APIMeta;
 }
 
 export interface APIPagesResult {
-  manga_id: number;
-  images: { url: string }[];
+  pages: { url: string; width?: number; height?: number }[];
 }
 
 export interface APIGenreItem {
-  term_id: number;
-  title: string;
-  slug: string;
-  type: string;
+  id: number;
+  label: string;
+  slug?: string;
 }
 
-export interface APIGenreResult {
-  items: APIGenreItem[];
+// /tags/search returns `result` as the array directly, not wrapped in `items`.
+export type APIGenreResult = APIGenreItem[];
+
+/**
+ * Parses a v1 relative-time string (e.g. "1d", "32m ago", "7mos ago") into a Date.
+ * Returns the current time if the string is missing or unparseable.
+ */
+export function parseRelativeTime(s?: string): Date {
+  if (!s) return new Date();
+  const m = s.match(/^(\d+)\s*(s|m|h|d|w|mos|mo|y)\b/i);
+  if (!m) return new Date();
+  const n = parseInt(m[1]!, 10);
+  const unit = m[2]!.toLowerCase();
+  const ms: Record<string, number> = {
+    s: 1000,
+    m: 60_000,
+    h: 60 * 60_000,
+    d: 24 * 60 * 60_000,
+    w: 7 * 24 * 60 * 60_000,
+    mo: 30 * 24 * 60 * 60_000,
+    mos: 30 * 24 * 60 * 60_000,
+    y: 365 * 24 * 60 * 60_000,
+  };
+  return new Date(Date.now() - n * (ms[unit] ?? 0));
 }
 
 // Static Filter Definitions

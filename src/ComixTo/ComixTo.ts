@@ -56,7 +56,7 @@ import {
 } from "./Settings";
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.4.0",
+  version: "1.5.0",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -160,7 +160,7 @@ export class ComixTo
     this.checkResponseError(response);
 
     const json = JSON.parse(response.data ?? "{}");
-    if (json.status !== 200) throw new Error(`Failed to fetch manga details (API ${json.status}: ${json.message ?? "no message"})`);
+    if (json.status !== "ok") throw new Error(`Failed to fetch manga details (API ${json.status}: ${json.message ?? "no message"})`);
 
     return this.parser.parseMangaDetails(json.result, mangaId);
   }
@@ -182,11 +182,11 @@ export class ComixTo
       const json = JSON.parse(
         response.data ?? "{}",
       ) as APIResponse<APIChapterResult>;
-      if (json.status !== 200) throw new Error(`Failed to fetch chapters (page ${page}) (API ${json.status}: ${json.message ?? "no message"})`);
+      if (json.status !== "ok") throw new Error(`Failed to fetch chapters (page ${page}) (API ${json.status}: ${json.message ?? "no message"})`);
 
       chapters.push(...json.result.items);
 
-      lastPage = json.result.pagination.last_page;
+      lastPage = json.result.meta?.last_page ?? 1;
       page++;
     } while (page <= lastPage);
 
@@ -215,7 +215,7 @@ export class ComixTo
     const json = JSON.parse(
       response.data ?? "{}",
     ) as APIResponse<APIPagesResult>;
-    if (json.status !== 200) throw new Error(`Failed to fetch chapter pages (API ${json.status}: ${json.message ?? "no message"})`);
+    if (json.status !== "ok") throw new Error(`Failed to fetch chapter pages (API ${json.status}: ${json.message ?? "no message"})`);
 
     return this.parser.parseChapterDetails(json.result, mangaId, chapterId);
   }
@@ -258,7 +258,7 @@ export class ComixTo
     // 0: "Popular (Trending)"
     promises.push(
       this.fetchHomeData(
-        `${API_BASE}/top?type=trending&days=${limit}&limit=15&includes[]=author`,
+        `${API_BASE}/manga?type=trending&days=${limit}&limit=15&includes[]=author`,
         sections[0],
         sectionCallback,
       ),
@@ -327,7 +327,7 @@ export class ComixTo
     // Added &includes[]=author to all requests
     switch (homepageSectionId) {
       case "trending":
-        url = `${API_BASE}/top?type=trending&days=${limit}&limit=20&page=${page}&includes[]=author`;
+        url = `${API_BASE}/manga?type=trending&days=${limit}&limit=20&page=${page}&includes[]=author`;
         break;
       case "follows":
         // Updated to match homepage change
@@ -367,19 +367,25 @@ export class ComixTo
 
   async getSearchTags(): Promise<TagSection[]> {
     const fetchTags = async (type: string) => {
-      const req = App.createRequest({
-        url: signUrl(`${API_BASE}/terms?type=${type}&limit=100`),
-        method: "GET",
-      });
-      const res = await this.requestManager.schedule(req, 1);
-      this.checkResponseError(res);
-      const json = JSON.parse(res.data ?? "{}") as APIResponse<APIGenreResult>;
-      return json.result?.items ?? [];
+      try {
+        const req = App.createRequest({
+          // /tags/search caps at limit=50 in v1; >50 returns 422.
+          url: signUrl(`${API_BASE}/tags/search?type=${type}&limit=50`),
+          method: "GET",
+        });
+        const res = await this.requestManager.schedule(req, 1);
+        if (res.status < 200 || res.status >= 300) return [];
+        const json = JSON.parse(res.data ?? "{}") as APIResponse<APIGenreResult>;
+        return Array.isArray(json.result) ? json.result : [];
+      } catch {
+        return [];
+      }
     };
 
+    // v1 renamed type=theme → type=tag.
     const [genres, themes, formats, demographics] = await Promise.all([
       fetchTags("genre"),
-      fetchTags("theme"),
+      fetchTags("tag"),
       fetchTags("format"),
       fetchTags("demographic"),
     ]);
@@ -447,31 +453,35 @@ export class ComixTo
     const page = metadata?.page ?? 1;
 
     // --- Order ---
+    // TEMP WORKAROUND (2026-05): when a keyword is present, omit `order[]` so
+    // the server falls through to its default ranking. Adding `order[relevance]=desc`
+    // currently makes the v1 backend lose the keyword's relevance signal —
+    // e.g. "Infinite Mage" returns "Infinite Stratos" first instead of the
+    // exact title match. The site's own typeahead also avoids `order[]`
+    // (`?keyword=...&limit=6`), so we mirror that. The site's full-search uses
+    // `order[chapter_updated_at]=desc` and is itself broken right now (returns
+    // nothing for "Infinite Mage"). Revisit when comix.to fixes server-side
+    // relevance ranking with explicit order params.
     const orderTag = (query.includedTags ?? []).find((t) => t.id.startsWith("order-"));
-    const orderKey = orderTag ? orderTag.id.replace("order-", "") : "relevance";
-    let url = `${API_BASE}/manga?order[${orderKey}]=desc&page=${page}&limit=20`;
+    const hasExplicitOrder = orderTag != null;
+    let url = `${API_BASE}/manga?page=${page}&limit=20`;
+    if (hasExplicitOrder) {
+      const orderKey = orderTag.id.replace("order-", "");
+      url += `&order[${orderKey}]=desc`;
+    } else if (!query.title) {
+      // No keyword AND no explicit order → fall back to relevance
+      url += `&order[relevance]=desc`;
+    }
 
     if (query.title) {
       url += `&keyword=${encodeURIComponent(normalizeString(query.title))}`;
     }
 
-    // --- Logic Mode Hack ---
-    let genresMode = "and"; // default
-
-    if (
-      query.includedTags &&
-      query.includedTags.some((t) => t.id === "logic-mode")
-    ) {
-      genresMode = "and";
-    }
-    if (
-      query.excludedTags &&
-      query.excludedTags.some((t) => t.id === "logic-mode")
-    ) {
+    // --- Logic Mode (only relevant when filtering by tags) ---
+    let genresMode = "and";
+    if (query.excludedTags?.some((t) => t.id === "logic-mode")) {
       genresMode = "or";
     }
-
-    url += `&genres_mode=${genresMode}`;
 
     const allTags = [...(query.includedTags ?? [])].filter(
       (t) => t.id !== "logic-mode" && !t.id.startsWith("order-"),
@@ -488,8 +498,8 @@ export class ComixTo
     for (const tag of allTags) {
       if (tag.id.startsWith("genre-")) {
         genreIds.push(tag.id.replace("genre-", ""));
-      } else if (tag.id.startsWith("theme-")) {
-        genreIds.push(tag.id.replace("theme-", ""));
+      } else if (tag.id.startsWith("tag-")) {
+        genreIds.push(tag.id.replace("tag-", ""));
       } else if (tag.id.startsWith("format-")) {
         genreIds.push(tag.id.replace("format-", ""));
       } else if (tag.id.startsWith("demographic-")) {
@@ -508,11 +518,16 @@ export class ComixTo
 
     if (excludedTags.length > 0) {
       for (const tag of excludedTags) {
-        if (tag.id.startsWith("genre-") || tag.id.startsWith("theme-")) {
-          const cleanId = tag.id.replace(/^(genre-|theme-)/, "");
+        if (tag.id.startsWith("genre-") || tag.id.startsWith("tag-")) {
+          const cleanId = tag.id.replace(/^(genre-|tag-)/, "");
           url += `&genres[]=-${cleanId}`;
         }
       }
+    }
+
+    // Only attach genres_mode when we actually sent any genre filter.
+    if (genreIds.length > 0 || excludedTags.some((t) => t.id.startsWith("genre-") || t.id.startsWith("tag-"))) {
+      url += `&genres_mode=${genresMode}`;
     }
 
     const request = App.createRequest({ url: signUrl(url), method: "GET" });
@@ -529,7 +544,7 @@ export class ComixTo
     const items = this.parser.parseMangaList(json.result.items, showNsfw, filteredTermIds, tagWhitelistMode, typeFilter, tagAndMode);
 
     let nextPage = undefined;
-    if (json.result.pagination && json.result.pagination.last_page > page) {
+    if (json.result.meta?.last_page && json.result.meta.last_page > page) {
       nextPage = { page: page + 1 };
     } else if (items.length >= 20) {
       nextPage = { page: page + 1 };
