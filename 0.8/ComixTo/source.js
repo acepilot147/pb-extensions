@@ -1681,7 +1681,7 @@ var _Sources = (() => {
 
   // src/ComixTo/ComixTo.ts
   var ComixToInfo = {
-    version: "1.5.0",
+    version: "1.5.1",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
@@ -1786,7 +1786,7 @@ var _Sources = (() => {
         );
         if (json.status !== "ok") throw new Error(`Failed to fetch chapters (page ${page}) (API ${json.status}: ${json.message ?? "no message"})`);
         chapters.push(...json.result.items);
-        lastPage = json.result.meta?.last_page ?? 1;
+        lastPage = json.result.meta?.lastPage ?? 1;
         page++;
       } while (page <= lastPage);
       const [isFiltering, isWhitelist, isStrict, savedGroups] = await Promise.all([
@@ -2060,7 +2060,7 @@ var _Sources = (() => {
       ]);
       const items = this.parser.parseMangaList(json.result.items, showNsfw, filteredTermIds, tagWhitelistMode, typeFilter, tagAndMode);
       let nextPage = void 0;
-      if (json.result.meta?.last_page && json.result.meta.last_page > page) {
+      if (json.result.meta?.lastPage && json.result.meta.lastPage > page) {
         nextPage = { page: page + 1 };
       } else if (items.length >= 20) {
         nextPage = { page: page + 1 };
