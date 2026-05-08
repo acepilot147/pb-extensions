@@ -766,6 +766,19 @@ var _Sources = (() => {
     { id: "discontinued", label: "Discontinued" },
     { id: "not_yet_released", label: "Not Yet Released" }
   ];
+  var CONTENT_RATINGS = [
+    { id: "safe", label: "Safe" },
+    { id: "suggestive", label: "Suggestive" },
+    { id: "erotica", label: "Erotica" },
+    { id: "pornographic", label: "Pornographic" }
+  ];
+  function isRatingAllowed(rating, maxRating) {
+    const ratingIdx = CONTENT_RATINGS.findIndex((r) => r.id === rating);
+    const maxIdx = CONTENT_RATINGS.findIndex((r) => r.id === maxRating);
+    if (ratingIdx === -1) return false;
+    if (maxIdx === -1) return true;
+    return ratingIdx <= maxIdx;
+  }
   var ORDER_OPTIONS = [
     { id: "relevance", label: "Best Match" },
     { id: "chapter_updated_at", label: "Updated Date" },
@@ -857,10 +870,10 @@ var _Sources = (() => {
         pages
       });
     }
-    parseMangaList(items, showNsfw, filteredTermIds = /* @__PURE__ */ new Set(), tagWhitelistMode = false, typeFilter = /* @__PURE__ */ new Set(), tagAndMode = false) {
+    parseMangaList(items, maxRating, filteredTermIds = /* @__PURE__ */ new Set(), tagWhitelistMode = false, typeFilter = /* @__PURE__ */ new Set(), tagAndMode = false) {
       const mangaList = [];
       for (const item of items) {
-        if (!showNsfw && isNsfw(item.contentRating)) {
+        if (!isRatingAllowed(item.contentRating, maxRating)) {
           continue;
         }
         if (filteredTermIds.size > 0 || typeFilter.size > 0) {
@@ -1302,9 +1315,9 @@ var _Sources = (() => {
     }
     return groupSettingsWarmUp;
   };
-  var getIsNsfw = async (stateManager) => {
-    const val = await stateManager.retrieve("is_nsfw");
-    return val !== null ? val : true;
+  var getContentRatingMax = async (stateManager) => {
+    const val = await stateManager.retrieve("content_rating_max");
+    return val?.[0] ?? "suggestive";
   };
   var getTrendingLimit = async (stateManager) => {
     const val = await stateManager.retrieve("trending_limit");
@@ -1358,17 +1371,23 @@ var _Sources = (() => {
           }),
           // 2. Content Filtering
           App.createDUISection({
-            id: "nsfw_settings",
+            id: "rating_settings",
             header: "Content Filtering",
+            footer: "Items with the selected rating or tamer are shown. Anything more explicit is hidden.",
             isHidden: false,
             rows: async () => keepAlive([
-              App.createDUISwitch({
-                id: "is_nsfw",
-                label: "Show NSFW Content",
+              App.createDUISelect({
+                id: "content_rating_max",
+                label: "Maximum Content Rating",
+                options: CONTENT_RATINGS.map((r) => r.id),
                 value: App.createDUIBinding({
-                  get: async () => await getIsNsfw(stateManager),
-                  set: async (newValue) => await stateManager.store("is_nsfw", newValue)
-                })
+                  get: async () => [await getContentRatingMax(stateManager)],
+                  set: async (newValue) => await stateManager.store("content_rating_max", newValue)
+                }),
+                allowsMultiselect: false,
+                labelResolver: async (value) => {
+                  return CONTENT_RATINGS.find((r) => r.id === value)?.label ?? value;
+                }
               })
             ])
           })
@@ -1662,6 +1681,7 @@ var _Sources = (() => {
       onTap: async () => {
         await stateManager.store("trending_limit", null);
         await stateManager.store("is_nsfw", null);
+        await stateManager.store("content_rating_max", null);
         await stateManager.store("uploaders", null);
         await stateManager.store("uploaders_selected", null);
         await stateManager.store("uploaders_whitelisted", null);
@@ -1681,7 +1701,7 @@ var _Sources = (() => {
 
   // src/ComixTo/ComixTo.ts
   var ComixToInfo = {
-    version: "1.5.1",
+    version: "1.5.2",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
@@ -1812,11 +1832,12 @@ var _Sources = (() => {
     }
     async getHomePageSections(sectionCallback) {
       const limitArray = await getTrendingLimit(this.stateManager);
-      const limit = limitArray[0] ?? "30";
+      const days = limitArray[0] ?? "30";
+      const maxRating = await getContentRatingMax(this.stateManager);
       const sections = [
         App.createHomeSection({
           id: "trending",
-          title: "Popular (Trending)",
+          title: "Most Recent Popular",
           containsMoreItems: true,
           type: import_types.HomeSectionType.featured
         }),
@@ -1833,6 +1854,12 @@ var _Sources = (() => {
           type: import_types.HomeSectionType.singleRowNormal
         }),
         App.createHomeSection({
+          id: "follows_new",
+          title: "Most Follows \xB7 New Comics",
+          containsMoreItems: true,
+          type: import_types.HomeSectionType.singleRowLarge
+        }),
+        App.createHomeSection({
           id: "follows",
           title: "Most Followed",
           containsMoreItems: true,
@@ -1842,7 +1869,7 @@ var _Sources = (() => {
       const promises = [];
       promises.push(
         this.fetchHomeData(
-          `${API_BASE}/manga?type=trending&days=${limit}&limit=15&includes[]=author`,
+          `${API_BASE}/manga/top?type=trending&days=${days}&limit=15&content_rating=${maxRating}`,
           sections[0],
           sectionCallback
         )
@@ -1863,8 +1890,15 @@ var _Sources = (() => {
       );
       promises.push(
         this.fetchHomeData(
-          `${API_BASE}/manga?order[follows_total]=desc&limit=15&includes[]=author`,
+          `${API_BASE}/manga/top?type=follows&days=${days}&limit=15&content_rating=${maxRating}`,
           sections[3],
+          sectionCallback
+        )
+      );
+      promises.push(
+        this.fetchHomeData(
+          `${API_BASE}/manga?order[follows_total]=desc&limit=15&includes[]=author`,
+          sections[4],
           sectionCallback
         )
       );
@@ -1875,23 +1909,31 @@ var _Sources = (() => {
       const response = await this.requestManager.schedule(request, 1);
       this.checkResponseError(response);
       const json = JSON.parse(response.data ?? "{}");
-      const [showNsfw, { filteredTermIds, tagWhitelistMode, tagAndMode, typeFilter }] = await Promise.all([
-        getIsNsfw(this.stateManager),
+      const [maxRating, { filteredTermIds, tagWhitelistMode, tagAndMode, typeFilter }] = await Promise.all([
+        getContentRatingMax(this.stateManager),
         this.getTagFilterState()
       ]);
-      if (json.result && json.result.items) {
-        section.items = this.parser.parseMangaList(json.result.items, showNsfw, filteredTermIds, tagWhitelistMode, typeFilter, tagAndMode);
+      const items = Array.isArray(json.result) ? json.result : json.result?.items;
+      if (items) {
+        section.items = this.parser.parseMangaList(items, maxRating, filteredTermIds, tagWhitelistMode, typeFilter, tagAndMode);
       }
       callback(section);
     }
     async getViewMoreItems(homepageSectionId, metadata) {
       const page = metadata?.page ?? 1;
       const limitArray = await getTrendingLimit(this.stateManager);
-      const limit = limitArray[0] ?? "30";
+      const days = limitArray[0] ?? "30";
+      const maxRating = await getContentRatingMax(this.stateManager);
       let url = "";
+      let isTopEndpoint = false;
       switch (homepageSectionId) {
         case "trending":
-          url = `${API_BASE}/manga?type=trending&days=${limit}&limit=20&page=${page}&includes[]=author`;
+          url = `${API_BASE}/manga/top?type=trending&days=${days}&limit=50&content_rating=${maxRating}`;
+          isTopEndpoint = true;
+          break;
+        case "follows_new":
+          url = `${API_BASE}/manga/top?type=follows&days=${days}&limit=50&content_rating=${maxRating}`;
+          isTopEndpoint = true;
           break;
         case "follows":
           url = `${API_BASE}/manga?order[follows_total]=desc&limit=20&page=${page}&includes[]=author`;
@@ -1908,18 +1950,14 @@ var _Sources = (() => {
       const request = App.createRequest({ url: signUrl(url), method: "GET" });
       const response = await this.requestManager.schedule(request, 1);
       this.checkResponseError(response);
-      const json = JSON.parse(
-        response.data ?? "{}"
-      );
-      const [showNsfw, { filteredTermIds, tagWhitelistMode, tagAndMode, typeFilter }] = await Promise.all([
-        getIsNsfw(this.stateManager),
-        this.getTagFilterState()
-      ]);
-      const items = this.parser.parseMangaList(json.result.items, showNsfw, filteredTermIds, tagWhitelistMode, typeFilter, tagAndMode);
-      const hasNext = items.length > 0;
+      const json = JSON.parse(response.data ?? "{}");
+      const { filteredTermIds, tagWhitelistMode, tagAndMode, typeFilter } = await this.getTagFilterState();
+      const rawItems = Array.isArray(json.result) ? json.result : json.result?.items ?? [];
+      const items = this.parser.parseMangaList(rawItems, maxRating, filteredTermIds, tagWhitelistMode, typeFilter, tagAndMode);
+      const nextPage = isTopEndpoint ? void 0 : items.length > 0 ? { page: page + 1 } : void 0;
       return App.createPagedResults({
         results: items,
-        metadata: hasNext ? { page: page + 1 } : void 0
+        metadata: nextPage
       });
     }
     // -- Advanced Search --
@@ -1993,16 +2031,10 @@ var _Sources = (() => {
     async getSearchResults(query, metadata) {
       const page = metadata?.page ?? 1;
       const orderTag = (query.includedTags ?? []).find((t) => t.id.startsWith("order-"));
-      const hasExplicitOrder = orderTag != null;
-      let url = `${API_BASE}/manga?page=${page}&limit=20`;
-      if (hasExplicitOrder) {
-        const orderKey = orderTag.id.replace("order-", "");
-        url += `&order[${orderKey}]=desc`;
-      } else if (!query.title) {
-        url += `&order[relevance]=desc`;
-      }
+      const orderKey = orderTag ? orderTag.id.replace("order-", "") : "relevance";
+      let url = `${API_BASE}/manga?order[${orderKey}]=desc&page=${page}&limit=20`;
       if (query.title) {
-        url += `&keyword=${encodeURIComponent(normalizeString(query.title))}`;
+        url += `&keyword=${encodeURIComponent(normalizeString(query.title)).replace(/%20/g, "+")}`;
       }
       let genresMode = "and";
       if (query.excludedTags?.some((t) => t.id === "logic-mode")) {
@@ -2054,11 +2086,11 @@ var _Sources = (() => {
       const json = JSON.parse(
         response.data ?? "{}"
       );
-      const [showNsfw, { filteredTermIds, tagWhitelistMode, tagAndMode, typeFilter }] = await Promise.all([
-        getIsNsfw(this.stateManager),
+      const [maxRating, { filteredTermIds, tagWhitelistMode, tagAndMode, typeFilter }] = await Promise.all([
+        getContentRatingMax(this.stateManager),
         this.getTagFilterState()
       ]);
-      const items = this.parser.parseMangaList(json.result.items, showNsfw, filteredTermIds, tagWhitelistMode, typeFilter, tagAndMode);
+      const items = this.parser.parseMangaList(json.result.items, maxRating, filteredTermIds, tagWhitelistMode, typeFilter, tagAndMode);
       let nextPage = void 0;
       if (json.result.meta?.lastPage && json.result.meta.lastPage > page) {
         nextPage = { page: page + 1 };
