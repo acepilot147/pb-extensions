@@ -1653,7 +1653,7 @@ var _Sources = (() => {
 
   // src/ComixTo/ComixTo.ts
   var ComixToInfo = {
-    version: "1.5.2",
+    version: "1.5.3",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
