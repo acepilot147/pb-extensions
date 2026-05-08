@@ -106,6 +106,17 @@ export class ComixTo
     },
   });
 
+  // -- Remote logging (temporary; remove after diagnosing the new "Cloudflare" false positive) --
+  private static readonly LOG_SERVER = "http://192.168.0.215:9090/log";
+  private remoteLog(message: string): void {
+    const req = App.createRequest({
+      url: ComixTo.LOG_SERVER,
+      method: "POST",
+      data: message,
+    });
+    this.requestManager.schedule(req, 1).then(() => {}, () => {});
+  }
+
   // -- Capabilities --
 
   async supportsTagExclusion(): Promise<boolean> {
@@ -579,18 +590,25 @@ export class ComixTo
   }
 
   checkResponseError(response: Response): void {
+    const data = response.data ?? "";
+    const preview = data.substring(0, 300).replace(/\s+/g, " ");
+    const headers = response.headers ?? {};
+    const ct = (headers["Content-Type"] ?? headers["content-type"] ?? "?") as string;
+    const server = (headers["Server"] ?? headers["server"] ?? "?") as string;
+    const cfRay = (headers["Cf-Ray"] ?? headers["cf-ray"] ?? "?") as string;
+    const reqUrl = (response as any).request?.url ?? "?";
+
     if (response.status === 403 || response.status === 503) {
+      this.remoteLog(`[checkErr] BLOCKED status=${response.status} ct=${ct} server=${server} cf-ray=${cfRay} url=${reqUrl} preview="${preview}"`);
       throw new Error("Cloudflare Bypass Required");
     }
     if (response.status < 200 || response.status >= 300) {
-      const preview = (response.data ?? "").substring(0, 300);
-      console.log(`[ComixTo] HTTP ${response.status} — response preview: ${preview}`);
+      this.remoteLog(`[checkErr] HTTP-FAIL status=${response.status} ct=${ct} url=${reqUrl} preview="${preview}"`);
       throw new Error(`HTTP ${response.status}: Unexpected response from server`);
     }
     // Warn if server returned HTML instead of JSON (e.g. Cloudflare challenge slipped through)
-    const data = response.data ?? "";
     if (data.trimStart().startsWith("<")) {
-      console.log(`[ComixTo] WARNING: Response looks like HTML, not JSON. Preview: ${data.substring(0, 300)}`);
+      this.remoteLog(`[checkErr] HTML-BODY status=${response.status} ct=${ct} server=${server} cf-ray=${cfRay} url=${reqUrl} preview="${preview}"`);
       throw new Error("Cloudflare Bypass Required");
     }
   }
