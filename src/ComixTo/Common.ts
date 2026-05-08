@@ -43,10 +43,14 @@ export interface APIMangaItem {
 }
 
 export interface APIMeta {
-  current_page?: number;
-  last_page?: number;
+  page?: number;
+  lastPage?: number;
+  perPage?: number;
   total?: number;
-  per_page?: number;
+  from?: number;
+  to?: number;
+  hasNext?: boolean;
+  hasPrev?: boolean;
 }
 
 export interface APIMangaResult {

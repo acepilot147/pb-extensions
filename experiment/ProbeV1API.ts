@@ -285,6 +285,54 @@ const TEST_SLUG = "ll172"; // stable test manga
     else console.log(`   Body: ${chapRes.body.slice(0, 300)}`);
 
     // -------------------------------------------------------------------------
+    // 1b. Chapter pagination — test against a long-running manga (One Piece, pvry)
+    //     We need to know:
+    //       - what `limit` values are accepted (current source uses limit=100)
+    //       - what `meta` keys are returned for pagination
+    //       - whether multi-page traversal actually works
+    // -------------------------------------------------------------------------
+    console.log("\n═══════════════════════════════════════════════════════════════");
+    console.log("1b. Chapter pagination — long-running manga (One Piece)");
+
+    const LONG_SLUG = "pvry";
+    const limitTests = [20, 50, 100, 200, 500];
+    for (const lim of limitTests) {
+        const url = signV1(`${API}/manga/${LONG_SLUG}/chapters?page=1&limit=${lim}&order[number]=desc`);
+        const r = await get(url);
+        const j = tryJson(r.body);
+        const items = j?.result?.items?.length ?? 0;
+        const meta = j?.result?.meta;
+        const ok = r.status === 200 && j?.status === "ok";
+        const icon = ok && items > 0 ? "✅" : (r.status === 200 ? "⚠️ " : "❌");
+        console.log(`   ${icon}  HTTP ${r.status}  items=${items}  limit=${lim}  meta=${JSON.stringify(meta) ?? "(none)"}`);
+        if (!ok && r.status !== 404) console.log(`        body: ${r.body.slice(0, 200)}`);
+    }
+
+    // Walk all pages and count, with whatever the highest accepted limit was
+    console.log("\n   Walking all pages with limit=100…");
+    let pageCount = 0;
+    let totalChapters = 0;
+    let walkPage = 1;
+    let walkLastPage = 1;
+    do {
+        const url = signV1(`${API}/manga/${LONG_SLUG}/chapters?page=${walkPage}&limit=100&order[number]=desc`);
+        const r = await get(url);
+        const j = tryJson(r.body);
+        if (j?.status !== "ok") {
+            console.log(`   ❌ page ${walkPage} failed: HTTP ${r.status}`);
+            break;
+        }
+        const got = j.result?.items?.length ?? 0;
+        totalChapters += got;
+        pageCount++;
+        walkLastPage = j.result?.meta?.last_page ?? walkPage;
+        console.log(`   page ${walkPage}/${walkLastPage}: got ${got} items (running total: ${totalChapters})`);
+        walkPage++;
+        if (walkPage > 20) { console.log("   (capped at 20 pages)"); break; }
+    } while (walkPage <= walkLastPage);
+    console.log(`   → Walked ${pageCount} pages, total chapters: ${totalChapters}`);
+
+    // -------------------------------------------------------------------------
     // 2. Manga list (open endpoint — no token needed, but we still sign it)
     // -------------------------------------------------------------------------
     console.log("\n═══════════════════════════════════════════════════════════════");

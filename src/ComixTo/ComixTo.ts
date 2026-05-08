@@ -56,7 +56,7 @@ import {
 } from "./Settings";
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.5.0",
+  version: "1.5.1",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -186,7 +186,7 @@ export class ComixTo
 
       chapters.push(...json.result.items);
 
-      lastPage = json.result.meta?.last_page ?? 1;
+      lastPage = json.result.meta?.lastPage ?? 1;
       page++;
     } while (page <= lastPage);
 
@@ -544,7 +544,7 @@ export class ComixTo
     const items = this.parser.parseMangaList(json.result.items, showNsfw, filteredTermIds, tagWhitelistMode, typeFilter, tagAndMode);
 
     let nextPage = undefined;
-    if (json.result.meta?.last_page && json.result.meta.last_page > page) {
+    if (json.result.meta?.lastPage && json.result.meta.lastPage > page) {
       nextPage = { page: page + 1 };
     } else if (items.length >= 20) {
       nextPage = { page: page + 1 };
