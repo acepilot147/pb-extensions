@@ -5,7 +5,7 @@ import {
     SourceStateManager
 } from '@paperback/types'
 
-import { API_BASE, APIResponse, APIGenreItem, APIGenreResult, CONTENT_TYPES } from './Common'
+import { API_BASE, APIResponse, APIGenreItem, APIGenreResult, CONTENT_TYPES, CONTENT_RATINGS } from './Common'
 import { signUrl } from './ComixHash'
 
 interface TagCache {
@@ -48,10 +48,12 @@ const warmUpGroupSettings = (stateManager: SourceStateManager): Promise<void> =>
     return groupSettingsWarmUp;
 }
 
-// --- HELPERS: DISCOVER & NSFW ---
-export const getIsNsfw = async (stateManager: SourceStateManager): Promise<boolean> => {
-    const val = await stateManager.retrieve('is_nsfw');
-    return val !== null ? (val as boolean) : true;
+// --- HELPERS: DISCOVER & CONTENT RATING ---
+// Returns the user's max-allowed content rating id (one of CONTENT_RATINGS ids).
+// Items with this rating or tamer are shown; anything more explicit is hidden.
+export const getContentRatingMax = async (stateManager: SourceStateManager): Promise<string> => {
+    const val = await stateManager.retrieve('content_rating_max') as string[] | null;
+    return val?.[0] ?? "suggestive";
 }
 
 export const getTrendingLimit = async (stateManager: SourceStateManager): Promise<string[]> => {
@@ -116,17 +118,23 @@ export const contentSettings = (stateManager: SourceStateManager): DUINavigation
                 }),
                 // 2. Content Filtering
                 App.createDUISection({
-                    id: 'nsfw_settings',
+                    id: 'rating_settings',
                     header: 'Content Filtering',
+                    footer: 'Items with the selected rating or tamer are shown. Anything more explicit is hidden.',
                     isHidden: false,
                     rows: async () => keepAlive([
-                        App.createDUISwitch({
-                            id: 'is_nsfw',
-                            label: 'Show NSFW Content',
+                        App.createDUISelect({
+                            id: 'content_rating_max',
+                            label: 'Maximum Content Rating',
+                            options: CONTENT_RATINGS.map(r => r.id),
                             value: App.createDUIBinding({
-                                get: async () => await getIsNsfw(stateManager),
-                                set: async (newValue) => await stateManager.store('is_nsfw', newValue)
-                            })
+                                get: async () => [await getContentRatingMax(stateManager)],
+                                set: async (newValue: string[]) => await stateManager.store('content_rating_max', newValue)
+                            }),
+                            allowsMultiselect: false,
+                            labelResolver: async (value: string) => {
+                                return CONTENT_RATINGS.find(r => r.id === value)?.label ?? value;
+                            }
                         })
                     ])
                 })
@@ -447,6 +455,7 @@ export const resetSettings = (stateManager: SourceStateManager): DUIButton => {
             // Await sequentially to avoid Swift bridge Promise.all flooding race conditions
             await stateManager.store('trending_limit', null);
             await stateManager.store('is_nsfw', null);
+            await stateManager.store('content_rating_max', null);
             await stateManager.store('uploaders', null);
             await stateManager.store('uploaders_selected', null);
             await stateManager.store('uploaders_whitelisted', null);

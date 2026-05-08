@@ -12,6 +12,7 @@ import {
   APIGenreItem,
   normalizeString,
   parseRelativeTime,
+  isRatingAllowed,
 } from "./Common";
 
 const NO_POSTER = "https://comix.to/images/no-poster.png";
@@ -124,7 +125,7 @@ export class Parser {
 
   parseMangaList(
     items: APIMangaItem[],
-    showNsfw: boolean,
+    maxRating: string,
     filteredTermIds: Set<number> = new Set(),
     tagWhitelistMode: boolean = false,
     typeFilter: Set<string> = new Set(),
@@ -133,7 +134,7 @@ export class Parser {
     const mangaList: PartialSourceManga[] = [];
 
     for (const item of items) {
-      if (!showNsfw && isNsfw(item.contentRating)) {
+      if (!isRatingAllowed(item.contentRating, maxRating)) {
         continue;
       }
 

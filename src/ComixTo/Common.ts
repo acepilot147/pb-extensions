@@ -32,7 +32,7 @@ export interface APIMangaItem {
   status: string;
   latestChapter: number;
   ratedAvg: number;
-  contentRating: string; // "safe" | "suggestive" | "erotica"
+  contentRating: string; // "safe" | "suggestive" | "erotica" | "pornographic"
   type?: string;
   authors?: { id: number; title: string; slug?: string }[];
   artists?: { id: number; title: string; slug?: string }[];
@@ -125,6 +125,23 @@ export const PUBLICATION_STATUS = [
   { id: "discontinued", label: "Discontinued" },
   { id: "not_yet_released", label: "Not Yet Released" },
 ];
+
+// Content ratings, ordered from tamest to most explicit. The user's selected
+// threshold allows everything at-or-below it (lower index = tamer).
+export const CONTENT_RATINGS = [
+  { id: "safe",         label: "Safe" },
+  { id: "suggestive",   label: "Suggestive" },
+  { id: "erotica",      label: "Erotica" },
+  { id: "pornographic", label: "Pornographic" },
+];
+
+export function isRatingAllowed(rating: string | undefined, maxRating: string): boolean {
+  const ratingIdx = CONTENT_RATINGS.findIndex(r => r.id === rating);
+  const maxIdx = CONTENT_RATINGS.findIndex(r => r.id === maxRating);
+  if (ratingIdx === -1) return false;        // unknown rating → hide to be safe
+  if (maxIdx === -1) return true;            // unknown max → fail open (don't drop everything)
+  return ratingIdx <= maxIdx;
+}
 
 export const ORDER_OPTIONS = [
   { id: "relevance",          label: "Best Match" },

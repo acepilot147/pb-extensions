@@ -42,7 +42,7 @@ import {
     contentSettings,
     groupSettings,
     tagFilterSettings,
-    getIsNsfw,
+    getContentRatingMax,
     getTrendingLimit,
     getUploadersFiltering,
     getUploadersWhitelisted,
@@ -56,7 +56,7 @@ import {
 } from "./Settings";
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.5.1",
+  version: "1.5.2",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -224,12 +224,13 @@ export class ComixTo
     sectionCallback: (section: HomeSection) => void,
   ): Promise<void> {
     const limitArray = await getTrendingLimit(this.stateManager);
-    const limit = limitArray[0] ?? "30"; // Fallback to "30" just in case
+    const days = limitArray[0] ?? "30";
+    const maxRating = await getContentRatingMax(this.stateManager);
 
     const sections = [
       App.createHomeSection({
         id: "trending",
-        title: "Popular (Trending)",
+        title: "Most Recent Popular",
         containsMoreItems: true,
         type: HomeSectionType.featured,
       }),
@@ -246,6 +247,12 @@ export class ComixTo
         type: HomeSectionType.singleRowNormal,
       }),
       App.createHomeSection({
+        id: "follows_new",
+        title: "Most Follows · New Comics",
+        containsMoreItems: true,
+        type: HomeSectionType.singleRowLarge,
+      }),
+      App.createHomeSection({
         id: "follows",
         title: "Most Followed",
         containsMoreItems: true,
@@ -255,10 +262,10 @@ export class ComixTo
 
     const promises: Promise<void>[] = [];
 
-    // 0: "Popular (Trending)"
+    // 0: "Most Recent Popular" — /manga/top with inclusive content_rating filter
     promises.push(
       this.fetchHomeData(
-        `${API_BASE}/manga?type=trending&days=${limit}&limit=15&includes[]=author`,
+        `${API_BASE}/manga/top?type=trending&days=${days}&limit=15&content_rating=${maxRating}`,
         sections[0],
         sectionCallback,
       ),
@@ -282,11 +289,20 @@ export class ComixTo
       ),
     );
 
-    // 3: "Most Followed"
+    // 3: "Most Follows · New Comics" — /manga/top with inclusive content_rating filter
+    promises.push(
+      this.fetchHomeData(
+        `${API_BASE}/manga/top?type=follows&days=${days}&limit=15&content_rating=${maxRating}`,
+        sections[3],
+        sectionCallback,
+      ),
+    );
+
+    // 4: "Most Followed"
     promises.push(
       this.fetchHomeData(
         `${API_BASE}/manga?order[follows_total]=desc&limit=15&includes[]=author`,
-        sections[3],
+        sections[4],
         sectionCallback,
       ),
     );
@@ -302,15 +318,17 @@ export class ComixTo
     const request = App.createRequest({ url: signUrl(url), method: "GET" });
     const response = await this.requestManager.schedule(request, 1);
     this.checkResponseError(response);
-    const json = JSON.parse(response.data ?? "{}") as APIResponse<APIMangaResult>;
+    const json = JSON.parse(response.data ?? "{}");
 
-    const [showNsfw, { filteredTermIds, tagWhitelistMode, tagAndMode, typeFilter }] = await Promise.all([
-      getIsNsfw(this.stateManager),
+    const [maxRating, { filteredTermIds, tagWhitelistMode, tagAndMode, typeFilter }] = await Promise.all([
+      getContentRatingMax(this.stateManager),
       this.getTagFilterState(),
     ]);
 
-    if (json.result && json.result.items) {
-      section.items = this.parser.parseMangaList(json.result.items, showNsfw, filteredTermIds, tagWhitelistMode, typeFilter, tagAndMode);
+    // /manga/top returns result as a flat array; /manga returns { items, meta }.
+    const items = Array.isArray(json.result) ? json.result : json.result?.items;
+    if (items) {
+      section.items = this.parser.parseMangaList(items, maxRating, filteredTermIds, tagWhitelistMode, typeFilter, tagAndMode);
     }
     callback(section);
   }
@@ -321,16 +339,22 @@ export class ComixTo
   ): Promise<PagedResults> {
     const page = metadata?.page ?? 1;
     const limitArray = await getTrendingLimit(this.stateManager);
-    const limit = limitArray[0] ?? "30";
+    const days = limitArray[0] ?? "30";
+    const maxRating = await getContentRatingMax(this.stateManager);
     let url = "";
+    let isTopEndpoint = false;
 
-    // Added &includes[]=author to all requests
     switch (homepageSectionId) {
       case "trending":
-        url = `${API_BASE}/manga?type=trending&days=${limit}&limit=20&page=${page}&includes[]=author`;
+        // /manga/top is a fixed top-N list with no pagination; fetch limit=50 once.
+        url = `${API_BASE}/manga/top?type=trending&days=${days}&limit=50&content_rating=${maxRating}`;
+        isTopEndpoint = true;
+        break;
+      case "follows_new":
+        url = `${API_BASE}/manga/top?type=follows&days=${days}&limit=50&content_rating=${maxRating}`;
+        isTopEndpoint = true;
         break;
       case "follows":
-        // Updated to match homepage change
         url = `${API_BASE}/manga?order[follows_total]=desc&limit=20&page=${page}&includes[]=author`;
         break;
       case "latest":
@@ -346,20 +370,22 @@ export class ComixTo
     const request = App.createRequest({ url: signUrl(url), method: "GET" });
     const response = await this.requestManager.schedule(request, 1);
     this.checkResponseError(response);
-    const json = JSON.parse(
-      response.data ?? "{}",
-    ) as APIResponse<APIMangaResult>;
+    const json = JSON.parse(response.data ?? "{}");
 
-    const [showNsfw, { filteredTermIds, tagWhitelistMode, tagAndMode, typeFilter }] = await Promise.all([
-      getIsNsfw(this.stateManager),
-      this.getTagFilterState(),
-    ]);
-    const items = this.parser.parseMangaList(json.result.items, showNsfw, filteredTermIds, tagWhitelistMode, typeFilter, tagAndMode);
-    const hasNext = items.length > 0;
+    const { filteredTermIds, tagWhitelistMode, tagAndMode, typeFilter } = await this.getTagFilterState();
+
+    const rawItems = Array.isArray(json.result) ? json.result : json.result?.items ?? [];
+    const items = this.parser.parseMangaList(rawItems, maxRating, filteredTermIds, tagWhitelistMode, typeFilter, tagAndMode);
+
+    const nextPage = isTopEndpoint
+      ? undefined  // top endpoint is a fixed list — no further pages
+      : items.length > 0
+        ? { page: page + 1 }
+        : undefined;
 
     return App.createPagedResults({
       results: items,
-      metadata: hasNext ? { page: page + 1 } : undefined,
+      metadata: nextPage,
     });
   }
 
@@ -452,29 +478,14 @@ export class ComixTo
   ): Promise<PagedResults> {
     const page = metadata?.page ?? 1;
 
-    // --- Order ---
-    // TEMP WORKAROUND (2026-05): when a keyword is present, omit `order[]` so
-    // the server falls through to its default ranking. Adding `order[relevance]=desc`
-    // currently makes the v1 backend lose the keyword's relevance signal —
-    // e.g. "Infinite Mage" returns "Infinite Stratos" first instead of the
-    // exact title match. The site's own typeahead also avoids `order[]`
-    // (`?keyword=...&limit=6`), so we mirror that. The site's full-search uses
-    // `order[chapter_updated_at]=desc` and is itself broken right now (returns
-    // nothing for "Infinite Mage"). Revisit when comix.to fixes server-side
-    // relevance ranking with explicit order params.
     const orderTag = (query.includedTags ?? []).find((t) => t.id.startsWith("order-"));
-    const hasExplicitOrder = orderTag != null;
-    let url = `${API_BASE}/manga?page=${page}&limit=20`;
-    if (hasExplicitOrder) {
-      const orderKey = orderTag.id.replace("order-", "");
-      url += `&order[${orderKey}]=desc`;
-    } else if (!query.title) {
-      // No keyword AND no explicit order → fall back to relevance
-      url += `&order[relevance]=desc`;
-    }
+    const orderKey = orderTag ? orderTag.id.replace("order-", "") : "relevance";
+    let url = `${API_BASE}/manga?order[${orderKey}]=desc&page=${page}&limit=20`;
 
     if (query.title) {
-      url += `&keyword=${encodeURIComponent(normalizeString(query.title))}`;
+      // comix.to splits the keyword on `+` to do multi-term matching; `%20` is treated
+      // as a literal space and breaks relevance ranking. Match what the browser sends.
+      url += `&keyword=${encodeURIComponent(normalizeString(query.title)).replace(/%20/g, "+")}`;
     }
 
     // --- Logic Mode (only relevant when filtering by tags) ---
@@ -537,11 +548,11 @@ export class ComixTo
     const json = JSON.parse(
       response.data ?? "{}",
     ) as APIResponse<APIMangaResult>;
-    const [showNsfw, { filteredTermIds, tagWhitelistMode, tagAndMode, typeFilter }] = await Promise.all([
-      getIsNsfw(this.stateManager),
+    const [maxRating, { filteredTermIds, tagWhitelistMode, tagAndMode, typeFilter }] = await Promise.all([
+      getContentRatingMax(this.stateManager),
       this.getTagFilterState(),
     ]);
-    const items = this.parser.parseMangaList(json.result.items, showNsfw, filteredTermIds, tagWhitelistMode, typeFilter, tagAndMode);
+    const items = this.parser.parseMangaList(json.result.items, maxRating, filteredTermIds, tagWhitelistMode, typeFilter, tagAndMode);
 
     let nextPage = undefined;
     if (json.result.meta?.lastPage && json.result.meta.lastPage > page) {
