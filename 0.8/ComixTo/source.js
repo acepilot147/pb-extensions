@@ -969,35 +969,35 @@ var _Sources = (() => {
     return out.replace(/\+/g, "-").replace(/\//g, "_");
   }
   var KEYS = [
-    "13YDu67uDgFczo3DnuTIURqas4lfMEPADY6Jaeqky+w=",
+    "JxTcdyiA5GZxnbrmthXBQfU2IMTKcY1+3nNhbq98Sgo=",
     // 0  RC4 key  round 1
-    "yEy7wBfBc+gsYPiQL/4Dfd0pIBZFzMwrtlRQGwMXy3Q=",
+    "3PordjODbhqla382Cxapmo/1JiABJQcjiJj1+48gTJ4=",
     // 1  mutKey   round 1
-    "yrP+EVA1Dw==",
+    "OaKvnI5ARA==",
     // 2  prefKey  round 1
-    "vZ23RT7pbSlxwiygkHd1dhToIku8SNHPC6V36L4cnwM=",
+    "MHNBHYWA7lvy867fXgvGcJwWDk79KqUJUVFsh3RwnnI=",
     // 3  RC4 key  round 2
-    "QX0sLahOByWLcWGnv6l98vQudWqdRI3DOXBdit9bxCE=",
+    "8i0Cru/VJBSVB2Y1GcMDVpzx2WepOcfnWdd81yxICl4=",
     // 4  mutKey   round 2
-    "WJwgqCmf",
+    "Fyskubz8VvA=",
     // 5  prefKey  round 2
-    "BkWI8feqSlDZKMq6awfzWlUypl88nz65KVRmpH0RWIc=",
+    "B46L1x+UeWP+19cRpQ+OZvdLAK9EHID8g3mSgn57tew=",
     // 6  RC4 key  round 3
-    "v7EIpiQQjd2BGuJzMbBA0qPWDSS+wTJRQ7uGzZ6rJKs=",
+    "DTSTmUt6LpDUw9r1lSQqyb3YlFTzruT8tk8wUGkwehQ=",
     // 7  mutKey   round 3
-    "1SUReYlCRA==",
+    "vY/meeI=",
     // 8  prefKey  round 3
-    "RougjiFHkSKs20DZ6BWXiWwQUGZXtseZIyQWKz5eG34=",
+    "7xWfIF5THL5LAnRgAARg+4mjWHPU9n3PQwvzbaMNi+Q=",
     // 9  RC4 key  round 4
-    "LL97cwoDoG5cw8QmhI+KSWzfW+8VehIh+inTxnVJ2ps=",
+    "bewtiTuV+HJk56xxkf2iCljLgruCpBmN9BgE8i6gc9M=",
     // 10 mutKey   round 4
-    "52iDqjzlqe8=",
+    "/Xcb2zAu8AU=",
     // 11 prefKey  round 4
-    "U9LRYFL2zXU4TtALIYDj+lCATRk/EJtH7/y7qYYNlh8=",
+    "WgeCQ3T8R51uTwVSiVa7Zy0dN6JOg6Z5JleMS+HV8Aw=",
     // 12 RC4 key  round 5
-    "e/GtffFDTvnw7LBRixAD+iGixjqTq9kIZ1m0Hj+s6fY=",
+    "yXayUVFrrcW56jQCEfZzuCidjpnWKjTDUNT7XeX9i7k=",
     // 13 mutKey   round 5
-    "xb2XwHNB"
+    "tSLco2w="
     // 14 prefKey  round 5
   ];
   function getKeyBytes(index) {
@@ -1032,256 +1032,208 @@ var _Sources = (() => {
     }
     return out;
   }
-  function mutS(e) {
-    return (e + 143) % 256;
-  }
-  function mutL(e) {
-    return (e >>> 1 | e << 7) & 255;
-  }
-  function mutC(e) {
-    return (e + 115) % 256;
-  }
-  function mutM(e) {
-    return (e ^ 177) & 255;
-  }
-  function mutF(e) {
-    return (e - 188 + 256) % 256;
-  }
-  function mutG(e) {
-    return (e << 2 | e >>> 6) & 255;
-  }
-  function mutH(e) {
-    return (e - 42 + 256) % 256;
-  }
-  function mutDollar(e) {
-    return (e << 4 | e >>> 4) & 255;
-  }
-  function mutB(e) {
-    return (e - 12 + 256) % 256;
-  }
-  function mutUnderscore(e) {
-    return (e - 20 + 256) % 256;
-  }
-  function mutY(e) {
-    return (e >>> 1 | e << 7) & 255;
-  }
-  function mutK(e) {
-    return (e - 241 + 256) % 256;
-  }
+  var rotL1 = (e) => 255 & (e << 1 | e >>> 7);
+  var rotR2 = (e) => 255 & (e >>> 2 | e << 6);
+  var nibSwap = (e) => 255 & (e << 4 | e >>> 4);
   function getMutKey(mk, idx) {
     return mk.length > 0 && idx % 32 < mk.length ? mk[idx % 32] : 0;
   }
-  function round1(data) {
-    const enc = rc4(getKeyBytes(0), data);
-    const mutKey = getKeyBytes(1);
-    const prefKey = getKeyBytes(2);
+  function mutate(data, mutKey, prefKey, prefLimit, round) {
     const out = [];
-    for (let i = 0; i < enc.length; i++) {
-      if (i < 7 && i < prefKey.length) out.push(prefKey[i]);
-      let v = enc[i] ^ getMutKey(mutKey, i);
-      switch (i % 10) {
-        case 0:
-        case 9:
-          v = mutC(v);
-          break;
+    for (let o = 0; o < data.length; o++) {
+      if (o < prefLimit && o < prefKey.length) out.push(prefKey[o]);
+      let n = data[o] ^ getMutKey(mutKey, o);
+      switch (round) {
         case 1:
-          v = mutB(v);
+          switch (o % 10) {
+            case 0:
+              n = rotL1(n);
+              break;
+            case 1:
+              n = 37 ^ n;
+              break;
+            case 2:
+              n = 81 ^ n;
+              break;
+            case 3:
+              n = 147 ^ n;
+              break;
+            case 4:
+              n = rotR2(n);
+              break;
+            case 5:
+            case 8:
+              n = nibSwap(n);
+              break;
+            case 6:
+              n = 218 ^ n;
+              break;
+            case 7:
+              n = (n + 159) % 256;
+              break;
+            case 9:
+              n = 180 ^ n;
+              break;
+          }
           break;
         case 2:
-          v = mutY(v);
+          switch (o % 10) {
+            case 0:
+            case 9:
+              n = 180 ^ n;
+              break;
+            case 1:
+              n = rotL1(n);
+              break;
+            case 2:
+              n = 147 ^ n;
+              break;
+            case 3:
+              n = rotL1(n);
+              break;
+            case 4:
+              n = rotR2(n);
+              break;
+            case 5:
+              n = nibSwap(n);
+              break;
+            case 6:
+            case 8:
+              n = (n + 159) % 256;
+              break;
+            case 7:
+              n = (n + 34) % 256;
+              break;
+          }
           break;
         case 3:
-          v = mutDollar(v);
+          switch (o % 10) {
+            case 0:
+              n = 81 ^ n;
+              break;
+            case 1:
+              n = nibSwap(n);
+              break;
+            case 2:
+            case 9:
+              n = nibSwap(n);
+              break;
+            case 3:
+              n = 37 ^ n;
+              break;
+            case 4:
+              n = (n + 159) % 256;
+              break;
+            case 5:
+              n = rotL1(n);
+              break;
+            case 6:
+              n = 180 ^ n;
+              break;
+            case 7:
+              n = (n + 34) % 256;
+              break;
+            case 8:
+              n = rotR2(n);
+              break;
+          }
           break;
         case 4:
-        case 6:
-          v = mutH(v);
+          switch (o % 10) {
+            case 0:
+            case 7:
+              n = 218 ^ n;
+              break;
+            case 1:
+            case 4:
+              n = rotL1(n);
+              break;
+            case 2:
+              n = rotL1(n);
+              break;
+            case 3:
+              n = (n + 159) % 256;
+              break;
+            case 5:
+            case 8:
+              n = 180 ^ n;
+              break;
+            case 6:
+              n = 147 ^ n;
+              break;
+            case 9:
+              n = 37 ^ n;
+              break;
+          }
           break;
         case 5:
-          v = mutS(v);
-          break;
-        case 7:
-          v = mutK(v);
-          break;
-        case 8:
-          v = mutL(v);
+          switch (o % 10) {
+            case 0:
+              n = nibSwap(n);
+              break;
+            case 1:
+            case 3:
+              n = 147 ^ n;
+              break;
+            case 2:
+              n = (n + 34) % 256;
+              break;
+            case 4:
+            case 9:
+              n = 218 ^ n;
+              break;
+            case 5:
+            case 7:
+              n = rotL1(n);
+              break;
+            case 6:
+              n = 180 ^ n;
+              break;
+            case 8:
+              n = rotR2(n);
+              break;
+          }
           break;
       }
-      out.push(v & 255);
+      out.push(n & 255);
     }
     return out;
   }
-  function round2(data) {
-    const enc = rc4(getKeyBytes(3), data);
-    const mutKey = getKeyBytes(4);
-    const prefKey = getKeyBytes(5);
-    const out = [];
-    for (let i = 0; i < enc.length; i++) {
-      if (i < 6 && i < prefKey.length) out.push(prefKey[i]);
-      let v = enc[i] ^ getMutKey(mutKey, i);
-      switch (i % 10) {
-        case 0:
-        case 8:
-          v = mutC(v);
-          break;
-        case 1:
-          v = mutB(v);
-          break;
-        case 2:
-        case 6:
-          v = mutDollar(v);
-          break;
-        case 3:
-          v = mutH(v);
-          break;
-        case 4:
-        case 9:
-          v = mutS(v);
-          break;
-        case 5:
-          v = mutK(v);
-          break;
-        case 7:
-          v = mutUnderscore(v);
-          break;
-      }
-      out.push(v & 255);
-    }
-    return out;
+  function round1(d) {
+    return rc4(getKeyBytes(0), mutate(d, getKeyBytes(1), getKeyBytes(2), 7, 1));
   }
-  function round3(data) {
-    const enc = rc4(getKeyBytes(6), data);
-    const mutKey = getKeyBytes(7);
-    const prefKey = getKeyBytes(8);
-    const out = [];
-    for (let i = 0; i < enc.length; i++) {
-      if (i < 7 && i < prefKey.length) out.push(prefKey[i]);
-      let v = enc[i] ^ getMutKey(mutKey, i);
-      switch (i % 10) {
-        case 0:
-          v = mutC(v);
-          break;
-        case 1:
-          v = mutF(v);
-          break;
-        case 2:
-        case 8:
-          v = mutS(v);
-          break;
-        case 3:
-          v = mutG(v);
-          break;
-        case 4:
-          v = mutY(v);
-          break;
-        case 5:
-          v = mutM(v);
-          break;
-        case 6:
-          v = mutDollar(v);
-          break;
-        case 7:
-          v = mutK(v);
-          break;
-        case 9:
-          v = mutB(v);
-          break;
-      }
-      out.push(v & 255);
-    }
-    return out;
+  function round2(d) {
+    return rc4(getKeyBytes(3), mutate(d, getKeyBytes(4), getKeyBytes(5), 8, 2));
   }
-  function round4(data) {
-    const enc = rc4(getKeyBytes(9), data);
-    const mutKey = getKeyBytes(10);
-    const prefKey = getKeyBytes(11);
-    const out = [];
-    for (let i = 0; i < enc.length; i++) {
-      if (i < 8 && i < prefKey.length) out.push(prefKey[i]);
-      let v = enc[i] ^ getMutKey(mutKey, i);
-      switch (i % 10) {
-        case 0:
-          v = mutB(v);
-          break;
-        case 1:
-        case 9:
-          v = mutM(v);
-          break;
-        case 2:
-        case 7:
-          v = mutL(v);
-          break;
-        case 3:
-        case 5:
-          v = mutS(v);
-          break;
-        case 4:
-        case 6:
-          v = mutUnderscore(v);
-          break;
-        case 8:
-          v = mutY(v);
-          break;
-      }
-      out.push(v & 255);
-    }
-    return out;
+  function round3(d) {
+    return rc4(getKeyBytes(6), mutate(d, getKeyBytes(7), getKeyBytes(8), 5, 3));
   }
-  function round5(data) {
-    const enc = rc4(getKeyBytes(12), data);
-    const mutKey = getKeyBytes(13);
-    const prefKey = getKeyBytes(14);
-    const out = [];
-    for (let i = 0; i < enc.length; i++) {
-      if (i < 6 && i < prefKey.length) out.push(prefKey[i]);
-      let v = enc[i] ^ getMutKey(mutKey, i);
-      switch (i % 10) {
-        case 0:
-          v = mutUnderscore(v);
-          break;
-        case 1:
-        case 7:
-          v = mutS(v);
-          break;
-        case 2:
-          v = mutC(v);
-          break;
-        case 3:
-        case 5:
-          v = mutM(v);
-          break;
-        case 4:
-          v = mutB(v);
-          break;
-        case 6:
-          v = mutF(v);
-          break;
-        case 8:
-          v = mutDollar(v);
-          break;
-        case 9:
-          v = mutG(v);
-          break;
-      }
-      out.push(v & 255);
-    }
-    return out;
+  function round4(d) {
+    return rc4(getKeyBytes(9), mutate(d, getKeyBytes(10), getKeyBytes(11), 8, 4));
   }
-  function generateHash(path) {
-    const encoded = encodeURIComponent(path).replace(/[!'()*]/g, (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase());
-    let data = [];
-    for (let i = 0; i < encoded.length; i++) {
-      data.push(encoded.charCodeAt(i) & 255);
-    }
-    data = round1(data);
-    data = round2(data);
-    data = round3(data);
-    data = round4(data);
-    data = round5(data);
-    return b64UrlEncode(data);
+  function round5(d) {
+    return rc4(getKeyBytes(12), mutate(d, getKeyBytes(13), getKeyBytes(14), 5, 5));
   }
+  function generateHash(rawPath) {
+    const path = rawPath.replace(/^https?:\/\/[^/]+/, "").split("?")[0].replace(/^\/api\/v1/, "");
+    const encoded = encodeURIComponent(path);
+    let bytes = new Array(encoded.length);
+    for (let i = 0; i < encoded.length; i++) bytes[i] = encoded.charCodeAt(i) & 255;
+    bytes = round1(bytes);
+    bytes = round2(bytes);
+    bytes = round3(bytes);
+    bytes = round4(bytes);
+    bytes = round5(bytes);
+    return b64UrlEncode(bytes);
+  }
+  var SIGNED_PATTERNS = [
+    /^\/manga\/[^/]+\/chapters\b/,
+    /^\/manga\/[^/]+\/chapter-indexes\b/,
+    /^\/chapters\/[^/]+(?:\?|$)/
+  ];
   function signUrl(url) {
     const path = url.replace("https://comix.to/api/v1", "").split("?")[0];
+    if (!SIGNED_PATTERNS.some((re) => re.test(path))) return url;
     const token = generateHash(path);
     const sep = url.includes("?") ? "&" : "?";
     return `${url}${sep}_=${token}`;
@@ -1717,7 +1669,7 @@ var _Sources = (() => {
     ],
     intents: import_types.SourceIntents.MANGA_CHAPTERS | import_types.SourceIntents.HOMEPAGE_SECTIONS | import_types.SourceIntents.CLOUDFLARE_BYPASS_REQUIRED | import_types.SourceIntents.SETTINGS_UI
   };
-  var ComixTo = class extends import_types.Source {
+  var ComixTo = class _ComixTo extends import_types.Source {
     constructor() {
       super(...arguments);
       this.parser = new Parser();
@@ -1738,6 +1690,20 @@ var _Sources = (() => {
             return response;
           }
         }
+      });
+    }
+    static {
+      // -- Remote logging (temporary; remove after diagnosing the new "Cloudflare" false positive) --
+      this.LOG_SERVER = "http://192.168.0.215:9090/log";
+    }
+    remoteLog(message) {
+      const req = App.createRequest({
+        url: _ComixTo.LOG_SERVER,
+        method: "POST",
+        data: message
+      });
+      this.requestManager.schedule(req, 1).then(() => {
+      }, () => {
       });
     }
     // -- Capabilities --
@@ -2113,17 +2079,23 @@ var _Sources = (() => {
       });
     }
     checkResponseError(response) {
+      const data = response.data ?? "";
+      const preview = data.substring(0, 300).replace(/\s+/g, " ");
+      const headers = response.headers ?? {};
+      const ct = headers["Content-Type"] ?? headers["content-type"] ?? "?";
+      const server = headers["Server"] ?? headers["server"] ?? "?";
+      const cfRay = headers["Cf-Ray"] ?? headers["cf-ray"] ?? "?";
+      const reqUrl = response.request?.url ?? "?";
       if (response.status === 403 || response.status === 503) {
+        this.remoteLog(`[checkErr] BLOCKED status=${response.status} ct=${ct} server=${server} cf-ray=${cfRay} url=${reqUrl} preview="${preview}"`);
         throw new Error("Cloudflare Bypass Required");
       }
       if (response.status < 200 || response.status >= 300) {
-        const preview = (response.data ?? "").substring(0, 300);
-        console.log(`[ComixTo] HTTP ${response.status} \u2014 response preview: ${preview}`);
+        this.remoteLog(`[checkErr] HTTP-FAIL status=${response.status} ct=${ct} url=${reqUrl} preview="${preview}"`);
         throw new Error(`HTTP ${response.status}: Unexpected response from server`);
       }
-      const data = response.data ?? "";
       if (data.trimStart().startsWith("<")) {
-        console.log(`[ComixTo] WARNING: Response looks like HTML, not JSON. Preview: ${data.substring(0, 300)}`);
+        this.remoteLog(`[checkErr] HTML-BODY status=${response.status} ct=${ct} server=${server} cf-ray=${cfRay} url=${reqUrl} preview="${preview}"`);
         throw new Error("Cloudflare Bypass Required");
       }
     }
