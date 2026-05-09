@@ -2,6 +2,7 @@
     "name": "comix-relay",
     "version": "1.0.0",
     "private": true,
+    "type": "module",
     "description": "Comix.to URL-signing + response-decryption relay (loads the live secure-*.js headlessly under a Node + DOM stub).",
     "scripts": {
         "start": "tsx Server.ts"

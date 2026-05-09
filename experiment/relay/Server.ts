@@ -50,14 +50,17 @@ import { createServer } from "node:http";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { createHash } from "node:crypto";
+import { Worker, parentPort } from "node:worker_threads";
 
 // Render / Railway / Fly / etc. inject $PORT; local dev defaults to 9091.
 const PORT       = Number(process.env.PORT ?? process.env.RELAY_PORT ?? 9091);
 const HOMEPAGE   = process.env.RELAY_PROBE_URL ?? "https://comix.to/title/xlyyj-eleceed";
 const PROBE_PATH = "/manga/xlyyj/chapters";
 const UA         = process.env.USER_AGENT  ?? "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+const IS_DECRYPT_WORKER = process.env.RELAY_WORKER === "decrypt";
+const CURRENT_FILE = fileURLToPath(import.meta.url);
 
 // Capture real timer functions before the DOM stub overrides them. The
 // stubbed timers must return real Node Timer objects (not plain numbers)
@@ -84,6 +87,7 @@ const STATS_DUMP_MS = Number(process.env.RELAY_STATS_DUMP_MS ?? 5 * 60 * 1000);
 interface Stats {
     sign: { ok: number; error: number };
     fetch: { byStatus: Map<number, number>; error: number };
+    decrypt: { ok: number; error: number; cacheHit: number };
     rebootstrap: number;
     other404: number;
 }
@@ -91,6 +95,7 @@ function emptyStats(): Stats {
     return {
         sign: { ok: 0, error: 0 },
         fetch: { byStatus: new Map(), error: 0 },
+        decrypt: { ok: 0, error: 0, cacheHit: 0 },
         rebootstrap: 0,
         other404: 0,
     };
@@ -121,7 +126,8 @@ process.on("unhandledRejection", (reason) => {
 function dumpStats(): void {
     const fetchTotal = [...stats.fetch.byStatus.values()].reduce((a, b) => a + b, 0);
     const signTotal  = stats.sign.ok + stats.sign.error;
-    if (fetchTotal === 0 && signTotal === 0 && stats.rebootstrap === 0 && stats.other404 === 0) {
+    const decryptTotal = stats.decrypt.ok + stats.decrypt.error + stats.decrypt.cacheHit;
+    if (fetchTotal === 0 && signTotal === 0 && decryptTotal === 0 && stats.rebootstrap === 0 && stats.other404 === 0) {
         return; // skip quiet windows
     }
     const parts: string[] = [];
@@ -135,6 +141,11 @@ function dumpStats(): void {
     }
     if (signTotal > 0) {
         parts.push(`/sign=${signTotal}` + (stats.sign.error ? ` (err:${stats.sign.error})` : ""));
+    }
+    if (decryptTotal > 0) {
+        parts.push(`/decrypt=${stats.decrypt.ok}` +
+            (stats.decrypt.cacheHit ? ` cache:${stats.decrypt.cacheHit}` : "") +
+            (stats.decrypt.error ? ` err:${stats.decrypt.error}` : ""));
     }
     if (stats.rebootstrap > 0) parts.push(`rebootstrap=${stats.rebootstrap}`);
     if (stats.other404 > 0) parts.push(`404=${stats.other404}`);
@@ -503,6 +514,50 @@ interface FetchResult {
     timings?: Record<string, number>;
 }
 
+interface CacheEntry {
+    expiresAt: number;
+    value: string;
+}
+
+const decryptCache = new Map<string, CacheEntry>();
+const CHAPTER_LIST_CACHE_MS = Number(process.env.RELAY_CHAPTER_LIST_CACHE_MS ?? 15 * 60 * 1000);
+const CHAPTER_DETAILS_CACHE_MS = Number(process.env.RELAY_CHAPTER_DETAILS_CACHE_MS ?? 6 * 60 * 60 * 1000);
+
+function cacheTtlForPath(path: string): number {
+    const clean = stripApi(path);
+    if (/^\/manga\/[^/]+\/chapters\b/.test(clean)) return CHAPTER_LIST_CACHE_MS;
+    if (/^\/chapters\/[^/]+(?:\?|$)/.test(clean)) return CHAPTER_DETAILS_CACHE_MS;
+    return 0;
+}
+
+function cacheKeyFor(path: string, payload: any): string {
+    const marker = payload && typeof payload === "object" && typeof payload.e === "string"
+        ? payload.e.slice(0, 96)
+        : JSON.stringify(payload).slice(0, 96);
+    return `${stripApi(path)}|${marker}`;
+}
+
+function getCachedDecrypt(path: string, payload: any): string | null {
+    if (cacheTtlForPath(path) <= 0) return null;
+    const key = cacheKeyFor(path, payload);
+    const cached = decryptCache.get(key);
+    if (!cached) return null;
+    if (cached.expiresAt <= Date.now()) {
+        decryptCache.delete(key);
+        return null;
+    }
+    return cached.value;
+}
+
+function setCachedDecrypt(path: string, payload: any, value: string): void {
+    const ttl = cacheTtlForPath(path);
+    if (ttl <= 0) return;
+    decryptCache.set(cacheKeyFor(path, payload), {
+        expiresAt: Date.now() + ttl,
+        value,
+    });
+}
+
 function logSlowFetch(rawPath: string, status: number | null, timings: Record<string, number>): void {
     if (timings.total < 2_000) return;
     const path = stripApi(rawPath).slice(0, 160);
@@ -606,6 +661,112 @@ async function readRequestBody(req: any, maxBytes = 5 * 1024 * 1024): Promise<st
     return body;
 }
 
+interface DecryptJob {
+    path: string;
+    payload: any;
+    status: number;
+    statusText: string;
+    headers: Record<string, string>;
+    configUrl: string;
+}
+
+type PendingDecrypt = {
+    resolve: (value: any) => void;
+    reject: (reason?: any) => void;
+};
+
+let decryptWorker: Worker | null = null;
+let decryptWorkerReady = false;
+let nextDecryptId = 1;
+const pendingDecrypts = new Map<number, PendingDecrypt>();
+
+function rejectPendingDecrypts(error: Error): void {
+    for (const pending of pendingDecrypts.values()) {
+        pending.reject(error);
+    }
+    pendingDecrypts.clear();
+}
+
+function ensureDecryptWorker(): Worker {
+    if (decryptWorker) return decryptWorker;
+
+    const env = { ...process.env, RELAY_WORKER: "decrypt" };
+    const worker = new Worker(CURRENT_FILE, { env });
+    decryptWorker = worker;
+    decryptWorkerReady = false;
+
+    worker.on("message", (msg: any) => {
+        if (msg?.type === "ready") {
+            decryptWorkerReady = true;
+            log(`decrypt worker ready — bundleId ${msg.bundleId ?? "?"}`);
+            return;
+        }
+        if (msg?.type !== "result" || typeof msg.id !== "number") return;
+        const pending = pendingDecrypts.get(msg.id);
+        if (!pending) return;
+        pendingDecrypts.delete(msg.id);
+        if (msg.ok) pending.resolve(msg.data);
+        else pending.reject(new Error(msg.error ?? "decrypt worker failed"));
+    });
+    worker.on("error", (e) => {
+        log("decrypt worker error:", e?.message ?? e);
+        if (decryptWorker === worker) {
+            decryptWorker = null;
+            decryptWorkerReady = false;
+        }
+        rejectPendingDecrypts(e instanceof Error ? e : new Error(String(e)));
+    });
+    worker.on("exit", (code) => {
+        log("decrypt worker exit", code);
+        if (decryptWorker === worker) {
+            decryptWorker = null;
+            decryptWorkerReady = false;
+        }
+        rejectPendingDecrypts(new Error(`decrypt worker exited ${code}`));
+    });
+    return worker;
+}
+
+function decryptInWorker(job: DecryptJob): Promise<any> {
+    const worker = ensureDecryptWorker();
+    const id = nextDecryptId++;
+    return new Promise((resolve, reject) => {
+        pendingDecrypts.set(id, { resolve, reject });
+        worker.postMessage({ type: "decrypt", id, job });
+    });
+}
+
+function startDecryptWorker(): void {
+    if (!parentPort) throw new Error("decrypt worker started without parentPort");
+    const ready = bootstrap()
+        .then((s) => {
+            parentPort!.postMessage({ type: "ready", bundleId: s.bundleId });
+        })
+        .catch((e: any) => {
+            parentPort!.postMessage({ type: "ready", error: e?.message ?? String(e) });
+            throw e;
+        });
+
+    parentPort.on("message", async (msg: any) => {
+        if (msg?.type !== "decrypt" || typeof msg.id !== "number") return;
+        try {
+            await ready;
+            const job = msg.job as DecryptJob;
+            const data = await decryptParsed(
+                job.path,
+                job.payload,
+                job.status,
+                job.statusText,
+                job.headers,
+                job.configUrl,
+            );
+            parentPort!.postMessage({ type: "result", id: msg.id, ok: true, data });
+        } catch (e: any) {
+            parentPort!.postMessage({ type: "result", id: msg.id, ok: false, error: e?.message ?? String(e) });
+        }
+    });
+}
+
 // ----- HTTP server ----------------------------------------------------------
 const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
@@ -622,6 +783,7 @@ const server = createServer(async (req, res) => {
                 signer: state?.signerRef ?? null,
                 installer: state?.installerRef ?? null,
                 hasResInterceptor: !!state?.resIntercept,
+                decryptWorkerReady,
             }));
             return;
         }
@@ -639,16 +801,11 @@ const server = createServer(async (req, res) => {
             return;
         }
         if (url.pathname === "/fetch") {
-            const path = url.searchParams.get("path");
-            if (!path) { res.statusCode = 400; res.end(JSON.stringify({ ok: false, error: "missing ?path" })); return; }
-            try {
-                const result = await fetchAndDecrypt(path);
-                stats.fetch.byStatus.set(result.status, (stats.fetch.byStatus.get(result.status) ?? 0) + 1);
-                res.end(JSON.stringify({ ok: true, ...result, bundleId: state!.bundleId }));
-            } catch (e: any) {
-                stats.fetch.error++;
-                throw e;
-            }
+            res.statusCode = 410;
+            res.end(JSON.stringify({
+                ok: false,
+                error: "deprecated endpoint; update the extension to use /sign + /decrypt",
+            }));
             return;
         }
         if (url.pathname === "/decrypt") {
@@ -672,15 +829,24 @@ const server = createServer(async (req, res) => {
                     res.end(JSON.stringify({ ok: false, error: "missing path" }));
                     return;
                 }
+                const cached = getCachedDecrypt(path, payload);
+                if (cached) {
+                    stats.decrypt.cacheHit++;
+                    res.end(cached);
+                    return;
+                }
                 const configUrl = await signedUrl(path);
-                const data = await decryptParsed(path, payload, status, statusText, headers, configUrl);
+                const data = await decryptInWorker({ path, payload, status, statusText, headers, configUrl });
                 const timings = { decrypt: Date.now() - t0 };
                 if (timings.decrypt > 2_000) {
                     log(`slow /decrypt decrypt=${timings.decrypt}ms path=${stripApi(path).slice(0, 160)}`);
                 }
-                res.end(JSON.stringify({ ok: true, data, bundleId: state!.bundleId, timings }));
+                const responseBody = JSON.stringify({ ok: true, data, bundleId: state!.bundleId, timings });
+                setCachedDecrypt(path, payload, responseBody);
+                stats.decrypt.ok++;
+                res.end(responseBody);
             } catch (e: any) {
-                stats.fetch.error++;
+                stats.decrypt.error++;
                 throw e;
             }
             return;
@@ -707,11 +873,16 @@ const server = createServer(async (req, res) => {
     }
 });
 
-server.listen(PORT, async () => {
-    log(`listening on http://0.0.0.0:${PORT}`);
-    try { await bootstrap(); }
-    catch (e: any) { log("bootstrap failed:", e?.message ?? e); }
-    // Use the real (pre-stub) interval so the bundle's setInterval override
-    // doesn't swallow our stats dumps.
-    realSetInterval(dumpStats, STATS_DUMP_MS);
-});
+if (IS_DECRYPT_WORKER) {
+    startDecryptWorker();
+} else {
+    server.listen(PORT, async () => {
+        log(`listening on http://0.0.0.0:${PORT}`);
+        try { await bootstrap(); }
+        catch (e: any) { log("bootstrap failed:", e?.message ?? e); }
+        ensureDecryptWorker();
+        // Use the real (pre-stub) interval so the bundle's setInterval override
+        // doesn't swallow our stats dumps.
+        realSetInterval(dumpStats, STATS_DUMP_MS);
+    });
+}
