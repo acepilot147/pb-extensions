@@ -2,6 +2,7 @@ temp_build
 bundles
 lib
 tmp
+experiment/
 
 #Private
 stuff/
