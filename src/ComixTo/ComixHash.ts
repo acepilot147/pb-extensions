@@ -12,14 +12,14 @@
  * a 351 KB VM-obfuscated build; the live "dev" build that's been
  * stable since is plain JS again (~28 KB).
  *
- * To recover the new keys we ran the live `secure-*.js` headlessly in Node
- * (`experiment/relay/Server.ts`). One catch: the bundle has an anti-tamper
+ * To recover the current signer/decrypt path we run the live `secure-*.js`
+ * headlessly in Node (`experiment/ExtractComixRuntime.ts`). One catch: the bundle has an anti-tamper
  * check `ce()` that requires `document.querySelector.toString()` to match a
  * native-function regex; if it fails, every mut-key-loading function silently
  * corrupts its bytes and produces a useless token. Defeated by overriding
  * `querySelector.toString` to return `"function querySelector() { [native code] }"`.
- * With that, the relay produced byte-exact browser tokens, which let us read
- * out the 15 base64 constants below from the bundle source.
+ * With that, the extractor produced byte-exact browser tokens and encrypted
+ * response fixtures.
  *
  * Cross-checked against the Tachiyomi
  * Kotlin port — independent reverse-engineering arrived at the identical
@@ -28,23 +28,17 @@
  *
  * --- Refresh procedure when comix.to rotates ------------------------------
  *
- *   1. `npx tsx --env-file=.env experiment/relay/Server.ts`  (relay scrapes
- *      the live homepage, fetches the live secure-*.js, imports it under
- *      a DOM stub, exposes /sign).
- *   2. Pretty-print the captured bundle (path printed in relay logs).
- *   3. Find `Si = { ..., I: ki[2], ... }` then `ki[2]` — its 10-stage chain
- *      gives you the 5 mut-rounds + 5 RC4 keys in order.
- *   4. Update KEYS[] below (5 RC4 / 5 mutKey / 5 prefKey).
- *   5. `npx tsx --env-file=.env experiment/ValidateComixHash.ts` — must pass
- *      both static fixtures and live cross-check vs the relay.
- *
- * TODO: when comix.to next rotates and breaks production tokens, plumb a
- *   relay fallback into `signUrl`: detect Invalid-token 403 once at runtime,
- *   then route subsequent signing through a deployed relay (`/sign?path=...`)
- *   until the next extension update lands. See TODO.md.
+ *   1. `npx tsx experiment/ExtractComixRuntime.ts`
+ *   2. `npx tsx experiment/BuildComixLiveRuntime.ts`
+ *   3. `npx tsx experiment/ValidateLocalComixRuntime.ts`
+ *   4. `npm run bundle`
  */
 
 // Pure-JS base64 helpers — neither Buffer, atob, nor btoa exist in Paperback's JSC.
+import { RequestManager, Response } from "@paperback/types";
+import { liveDecryptComixPayload, liveGenerateHash, liveGetRuntimeTiming } from "./ComixLiveRuntime";
+import { fastDecryptComixPayload } from "./ComixFastDecrypt";
+
 const B64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 function b64Decode(s: string): number[] {
@@ -235,22 +229,15 @@ function round5(d: number[]): number[] { return rc4(getKeyBytes(12), mutate(d, g
  *                preprocessing in `Pi(url)`).
  */
 export function generateHash(rawPath: string): string {
-    const path = rawPath
-        .replace(/^https?:\/\/[^/]+/, "")
-        .split("?")[0]!
-        .replace(/^\/api\/v1/, "");
+    return liveGenerateHash(rawPath);
+}
 
-    const encoded = encodeURIComponent(path);
-    let bytes: number[] = new Array(encoded.length);
-    for (let i = 0; i < encoded.length; i++) bytes[i] = encoded.charCodeAt(i) & 0xFF;
-
-    bytes = round1(bytes);
-    bytes = round2(bytes);
-    bytes = round3(bytes);
-    bytes = round4(bytes);
-    bytes = round5(bytes);
-
-    return b64UrlEncode(bytes);
+export async function decryptComixPayload(rawPath: string, payload: any, headers: Record<string, string> = {}): Promise<any> {
+    try {
+        return fastDecryptComixPayload(rawPath, payload, headers);
+    } catch {
+        return await liveDecryptComixPayload(rawPath, payload, headers);
+    }
 }
 
 // Paths the live bundle actually signs (zi[] in the bundle source). Anything
@@ -272,4 +259,132 @@ export function signUrl(url: string): string {
     const token = generateHash(path);
     const sep = url.includes("?") ? "&" : "?";
     return `${url}${sep}_=${token}`;
+}
+
+const TIMING_LOG_URL = "http://192.168.0.215:9090/log";
+let timingSeq = 0;
+let runtimeTimingLogged = false;
+let timingRequestManager: RequestManager | null = null;
+
+function apiPathFromUrl(fullUrl: string): string {
+    return fullUrl
+        .replace(/^https?:\/\/[^/]+/, "")
+        .replace(/^\/api\/v1/, "");
+}
+
+function headerValue(headers: Record<string, any>, name: string): string {
+    return String(headers[name] ?? headers[name.toLowerCase()] ?? headers[name.toUpperCase()] ?? "");
+}
+
+function getTimingRequestManager(): RequestManager {
+    if (timingRequestManager === null) {
+        timingRequestManager = App.createRequestManager({
+            requestsPerSecond: 20,
+            requestTimeout: 3000,
+        });
+    }
+    return timingRequestManager;
+}
+
+function timingLog(message: string): void {
+    if (!TIMING_LOG_URL) return;
+    try {
+        const request = App.createRequest({
+            url: TIMING_LOG_URL,
+            method: "POST",
+            headers: { "Content-Type": "text/plain" },
+            data: message,
+        });
+        void getTimingRequestManager().schedule(request, 1).catch(() => {});
+    } catch {
+        // Timing must never break source behavior.
+    }
+}
+
+function logRuntimeTimingOnce(): void {
+    if (runtimeTimingLogged) return;
+    runtimeTimingLogged = true;
+    const timing = liveGetRuntimeTiming();
+    timingLog(
+        `[runtime:init] browserStub=${timing.browserStubMs}ms secureEval=${timing.secureEvalMs}ms restoreTimers=${timing.restoreTimersMs}ms total=${timing.totalInitMs}ms installer=${timing.installerMs ?? "pending"}ms`,
+    );
+}
+
+function checkSignedResponseError(response: Response): void {
+    const data = response.data ?? "";
+    const preview = data.substring(0, 200).replace(/\s+/g, " ");
+    const headers = response.headers ?? {};
+    const ct = (headers["Content-Type"] ?? headers["content-type"] ?? "?") as string;
+    const cfRay = (headers["Cf-Ray"] ?? headers["cf-ray"] ?? "?") as string;
+    const reqUrl = (response as any).request?.url ?? "?";
+    const ctx = `status=${response.status} ct=${ct} cf-ray=${cfRay} url=${reqUrl} preview="${preview}"`;
+
+    if (response.status === 403 || response.status === 503) {
+        throw new Error(`Cloudflare Bypass Required [${ctx}]`);
+    }
+    if (response.status < 200 || response.status >= 300) {
+        throw new Error(`HTTP ${response.status}: Unexpected response from server [${ctx}]`);
+    }
+    if (data.trimStart().startsWith("<")) {
+        throw new Error(`Cloudflare Bypass Required [${ctx}]`);
+    }
+}
+
+export async function fetchSigned<T>(
+    requestManager: RequestManager,
+    fullUrl: string,
+): Promise<T> {
+    const id = ++timingSeq;
+    logRuntimeTimingOnce();
+
+    const totalStart = Date.now();
+    const apiPath = apiPathFromUrl(fullUrl);
+
+    const signStart = Date.now();
+    const signedUrl = signUrl(fullUrl);
+    const signMs = Date.now() - signStart;
+
+    const request = App.createRequest({
+        url: signedUrl,
+        method: "GET",
+        headers: {
+            "Accept": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+            "Referer": "https://comix.to/",
+        },
+    });
+
+    const fetchStart = Date.now();
+    const response = await requestManager.schedule(request, 1);
+    const fetchMs = Date.now() - fetchStart;
+
+    checkSignedResponseError(response);
+
+    const parseStart = Date.now();
+    const json = JSON.parse(response.data ?? "{}");
+    const parseMs = Date.now() - parseStart;
+
+    const headers = response.headers ?? {};
+    const xEnc = headerValue(headers, "x-enc") || "0";
+    const bytes = (response.data ?? "").length;
+
+    if (json && typeof json === "object" && "e" in json) {
+        const decryptStart = Date.now();
+        const decrypted = await decryptComixPayload(apiPath, json, headers) as T;
+        const decryptMs = Date.now() - decryptStart;
+        const runtime = liveGetRuntimeTiming();
+        timingLog(
+            `[fetch:${id}] path=${apiPath} status=${response.status} bytes=${bytes} xEnc=${xEnc} sign=${signMs}ms fetch=${fetchMs}ms parse=${parseMs}ms decrypt=${decryptMs}ms total=${Date.now() - totalStart}ms installer=${runtime.installerMs ?? "pending"}ms`,
+        );
+        return decrypted;
+    }
+
+    if (json.status !== "ok") {
+        throw new Error(`Comix API ${json.status}: ${json.message ?? "no message"}`);
+    }
+
+    timingLog(
+        `[fetch:${id}] path=${apiPath} status=${response.status} bytes=${bytes} xEnc=${xEnc} sign=${signMs}ms fetch=${fetchMs}ms parse=${parseMs}ms decrypt=0ms total=${Date.now() - totalStart}ms`,
+    );
+    return json.result as T;
 }

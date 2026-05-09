@@ -22,8 +22,7 @@ import {
 } from "@paperback/types";
 
 import { Parser } from "./Parser";
-import { signUrl } from "./ComixHash";
-import { fetchSigned } from "./RelayClient";
+import { fetchSigned, signUrl } from "./ComixHash";
 import {
   API_BASE,
   DOMAIN,
@@ -57,7 +56,7 @@ import {
 } from "./Settings";
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.6.2",
+  version: "1.7.0",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
