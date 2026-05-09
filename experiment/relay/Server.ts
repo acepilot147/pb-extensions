@@ -9,6 +9,10 @@ export {};
  *   GET /fetch?path=/manga/xxx/chapters
  *     → { ok: true, status: 200, data: <decrypted plaintext JSON> }
  *
+ *   POST /decrypt
+ *     body { path, payload } where payload is the encrypted comix.to JSON
+ *     → { ok: true, data: <decrypted plaintext JSON> }
+ *
  *   GET /health
  *     → { ok: true, bundleId, secureUrl, cfgPrefix, hasSigner, hasResInterceptor }
  *
@@ -506,6 +510,25 @@ function logSlowFetch(rawPath: string, status: number | null, timings: Record<st
     log(`slow /fetch status=${status ?? "?"} ${parts} path=${path}`);
 }
 
+async function decryptParsed(rawPath: string, parsed: any, status = 200, statusText = "OK", headers: Record<string, string> = {}, configUrl?: string): Promise<any> {
+    const s = state!;
+    if (!s.resIntercept) throw new Error("relay: response interceptor not captured - cannot decrypt");
+
+    if (parsed && typeof parsed === "object" && "e" in parsed) {
+        const fakeResp = {
+            data: parsed,
+            status,
+            statusText,
+            headers,
+            config: { url: configUrl ?? `${API_BASE}${stripApi(rawPath)}`, method: "get", baseURL: API_BASE },
+            request: {},
+        };
+        const decoded: any = await s.resIntercept(fakeResp);
+        return decoded?.data ?? decoded;
+    }
+    return parsed;
+}
+
 async function fetchAndDecrypt(rawPath: string): Promise<FetchResult> {
     const t0 = Date.now();
     if (!state) await bootstrap();
@@ -551,15 +574,7 @@ async function fetchAndDecrypt(rawPath: string): Promise<FetchResult> {
     const tParsed = Date.now();
 
     if (parsed && typeof parsed === "object" && "e" in parsed) {
-        const fakeResp = {
-            data: parsed,
-            status: upstream.status,
-            statusText: upstream.statusText,
-            headers: Object.fromEntries(upstream.headers.entries()),
-            config: { url, method: "get", baseURL: API_BASE },
-            request: {},
-        };
-        const decoded: any = await s.resIntercept(fakeResp);
+        const decoded = await decryptParsed(rawPath, parsed, upstream.status, upstream.statusText, Object.fromEntries(upstream.headers.entries()), url);
         const timings = {
             sign: tSigned - t0,
             upstreamHeaders: tHeaders - tSigned,
@@ -580,6 +595,15 @@ async function fetchAndDecrypt(rawPath: string): Promise<FetchResult> {
     };
     logSlowFetch(rawPath, upstream.status, timings);
     return { status: upstream.status, data: parsed, timings };
+}
+
+async function readRequestBody(req: any, maxBytes = 5 * 1024 * 1024): Promise<string> {
+    let body = "";
+    for await (const chunk of req) {
+        body += Buffer.isBuffer(chunk) ? chunk.toString("utf8") : String(chunk);
+        if (body.length > maxBytes) throw new Error("request body too large");
+    }
+    return body;
 }
 
 // ----- HTTP server ----------------------------------------------------------
@@ -621,6 +645,40 @@ const server = createServer(async (req, res) => {
                 const result = await fetchAndDecrypt(path);
                 stats.fetch.byStatus.set(result.status, (stats.fetch.byStatus.get(result.status) ?? 0) + 1);
                 res.end(JSON.stringify({ ok: true, ...result, bundleId: state!.bundleId }));
+            } catch (e: any) {
+                stats.fetch.error++;
+                throw e;
+            }
+            return;
+        }
+        if (url.pathname === "/decrypt") {
+            if (req.method !== "POST") {
+                res.statusCode = 405;
+                res.end(JSON.stringify({ ok: false, error: "method not allowed" }));
+                return;
+            }
+            const t0 = Date.now();
+            try {
+                if (!state) await bootstrap();
+                const body = await readRequestBody(req);
+                const wrapped = JSON.parse(body || "{}");
+                const path = typeof wrapped.path === "string" ? wrapped.path : "";
+                const payload = "payload" in wrapped ? wrapped.payload : wrapped;
+                const status = typeof wrapped.status === "number" ? wrapped.status : 200;
+                const statusText = typeof wrapped.statusText === "string" ? wrapped.statusText : "OK";
+                const headers = wrapped.headers && typeof wrapped.headers === "object" ? wrapped.headers : {};
+                if (!path) {
+                    res.statusCode = 400;
+                    res.end(JSON.stringify({ ok: false, error: "missing path" }));
+                    return;
+                }
+                const configUrl = await signedUrl(path);
+                const data = await decryptParsed(path, payload, status, statusText, headers, configUrl);
+                const timings = { decrypt: Date.now() - t0 };
+                if (timings.decrypt > 2_000) {
+                    log(`slow /decrypt decrypt=${timings.decrypt}ms path=${stripApi(path).slice(0, 160)}`);
+                }
+                res.end(JSON.stringify({ ok: true, data, bundleId: state!.bundleId, timings }));
             } catch (e: any) {
                 stats.fetch.error++;
                 throw e;

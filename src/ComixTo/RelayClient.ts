@@ -9,8 +9,8 @@ import { signUrl } from "./ComixHash";
  * static signer is current this can be left as the empty string and the
  * extension uses it directly. While it's broken (e.g. post-2026-05-09 VM
  * obfuscation + body-encryption rotation), point this at a deployed instance
- * of `experiment/relay/Server.ts` and the three signed endpoints route
- * through `<RELAY_URL>/fetch`.
+ * of `experiment/relay/Server.ts`; the extension asks the relay to sign,
+ * fetches Comix directly, then sends encrypted bodies through `/decrypt`.
  *
  * Operational deployment targets:
  *   - Local testing: `http://<lan-ip>:9091` (only works on the same Wi-Fi)
@@ -36,28 +36,74 @@ export async function fetchSigned<T>(
             .replace(/^https?:\/\/[^/]+/, "")
             .replace(/^\/api\/v1/, "");
 
-        const relayFetchUrl = `${RELAY}/fetch?path=${encodeURIComponent(apiPath)}`;
-        const request = App.createRequest({ url: relayFetchUrl, method: "GET" });
-        const response = await requestManager.schedule(request, 1);
+        const signRequest = App.createRequest({
+            url: `${RELAY}/sign?path=${encodeURIComponent(apiPath)}`,
+            method: "GET",
+        });
+        const signResponse = await requestManager.schedule(signRequest, 1);
 
-        if (response.status < 200 || response.status >= 300) {
-            const preview = (response.data ?? "").slice(0, 200).replace(/\s+/g, " ");
-            throw new Error(`Comix relay unreachable (HTTP ${response.status} from ${RELAY}${preview ? `: ${preview}` : ""})`);
+        if (signResponse.status < 200 || signResponse.status >= 300) {
+            const preview = (signResponse.data ?? "").slice(0, 200).replace(/\s+/g, " ");
+            throw new Error(`Comix relay unreachable (HTTP ${signResponse.status} from ${RELAY}${preview ? `: ${preview}` : ""})`);
         }
 
-        let wrapped: any;
-        try { wrapped = JSON.parse(response.data ?? "{}"); }
-        catch { throw new Error(`Comix relay returned non-JSON: ${(response.data ?? "").slice(0, 200)}`); }
+        let signedWrapped: any;
+        try { signedWrapped = JSON.parse(signResponse.data ?? "{}"); }
+        catch { throw new Error(`Comix relay returned non-JSON: ${(signResponse.data ?? "").slice(0, 200)}`); }
 
-        if (!wrapped.ok) {
-            throw new Error(`Comix relay error: ${wrapped.error ?? "unknown"}`);
+        if (!signedWrapped.ok || typeof signedWrapped.signedUrl !== "string") {
+            throw new Error(`Comix relay error: ${signedWrapped.error ?? "missing signedUrl"}`);
         }
-        const upstreamStatus = wrapped.status as number;
-        if (upstreamStatus < 200 || upstreamStatus >= 300) {
-            const rawPreview = String(wrapped.raw ?? "").slice(0, 200);
-            throw new Error(`Comix API HTTP ${upstreamStatus} via relay${rawPreview ? `: ${rawPreview}` : ""}`);
+
+        const apiRequest = App.createRequest({
+            url: signedWrapped.signedUrl,
+            method: "GET",
+            headers: {
+                "Accept": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+                "Referer": "https://comix.to/",
+            },
+        });
+        const apiResponse = await requestManager.schedule(apiRequest, 1);
+        checkStaticResponseError(apiResponse);
+
+        let apiJson: any;
+        try { apiJson = JSON.parse(apiResponse.data ?? "{}"); }
+        catch { throw new Error(`Comix API returned non-JSON: ${(apiResponse.data ?? "").slice(0, 200)}`); }
+
+        if (!(apiJson && typeof apiJson === "object" && "e" in apiJson)) {
+            if (apiJson.status !== "ok") {
+                throw new Error(`Comix API ${apiJson.status}: ${apiJson.message ?? "no message"}`);
+            }
+            return apiJson.result as T;
         }
-        return wrapped.data as T;
+
+        const decryptRequest = App.createRequest({
+            url: `${RELAY}/decrypt`,
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            data: JSON.stringify({
+                path: apiPath,
+                status: apiResponse.status,
+                headers: apiResponse.headers ?? {},
+                payload: apiJson,
+            }),
+        });
+        const decryptResponse = await requestManager.schedule(decryptRequest, 1);
+
+        if (decryptResponse.status < 200 || decryptResponse.status >= 300) {
+            const preview = (decryptResponse.data ?? "").slice(0, 200).replace(/\s+/g, " ");
+            throw new Error(`Comix relay decrypt failed (HTTP ${decryptResponse.status} from ${RELAY}${preview ? `: ${preview}` : ""})`);
+        }
+
+        let decryptedWrapped: any;
+        try { decryptedWrapped = JSON.parse(decryptResponse.data ?? "{}"); }
+        catch { throw new Error(`Comix relay decrypt returned non-JSON: ${(decryptResponse.data ?? "").slice(0, 200)}`); }
+
+        if (!decryptedWrapped.ok) {
+            throw new Error(`Comix relay decrypt error: ${decryptedWrapped.error ?? "unknown"}`);
+        }
+        return decryptedWrapped.data as T;
     }
 
     // --- static fallback ---------------------------------------------------
