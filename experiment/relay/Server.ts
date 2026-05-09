@@ -692,7 +692,9 @@ function ensureDecryptWorker(): Worker {
 
     const env = { ...process.env, RELAY_WORKER: "decrypt" };
     log("starting decrypt worker with execArgv:", process.execArgv.join(" "));
-    const worker = new Worker(CURRENT_FILE, {
+    const workerEntry = `import(${JSON.stringify(pathToFileURL(CURRENT_FILE).href)});`;
+    const worker = new Worker(workerEntry, {
+        eval: true,
         env,
         execArgv: process.execArgv,
     });
