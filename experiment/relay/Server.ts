@@ -691,7 +691,11 @@ function ensureDecryptWorker(): Worker {
     if (decryptWorker) return decryptWorker;
 
     const env = { ...process.env, RELAY_WORKER: "decrypt" };
-    const worker = new Worker(CURRENT_FILE, { env });
+    log("starting decrypt worker with execArgv:", process.execArgv.join(" "));
+    const worker = new Worker(CURRENT_FILE, {
+        env,
+        execArgv: process.execArgv,
+    });
     decryptWorker = worker;
     decryptWorkerReady = false;
 
