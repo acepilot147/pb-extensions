@@ -56,7 +56,7 @@ import {
 } from "./Settings";
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.5.3",
+  version: "1.5.4",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -106,17 +106,6 @@ export class ComixTo
     },
   });
 
-  // -- Remote logging (temporary; remove after diagnosing the new "Cloudflare" false positive) --
-  private static readonly LOG_SERVER = "http://192.168.0.215:9090/log";
-  private remoteLog(message: string): void {
-    const req = App.createRequest({
-      url: ComixTo.LOG_SERVER,
-      method: "POST",
-      data: message,
-    });
-    this.requestManager.schedule(req, 1).then(() => {}, () => {});
-  }
-
   // -- Capabilities --
 
   async supportsTagExclusion(): Promise<boolean> {
@@ -138,23 +127,36 @@ export class ComixTo
     }));
   }
 
-  private async getTagFilterState(): Promise<{ filteredTermIds: Set<number>; tagWhitelistMode: boolean; typeFilter: Set<string>; tagAndMode: boolean }> {
+  // Build the URL fragment that applies the user's saved tag/type filter to a /manga or
+  // /manga/top request. List endpoints don't return tag arrays, so client-side filtering
+  // isn't possible — all filtering is delegated to the API via genres_in[] / genres_ex[].
+  // genres_mode only affects whitelist (genres_in[]); blacklist is always OR.
+  // For types[], the API only supports inclusion, so blacklist mode is implemented by
+  // including every CONTENT_TYPE not in the user's hide list.
+  private async buildFilterParams(): Promise<string> {
     const enabled = await getTagFilterEnabled(this.stateManager);
-    if (!enabled) {
-      return { filteredTermIds: new Set(), tagWhitelistMode: false, tagAndMode: false, typeFilter: new Set() };
-    }
+    if (!enabled) return "";
+
     const [blacklist, whitelistMode, andMode, typeFilterList] = await Promise.all([
       getTagBlacklist(this.stateManager),
       getTagWhitelistMode(this.stateManager),
       getTagAndMode(this.stateManager),
       getTypeFilter(this.stateManager),
     ]);
-    return {
-      filteredTermIds: new Set(blacklist.map(id => parseInt(id, 10))),
-      tagWhitelistMode: whitelistMode,
-      tagAndMode: andMode,
-      typeFilter: new Set(typeFilterList),
-    };
+
+    const parts: string[] = [];
+    if (blacklist.length > 0) {
+      const param = whitelistMode ? "genres_in[]" : "genres_ex[]";
+      for (const id of blacklist) parts.push(`${param}=${id}`);
+      if (whitelistMode) parts.push(`genres_mode=${andMode ? "and" : "or"}`);
+    }
+    if (typeFilterList.length > 0) {
+      const include = whitelistMode
+        ? typeFilterList
+        : CONTENT_TYPES.map(t => t.id).filter(t => !typeFilterList.includes(t));
+      for (const t of include) parts.push(`types[]=${t}`);
+    }
+    return parts.length ? "&" + parts.join("&") : "";
   }
 
   getMangaShareUrl(mangaId: string): string {
@@ -237,6 +239,7 @@ export class ComixTo
     const limitArray = await getTrendingLimit(this.stateManager);
     const days = limitArray[0] ?? "30";
     const maxRating = await getContentRatingMax(this.stateManager);
+    const filterParams = await this.buildFilterParams();
 
     const sections = [
       App.createHomeSection({
@@ -276,7 +279,7 @@ export class ComixTo
     // 0: "Most Recent Popular" — /manga/top with inclusive content_rating filter
     promises.push(
       this.fetchHomeData(
-        `${API_BASE}/manga/top?type=trending&days=${days}&limit=15&content_rating=${maxRating}`,
+        `${API_BASE}/manga/top?type=trending&days=${days}&limit=15&content_rating=${maxRating}${filterParams}`,
         sections[0],
         sectionCallback,
       ),
@@ -285,7 +288,7 @@ export class ComixTo
     // 1: "Latest Updates"
     promises.push(
       this.fetchHomeData(
-        `${API_BASE}/manga?order[chapter_updated_at]=desc&limit=15&includes[]=author`,
+        `${API_BASE}/manga?order[chapter_updated_at]=desc&limit=15&includes[]=author${filterParams}`,
         sections[1],
         sectionCallback,
       ),
@@ -294,7 +297,7 @@ export class ComixTo
     // 2: "Recently Added"
     promises.push(
       this.fetchHomeData(
-        `${API_BASE}/manga?order[created_at]=desc&limit=15&includes[]=author`,
+        `${API_BASE}/manga?order[created_at]=desc&limit=15&includes[]=author${filterParams}`,
         sections[2],
         sectionCallback,
       ),
@@ -303,7 +306,7 @@ export class ComixTo
     // 3: "Most Follows · New Comics" — /manga/top with inclusive content_rating filter
     promises.push(
       this.fetchHomeData(
-        `${API_BASE}/manga/top?type=follows&days=${days}&limit=15&content_rating=${maxRating}`,
+        `${API_BASE}/manga/top?type=follows&days=${days}&limit=15&content_rating=${maxRating}${filterParams}`,
         sections[3],
         sectionCallback,
       ),
@@ -312,7 +315,7 @@ export class ComixTo
     // 4: "Most Followed"
     promises.push(
       this.fetchHomeData(
-        `${API_BASE}/manga?order[follows_total]=desc&limit=15&includes[]=author`,
+        `${API_BASE}/manga?order[follows_total]=desc&limit=15&includes[]=author${filterParams}`,
         sections[4],
         sectionCallback,
       ),
@@ -330,16 +333,12 @@ export class ComixTo
     const response = await this.requestManager.schedule(request, 1);
     this.checkResponseError(response);
     const json = JSON.parse(response.data ?? "{}");
-
-    const [maxRating, { filteredTermIds, tagWhitelistMode, tagAndMode, typeFilter }] = await Promise.all([
-      getContentRatingMax(this.stateManager),
-      this.getTagFilterState(),
-    ]);
+    const maxRating = await getContentRatingMax(this.stateManager);
 
     // /manga/top returns result as a flat array; /manga returns { items, meta }.
     const items = Array.isArray(json.result) ? json.result : json.result?.items;
     if (items) {
-      section.items = this.parser.parseMangaList(items, maxRating, filteredTermIds, tagWhitelistMode, typeFilter, tagAndMode);
+      section.items = this.parser.parseMangaList(items, maxRating);
     }
     callback(section);
   }
@@ -352,27 +351,28 @@ export class ComixTo
     const limitArray = await getTrendingLimit(this.stateManager);
     const days = limitArray[0] ?? "30";
     const maxRating = await getContentRatingMax(this.stateManager);
+    const filterParams = await this.buildFilterParams();
     let url = "";
     let isTopEndpoint = false;
 
     switch (homepageSectionId) {
       case "trending":
         // /manga/top is a fixed top-N list with no pagination; fetch limit=50 once.
-        url = `${API_BASE}/manga/top?type=trending&days=${days}&limit=50&content_rating=${maxRating}`;
+        url = `${API_BASE}/manga/top?type=trending&days=${days}&limit=50&content_rating=${maxRating}${filterParams}`;
         isTopEndpoint = true;
         break;
       case "follows_new":
-        url = `${API_BASE}/manga/top?type=follows&days=${days}&limit=50&content_rating=${maxRating}`;
+        url = `${API_BASE}/manga/top?type=follows&days=${days}&limit=50&content_rating=${maxRating}${filterParams}`;
         isTopEndpoint = true;
         break;
       case "follows":
-        url = `${API_BASE}/manga?order[follows_total]=desc&limit=20&page=${page}&includes[]=author`;
+        url = `${API_BASE}/manga?order[follows_total]=desc&limit=20&page=${page}&includes[]=author${filterParams}`;
         break;
       case "latest":
-        url = `${API_BASE}/manga?order[chapter_updated_at]=desc&limit=20&page=${page}&includes[]=author`;
+        url = `${API_BASE}/manga?order[chapter_updated_at]=desc&limit=20&page=${page}&includes[]=author${filterParams}`;
         break;
       case "new":
-        url = `${API_BASE}/manga?order[created_at]=desc&limit=20&page=${page}&includes[]=author`;
+        url = `${API_BASE}/manga?order[created_at]=desc&limit=20&page=${page}&includes[]=author${filterParams}`;
         break;
       default:
         return App.createPagedResults({ results: [], metadata: undefined });
@@ -383,10 +383,8 @@ export class ComixTo
     this.checkResponseError(response);
     const json = JSON.parse(response.data ?? "{}");
 
-    const { filteredTermIds, tagWhitelistMode, tagAndMode, typeFilter } = await this.getTagFilterState();
-
     const rawItems = Array.isArray(json.result) ? json.result : json.result?.items ?? [];
-    const items = this.parser.parseMangaList(rawItems, maxRating, filteredTermIds, tagWhitelistMode, typeFilter, tagAndMode);
+    const items = this.parser.parseMangaList(rawItems, maxRating);
 
     const nextPage = isTopEndpoint
       ? undefined  // top endpoint is a fixed list — no further pages
@@ -500,6 +498,7 @@ export class ComixTo
     }
 
     // --- Logic Mode (only relevant when filtering by tags) ---
+    // Default AND; the "logic-mode" hack tag in the excluded slot flips to OR.
     let genresMode = "and";
     if (query.excludedTags?.some((t) => t.id === "logic-mode")) {
       genresMode = "or";
@@ -512,45 +511,30 @@ export class ComixTo
       (t) => t.id !== "logic-mode",
     );
 
-    const genreIds: string[] = [];
-    const typeIds: string[] = [];
-    const statusIds: string[] = [];
-    const demographicIds: string[] = [];
+    // Tag categories (genre/tag/format/demographic) all share one ID space and go through
+    // genres_in[] / genres_ex[] on the API. types[] and statuses[] are separate.
+    const TAG_PREFIXES = ["genre-", "tag-", "format-", "demographic-"];
+    const stripPrefix = (id: string) => id.replace(/^(genre-|tag-|format-|demographic-)/, "");
+    const isTag = (id: string) => TAG_PREFIXES.some(p => id.startsWith(p));
 
-    for (const tag of allTags) {
-      if (tag.id.startsWith("genre-")) {
-        genreIds.push(tag.id.replace("genre-", ""));
-      } else if (tag.id.startsWith("tag-")) {
-        genreIds.push(tag.id.replace("tag-", ""));
-      } else if (tag.id.startsWith("format-")) {
-        genreIds.push(tag.id.replace("format-", ""));
-      } else if (tag.id.startsWith("demographic-")) {
-        demographicIds.push(tag.id.replace("demographic-", ""));
-      } else if (tag.id.startsWith("type-")) {
-        typeIds.push(tag.id.replace("type-", ""));
-      } else if (tag.id.startsWith("status-")) {
-        statusIds.push(tag.id.replace("status-", ""));
-      }
-    }
+    const includedTagIds = allTags.filter(t => isTag(t.id)).map(t => stripPrefix(t.id));
+    const excludedTagIds = excludedTags.filter(t => isTag(t.id)).map(t => stripPrefix(t.id));
+    const typeIds = allTags.filter(t => t.id.startsWith("type-")).map(t => t.id.replace("type-", ""));
+    const statusIds = allTags.filter(t => t.id.startsWith("status-")).map(t => t.id.replace("status-", ""));
 
-    for (const id of genreIds) url += `&genres[]=${id}`;
+    for (const id of includedTagIds) url += `&genres_in[]=${id}`;
+    for (const id of excludedTagIds) url += `&genres_ex[]=${id}`;
     for (const id of typeIds) url += `&types[]=${id}`;
     for (const id of statusIds) url += `&statuses[]=${id}`;
-    for (const id of demographicIds) url += `&demographics[]=${id}`;
 
-    if (excludedTags.length > 0) {
-      for (const tag of excludedTags) {
-        if (tag.id.startsWith("genre-") || tag.id.startsWith("tag-")) {
-          const cleanId = tag.id.replace(/^(genre-|tag-)/, "");
-          url += `&genres[]=-${cleanId}`;
-        }
-      }
-    }
-
-    // Only attach genres_mode when we actually sent any genre filter.
-    if (genreIds.length > 0 || excludedTags.some((t) => t.id.startsWith("genre-") || t.id.startsWith("tag-"))) {
+    // genres_mode applies only to genres_in[] (whitelist). Send it only when at least one
+    // include tag exists; the API silently ignores it for genres_ex[] anyway.
+    if (includedTagIds.length > 0) {
       url += `&genres_mode=${genresMode}`;
     }
+
+    // Apply the user's saved global tag/type filter on top of the search-specific filter.
+    url += await this.buildFilterParams();
 
     const request = App.createRequest({ url: signUrl(url), method: "GET" });
     const response = await this.requestManager.schedule(request, 1);
@@ -559,11 +543,8 @@ export class ComixTo
     const json = JSON.parse(
       response.data ?? "{}",
     ) as APIResponse<APIMangaResult>;
-    const [maxRating, { filteredTermIds, tagWhitelistMode, tagAndMode, typeFilter }] = await Promise.all([
-      getContentRatingMax(this.stateManager),
-      this.getTagFilterState(),
-    ]);
-    const items = this.parser.parseMangaList(json.result.items, maxRating, filteredTermIds, tagWhitelistMode, typeFilter, tagAndMode);
+    const maxRating = await getContentRatingMax(this.stateManager);
+    const items = this.parser.parseMangaList(json.result.items, maxRating);
 
     let nextPage = undefined;
     if (json.result.meta?.lastPage && json.result.meta.lastPage > page) {
@@ -591,25 +572,24 @@ export class ComixTo
 
   checkResponseError(response: Response): void {
     const data = response.data ?? "";
-    const preview = data.substring(0, 300).replace(/\s+/g, " ");
+    // Diagnostic context is folded into thrown errors so users can include it in bug reports.
+    const preview = data.substring(0, 200).replace(/\s+/g, " ");
     const headers = response.headers ?? {};
     const ct = (headers["Content-Type"] ?? headers["content-type"] ?? "?") as string;
     const server = (headers["Server"] ?? headers["server"] ?? "?") as string;
     const cfRay = (headers["Cf-Ray"] ?? headers["cf-ray"] ?? "?") as string;
     const reqUrl = (response as any).request?.url ?? "?";
+    const ctx = `status=${response.status} ct=${ct} server=${server} cf-ray=${cfRay} url=${reqUrl} preview="${preview}"`;
 
     if (response.status === 403 || response.status === 503) {
-      this.remoteLog(`[checkErr] BLOCKED status=${response.status} ct=${ct} server=${server} cf-ray=${cfRay} url=${reqUrl} preview="${preview}"`);
-      throw new Error("Cloudflare Bypass Required");
+      throw new Error(`Cloudflare Bypass Required [${ctx}]`);
     }
     if (response.status < 200 || response.status >= 300) {
-      this.remoteLog(`[checkErr] HTTP-FAIL status=${response.status} ct=${ct} url=${reqUrl} preview="${preview}"`);
-      throw new Error(`HTTP ${response.status}: Unexpected response from server`);
+      throw new Error(`HTTP ${response.status}: Unexpected response from server [${ctx}]`);
     }
     // Warn if server returned HTML instead of JSON (e.g. Cloudflare challenge slipped through)
     if (data.trimStart().startsWith("<")) {
-      this.remoteLog(`[checkErr] HTML-BODY status=${response.status} ct=${ct} server=${server} cf-ray=${cfRay} url=${reqUrl} preview="${preview}"`);
-      throw new Error("Cloudflare Bypass Required");
+      throw new Error(`Cloudflare Bypass Required [${ctx}]`);
     }
   }
 }

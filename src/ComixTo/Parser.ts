@@ -123,51 +123,14 @@ export class Parser {
     });
   }
 
-  parseMangaList(
-    items: APIMangaItem[],
-    maxRating: string,
-    filteredTermIds: Set<number> = new Set(),
-    tagWhitelistMode: boolean = false,
-    typeFilter: Set<string> = new Set(),
-    tagAndMode: boolean = false,
-  ): PartialSourceManga[] {
+  // Tag/type filtering is delegated to the API via genres_in[] / genres_ex[] / types[] —
+  // /manga and /manga/top list endpoints don't return per-item tag arrays, so the only
+  // client-side filter that's meaningful here is content rating.
+  parseMangaList(items: APIMangaItem[], maxRating: string): PartialSourceManga[] {
     const mangaList: PartialSourceManga[] = [];
 
     for (const item of items) {
-      if (!isRatingAllowed(item.contentRating, maxRating)) {
-        continue;
-      }
-
-      if (filteredTermIds.size > 0 || typeFilter.size > 0) {
-        // v1 list items expose tag arrays only on detail endpoints; flatten what we have on list items.
-        const itemTagIds = new Set<number>([
-          ...(item.genres ?? []).map((t) => t.id),
-          ...(item.demographics ?? []).map((t) => t.id),
-          ...(item.formats ?? []).map((t) => t.id),
-          ...(item.tags ?? []).map((t) => t.id),
-        ]);
-
-        const filteredIdsArr = Array.from(filteredTermIds);
-        let hasMatch: boolean;
-        if (tagAndMode) {
-          const tagsAllMatch =
-            filteredIdsArr.length === 0 ||
-            filteredIdsArr.every((id) => itemTagIds.has(id));
-          const typeMatches =
-            typeFilter.size === 0 || (item.type != null && typeFilter.has(item.type));
-          hasMatch = tagsAllMatch && typeMatches;
-        } else {
-          const hasTagMatch =
-            filteredIdsArr.length > 0 &&
-            filteredIdsArr.some((id) => itemTagIds.has(id));
-          const hasTypeMatch =
-            typeFilter.size > 0 && item.type != null && typeFilter.has(item.type);
-          hasMatch = hasTagMatch || hasTypeMatch;
-        }
-        if (tagWhitelistMode ? !hasMatch : hasMatch) {
-          continue;
-        }
-      }
+      if (!isRatingAllowed(item.contentRating, maxRating)) continue;
 
       mangaList.push(
         App.createPartialSourceManga({

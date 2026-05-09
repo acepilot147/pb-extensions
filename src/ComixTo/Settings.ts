@@ -384,7 +384,7 @@ export const tagFilterSettings = (stateManager: SourceStateManager, requestManag
                     App.createDUISection({
                         id: 'tag_filter_mode',
                         header: 'Tag Filter Settings',
-                        footer: 'Blacklist (default): hide titles that match any checked item. Whitelist: show only titles that match. AND Mode: require all checked tags to match instead of any.',
+                        footer: 'Blacklist (default): hide titles that match any checked item. Whitelist: show only titles that match. AND Mode: require all checked tags to match instead of any (whitelist mode only — ignored in blacklist mode).',
                         isHidden: false,
                         rows: async () => keepAlive([
                             App.createDUISwitch({
