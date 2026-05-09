@@ -492,12 +492,28 @@ async function signedUrl(rawPath: string): Promise<string> {
     return `${API_BASE}${justPath}${qs}${sep}_=${encodeURIComponent(token)}`;
 }
 
-async function fetchAndDecrypt(rawPath: string): Promise<{ status: number; data: any; raw?: string }> {
+interface FetchResult {
+    status: number;
+    data: any;
+    raw?: string;
+    timings?: Record<string, number>;
+}
+
+function logSlowFetch(rawPath: string, status: number | null, timings: Record<string, number>): void {
+    if (timings.total < 2_000) return;
+    const path = stripApi(rawPath).slice(0, 160);
+    const parts = Object.entries(timings).map(([k, v]) => `${k}=${v}ms`).join(" ");
+    log(`slow /fetch status=${status ?? "?"} ${parts} path=${path}`);
+}
+
+async function fetchAndDecrypt(rawPath: string): Promise<FetchResult> {
+    const t0 = Date.now();
     if (!state) await bootstrap();
     const s = state!;
     if (!s.resIntercept) throw new Error("relay: response interceptor not captured — cannot decrypt");
 
     const url = await signedUrl(rawPath);
+    const tSigned = Date.now();
     const upstream = await fetch(url, {
         headers: {
             "User-Agent": UA,
@@ -507,13 +523,32 @@ async function fetchAndDecrypt(rawPath: string): Promise<{ status: number; data:
             "Referer": "https://comix.to/",
         },
     });
+    const tHeaders = Date.now();
     const text = await upstream.text();
+    const tBody = Date.now();
     if (!upstream.ok) {
-        return { status: upstream.status, data: null, raw: text.slice(0, 500) };
+        const timings = {
+            sign: tSigned - t0,
+            upstreamHeaders: tHeaders - tSigned,
+            upstreamBody: tBody - tHeaders,
+            total: Date.now() - t0,
+        };
+        logSlowFetch(rawPath, upstream.status, timings);
+        return { status: upstream.status, data: null, raw: text.slice(0, 500), timings };
     }
     let parsed: any;
     try { parsed = JSON.parse(text); }
-    catch { return { status: upstream.status, data: null, raw: text.slice(0, 500) }; }
+    catch {
+        const timings = {
+            sign: tSigned - t0,
+            upstreamHeaders: tHeaders - tSigned,
+            upstreamBody: tBody - tHeaders,
+            total: Date.now() - t0,
+        };
+        logSlowFetch(rawPath, upstream.status, timings);
+        return { status: upstream.status, data: null, raw: text.slice(0, 500), timings };
+    }
+    const tParsed = Date.now();
 
     if (parsed && typeof parsed === "object" && "e" in parsed) {
         const fakeResp = {
@@ -525,9 +560,26 @@ async function fetchAndDecrypt(rawPath: string): Promise<{ status: number; data:
             request: {},
         };
         const decoded: any = await s.resIntercept(fakeResp);
-        return { status: upstream.status, data: decoded?.data ?? decoded };
+        const timings = {
+            sign: tSigned - t0,
+            upstreamHeaders: tHeaders - tSigned,
+            upstreamBody: tBody - tHeaders,
+            parse: tParsed - tBody,
+            decrypt: Date.now() - tParsed,
+            total: Date.now() - t0,
+        };
+        logSlowFetch(rawPath, upstream.status, timings);
+        return { status: upstream.status, data: decoded?.data ?? decoded, timings };
     }
-    return { status: upstream.status, data: parsed };
+    const timings = {
+        sign: tSigned - t0,
+        upstreamHeaders: tHeaders - tSigned,
+        upstreamBody: tBody - tHeaders,
+        parse: Date.now() - tBody,
+        total: Date.now() - t0,
+    };
+    logSlowFetch(rawPath, upstream.status, timings);
+    return { status: upstream.status, data: parsed, timings };
 }
 
 // ----- HTTP server ----------------------------------------------------------
