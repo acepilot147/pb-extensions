@@ -74,8 +74,15 @@ export interface APIChapterResult {
   meta?: APIMeta;
 }
 
+// Post-2026-05-09 shape: `pages` is now an object with a CDN baseUrl and a
+// list of items whose `url` is just the filename (e.g. "01.webp") relative
+// to baseUrl. The previous shape was a flat array of {url, width, height}
+// where `url` was already absolute.
 export interface APIPagesResult {
-  pages: { url: string; width?: number; height?: number }[];
+  pages: {
+    baseUrl: string;
+    items: { url: string; width?: number; height?: number }[];
+  };
 }
 
 export interface APIGenreItem {

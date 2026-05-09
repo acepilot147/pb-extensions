@@ -1,32 +1,47 @@
 export {};
 
 /**
- * Comix.to URL-signing relay (local prototype).
+ * Comix.to URL-signing + response-decryption relay.
  *
- *   GET /sign?path=/chapters/9000025
- *     → { ok: true, signedUrl: "https://comix.to/api/v1/chapters/9000025?_=..." }
+ *   GET /sign?path=/manga/xxx/chapters
+ *     → { ok: true, signedUrl: "https://comix.to/api/v1/manga/xxx/chapters?_=..." }
+ *
+ *   GET /fetch?path=/manga/xxx/chapters
+ *     → { ok: true, status: 200, data: <decrypted plaintext JSON> }
  *
  *   GET /health
- *     → { ok: true, bundleId, cfgPrefix, lastBootstrap }
+ *     → { ok: true, bundleId, secureUrl, cfgPrefix, hasSigner, hasResInterceptor }
  *
- * Strategy:
- *   1. On boot, scrape https://comix.to/title/xlyyj-eleceed for:
- *        <meta name="cfg" content="...">
- *        <script src=".../main-<id>.js">
- *      Fetch main.js, parse its `import "./secure-<id>.js"` to get the secure URL.
- *      Download the secure bundle to a unique temp file and dynamic-import it.
- *      Install DOM stub (just navigator.appCodeName="Mozilla" + cfg meta) and
- *      attach the bundle's interceptor to a single shared axios instance.
- *   2. /sign uses that axios instance. On 403 "Invalid token", trigger a
- *      bootstrap retry (treat as bundle rotation) and try once more.
- *   3. setTimeout is stubbed so the bundle's recurring background work never
- *      fires — keeps logs quiet and avoids leaking timers.
+ *   GET /rebootstrap
+ *     → forces a fresh scrape + bundle re-load (use after suspected rotation).
+ *
+ * Bootstrap (matches the Keiyoushi Tachiyomi extension's behavior probe so
+ * we survive name rotation and signing-algorithm rewrites for free):
+ *
+ *   1. Scrape https://comix.to/title/<probe> for `<meta name="cfg">` and the
+ *      `main-*.js` URL. Parse main-*.js for the `secure-*.js` import.
+ *   2. Install a DOM stub (defeats the bundle's `ce()` anti-tamper check by
+ *      stubbing `document.querySelector.toString()` to look native) and
+ *      dynamic-import the bundle. The bundle attaches its hoisted globals to
+ *      `globalThis.vmf_<id>` and to bare `globalThis.<name>`.
+ *   3. Walk `globalThis.vmf_*` namespaces, identify two functions by
+ *      behavior:
+ *        - signer:     fn(probePath) returns a base64url-shaped token
+ *        - installer:  fn(fakeAxios) registers a request interceptor and
+ *                      a response interceptor on the fake axios's
+ *                      .interceptors.{request,response}.use
+ *      The fake-axios trick captures both interceptor handlers so we can
+ *      call them directly later (no real axios needed).
+ *
+ * Why this is more robust than the previous `mod.n(ax)` approach: the
+ * bundle's exported names rotated 3× already this month (was `n`,
+ * could become anything). Probing by behavior — "the function whose output
+ * for a known path looks like a base64url token" — is name-independent.
  *
  * Run:
  *   npx tsx --env-file=.env experiment/relay/Server.ts
  */
 
-import axios, { type AxiosInstance } from "axios";
 import { createServer } from "node:http";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -34,16 +49,93 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createHash } from "node:crypto";
 
-const PORT       = Number(process.env.RELAY_PORT ?? 9091);
+// Render / Railway / Fly / etc. inject $PORT; local dev defaults to 9091.
+const PORT       = Number(process.env.PORT ?? process.env.RELAY_PORT ?? 9091);
 const HOMEPAGE   = process.env.RELAY_PROBE_URL ?? "https://comix.to/title/xlyyj-eleceed";
+const PROBE_PATH = "/manga/xlyyj/chapters";
 const UA         = process.env.USER_AGENT  ?? "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
-// ----- DOM stub ----------------------------------------------------------
+// Capture real timer functions before the DOM stub overrides them. The
+// stubbed timers must return real Node Timer objects (not plain numbers)
+// because Node's own internals — fetch in particular — call .unref() / .ref()
+// on whatever setTimeout returns.
+const realSetTimeout: typeof globalThis.setTimeout = globalThis.setTimeout.bind(globalThis);
+const realClearTimeout: typeof globalThis.clearTimeout = globalThis.clearTimeout.bind(globalThis);
+const realSetInterval: typeof globalThis.setInterval = globalThis.setInterval.bind(globalThis);
+const realClearInterval: typeof globalThis.clearInterval = globalThis.clearInterval.bind(globalThis);
+
+// Tagged, time-stamped logger. ISO-ish "YYYY-MM-DD HH:MM:SS.mmm".
+function ts(): string {
+    return new Date().toISOString().replace("T", " ").replace("Z", "");
+}
+function log(...args: any[]): void {
+    console.log(`[${ts()}] [relay]`, ...args);
+}
+
+// Aggregate usage stats. Per-request logs don't scale once real users hit the
+// relay, but counters bucketed by upstream status give us enough signal to
+// catch (a) traffic patterns, (b) spikes of 4xx/5xx that mean comix.to has
+// rotated and the bundle needs a re-bootstrap.
+const STATS_DUMP_MS = Number(process.env.RELAY_STATS_DUMP_MS ?? 5 * 60 * 1000);
+interface Stats {
+    sign: { ok: number; error: number };
+    fetch: { byStatus: Map<number, number>; error: number };
+    rebootstrap: number;
+    other404: number;
+}
+function emptyStats(): Stats {
+    return {
+        sign: { ok: 0, error: 0 },
+        fetch: { byStatus: new Map(), error: 0 },
+        rebootstrap: 0,
+        other404: 0,
+    };
+}
+let stats: Stats = emptyStats();
+
+// Rate-limit error logging: emit each unique error message at most once per
+// ERROR_LOG_COOLDOWN_MS so transient outages (cf 403, comix.to 5xx) don't
+// flood the log. Aggregate counts still capture frequency.
+const ERROR_LOG_COOLDOWN_MS = 60_000;
+const errorLastLogged = new Map<string, number>();
+function shouldLogError(msg: string): boolean {
+    const key = msg.slice(0, 200);
+    const last = errorLastLogged.get(key) ?? 0;
+    const now = Date.now();
+    if (now - last < ERROR_LOG_COOLDOWN_MS) return false;
+    errorLastLogged.set(key, now);
+    return true;
+}
+
+function dumpStats(): void {
+    const fetchTotal = [...stats.fetch.byStatus.values()].reduce((a, b) => a + b, 0);
+    const signTotal  = stats.sign.ok + stats.sign.error;
+    if (fetchTotal === 0 && signTotal === 0 && stats.rebootstrap === 0 && stats.other404 === 0) {
+        return; // skip quiet windows
+    }
+    const parts: string[] = [];
+    if (fetchTotal > 0) {
+        const breakdown = [...stats.fetch.byStatus.entries()]
+            .sort((a, b) => a[0] - b[0])
+            .map(([s, n]) => `${s}:${n}`)
+            .join(" ");
+        const errSuffix = stats.fetch.error ? ` err:${stats.fetch.error}` : "";
+        parts.push(`/fetch=${fetchTotal} (${breakdown}${errSuffix})`);
+    }
+    if (signTotal > 0) {
+        parts.push(`/sign=${signTotal}` + (stats.sign.error ? ` (err:${stats.sign.error})` : ""));
+    }
+    if (stats.rebootstrap > 0) parts.push(`rebootstrap=${stats.rebootstrap}`);
+    if (stats.other404 > 0) parts.push(`404=${stats.other404}`);
+    const periodMin = (STATS_DUMP_MS / 60000).toFixed(0);
+    log(`stats(${periodMin}m): ${parts.join("  ")}`);
+    stats = emptyStats();
+}
+
+// ----- DOM stub -------------------------------------------------------------
 let installed = false;
-const stubbedTimers: Set<number> = new Set();
 function installDomStub(cfg: string): void {
     if (installed) {
-        // update cfg in place
         (globalThis as any).__cfg = cfg;
         return;
     }
@@ -60,9 +152,6 @@ function installDomStub(cfg: string): void {
         name: "cfg",
     };
 
-    // Bundle's ce() anti-tamper check requires querySelector.toString() to
-    // match a native-function regex; if it fails, every key-loading function
-    // silently corrupts its key bytes and signing produces useless tokens.
     function querySelector(sel: string): unknown {
         if (sel.includes('meta[name="cfg"]') || sel.includes("meta[name='cfg']")) return metaCfg;
         return null;
@@ -99,7 +188,7 @@ function installDomStub(cfg: string): void {
         location: loc,
         navigator: {
             userAgent: UA,
-            appCodeName: "Mozilla",   // VM decryption-key seed
+            appCodeName: "Mozilla",
             appName: "Netscape",
             language: "en-US",
             languages: ["en-US", "en"],
@@ -107,20 +196,22 @@ function installDomStub(cfg: string): void {
             cookieEnabled: true,
         },
         addEventListener() {}, dispatchEvent() { return true; },
-        // Stub timers so the bundle's recurring background work never fires.
-        // We still return ids so any clearTimeout call from the bundle works.
-        setTimeout: (_fn: () => void, _ms?: number) => {
-            const id = ++stubTimerSeq;
-            stubbedTimers.add(id);
-            return id as unknown as ReturnType<typeof setTimeout>;
+        // Schedule a real Node Timer (with .unref/.ref/.refresh) wrapping a
+        // no-op, then unref so it doesn't keep the process alive. The bundle
+        // gets a real Timer it can clearTimeout, and any Node-internal caller
+        // (e.g. fetch) can safely call .unref() on the result.
+        setTimeout: (_fn: () => void, ms?: number) => {
+            const t = realSetTimeout(() => {}, ms ?? 0);
+            t.unref();
+            return t;
         },
-        clearTimeout: (id: number) => { stubbedTimers.delete(id); },
-        setInterval: (_fn: () => void, _ms?: number) => {
-            const id = ++stubTimerSeq;
-            stubbedTimers.add(id);
-            return id as unknown as ReturnType<typeof setInterval>;
+        clearTimeout: (t: NodeJS.Timeout) => { realClearTimeout(t); },
+        setInterval: (_fn: () => void, ms?: number) => {
+            const t = realSetInterval(() => {}, ms ?? 1000);
+            t.unref();
+            return t;
         },
-        clearInterval: (id: number) => { stubbedTimers.delete(id); },
+        clearInterval: (t: NodeJS.Timeout) => { realClearInterval(t); },
         atob: (s: string) => Buffer.from(s, "base64").toString("binary"),
         btoa: (s: string) => Buffer.from(s, "binary").toString("base64"),
     };
@@ -131,41 +222,49 @@ function installDomStub(cfg: string): void {
     set("document", doc);
     set("location", loc);
     set("navigator", win.navigator);
-    // Override the real timers globally too, so the bundle picks them up
-    // whether it reads via window.setTimeout or bare setTimeout.
     set("setTimeout",  win.setTimeout);
     set("clearTimeout",  win.clearTimeout);
     set("setInterval", win.setInterval);
     set("clearInterval", win.clearInterval);
 
     process.on("uncaughtException", (e) => {
-        console.log("[relay] uncaughtException (suppressed):", (e as any)?.message ?? e);
+        log("uncaughtException (suppressed):", (e as any)?.message ?? e);
     });
 }
-let stubTimerSeq = 0;
 
-// ----- bootstrap: download and load live bundle --------------------------
-type BundleState = {
+// ----- bootstrap ------------------------------------------------------------
+type ReqInterceptor = (config: any) => any | Promise<any>;
+type ResInterceptor = (response: any) => any | Promise<any>;
+
+interface BundleState {
     cfg: string;
     mainUrl: string;
     secureUrl: string;
-    bundleId: string;       // hash of secure source
+    bundleId: string;
     bootstrappedAt: number;
-    axios: AxiosInstance;
-};
+    signer: ((path: string) => string) | null;
+    reqIntercept: ReqInterceptor | null;
+    resIntercept: ResInterceptor | null;
+    signerRef: string;        // human-readable: "vmf_<id>.<name>"
+    installerRef: string;     // human-readable
+}
 
 let state: BundleState | null = null;
 let bootstrapInFlight: Promise<BundleState> | null = null;
+
+function cookieHeader(): string {
+    return [
+        process.env.SESSION ? `session=${process.env.SESSION}` : "",
+        process.env.CF_CLEARANCE ? `cf_clearance=${process.env.CF_CLEARANCE}` : "",
+    ].filter(Boolean).join("; ");
+}
 
 async function fetchText(url: string): Promise<string> {
     const res = await fetch(url, {
         headers: {
             "User-Agent": UA,
             "Accept": url.endsWith(".js") ? "application/javascript,*/*;q=0.9" : "text/html,*/*;q=0.9",
-            "Cookie": [
-                process.env.SESSION ? `session=${process.env.SESSION}` : "",
-                process.env.CF_CLEARANCE ? `cf_clearance=${process.env.CF_CLEARANCE}` : "",
-            ].filter(Boolean).join("; "),
+            "Cookie": cookieHeader(),
             "Referer": "https://comix.to/",
         },
     });
@@ -173,10 +272,90 @@ async function fetchText(url: string): Promise<string> {
     return await res.text();
 }
 
+const TOKEN_RE = /^[A-Za-z0-9_-]{40,200}$/;
+
+interface ProbeResult {
+    signer: ((path: string) => string) | null;
+    signerRef: string;
+    installer: ((axios: any) => void) | null;
+    installerRef: string;
+    reqIntercept: ReqInterceptor | null;
+    resIntercept: ResInterceptor | null;
+}
+
+function probeBundle(): ProbeResult {
+    const G = globalThis as any;
+    let signer: ((p: string) => string) | null = null;
+    let signerRef = "";
+    let installer: ((a: any) => void) | null = null;
+    let installerRef = "";
+    let reqIntercept: ReqInterceptor | null = null;
+    let resIntercept: ResInterceptor | null = null;
+
+    const nsNames = Object.keys(G).filter(k => k.startsWith("vmf_"));
+    if (nsNames.length === 0) {
+        // Fallback: also walk bare globals (the bundle attaches both vmf.<x> and globalThis.<x>).
+        nsNames.push("__globalThis_fallback__");
+    }
+
+    for (const ns of nsNames) {
+        const obj = ns === "__globalThis_fallback__" ? G : G[ns];
+        if (!obj || typeof obj !== "object") continue;
+        const keys = Object.keys(obj);
+        for (const key of keys) {
+            const fn = obj[key];
+            if (typeof fn !== "function") continue;
+            const ref = ns === "__globalThis_fallback__" ? `globalThis.${key}` : `${ns}.${key}`;
+
+            // --- signer probe -------------------------------------------------
+            if (!signer) {
+                try {
+                    const out = fn(PROBE_PATH);
+                    if (typeof out === "string" && out !== PROBE_PATH && TOKEN_RE.test(out)) {
+                        signer = fn.bind(null);
+                        signerRef = ref;
+                    }
+                } catch { /* not the signer */ }
+            }
+
+            // --- installer probe ---------------------------------------------
+            if (!installer) {
+                let gotRes = false;
+                let req: ReqInterceptor | null = null;
+                let res: ResInterceptor | null = null;
+                const fakeAxios: any = {
+                    interceptors: {
+                        request:  { use: (h: ReqInterceptor) => { req = h; } },
+                        response: { use: (h: ResInterceptor) => { res = h; gotRes = true; } },
+                    },
+                    defaults: {
+                        headers: { common: {}, get: {}, post: {}, put: {}, delete: {}, patch: {}, head: {} },
+                        transformRequest: [],
+                        transformResponse: [],
+                    },
+                };
+                try {
+                    fn(fakeAxios);
+                    if (gotRes) {
+                        installer = fn.bind(null);
+                        installerRef = ref;
+                        reqIntercept = req;
+                        resIntercept = res;
+                    }
+                } catch { /* not the installer */ }
+            }
+            if (signer && installer) break;
+        }
+        if (signer && installer) break;
+    }
+
+    return { signer, signerRef, installer, installerRef, reqIntercept, resIntercept };
+}
+
 async function bootstrap(): Promise<BundleState> {
     if (bootstrapInFlight) return bootstrapInFlight;
     bootstrapInFlight = (async () => {
-        console.log("[relay] bootstrap: scraping homepage", HOMEPAGE);
+        log("bootstrap: scraping homepage", HOMEPAGE);
         const html = await fetchText(HOMEPAGE);
 
         const cfgM  = html.match(/<meta\s+name="cfg"\s+content="([^"]+)"/);
@@ -188,50 +367,45 @@ async function bootstrap(): Promise<BundleState> {
         const mainText = await fetchText(mainUrl);
         const secM = mainText.match(/from\s*["']([^"']*secure-[a-zA-Z0-9_-]+\.js)["']/);
         if (!secM) throw new Error("could not find secure-*.js import in main bundle");
-        const secureUrlRel = secM[1]!;
-        const secureUrl = new URL(secureUrlRel, mainUrl).href;
+        const secureUrl = new URL(secM[1]!, mainUrl).href;
 
-        console.log("[relay] live build:");
-        console.log("    main  :", mainUrl);
-        console.log("    secure:", secureUrl);
-        console.log("    cfg   :", cfg.slice(0, 40), `(len=${cfg.length})`);
+        log("live build:");
+        log("    main  :", mainUrl);
+        log("    secure:", secureUrl);
+        log("    cfg   :", cfg.slice(0, 40), `(len=${cfg.length})`);
 
         const secureText = await fetchText(secureUrl);
         const bundleId = createHash("sha256").update(secureText).digest("hex").slice(0, 12);
 
-        // Save under unique filename so dynamic import isn't cached against an old version.
         const dir = mkdtempSync(join(tmpdir(), "comix-relay-"));
         const file = join(dir, `secure-${bundleId}.mjs`);
         writeFileSync(file, secureText);
 
         installDomStub(cfg);
 
-        const mod: any = await import(pathToFileURL(file).href);
-        if (typeof mod.n !== "function") throw new Error("secure bundle missing export `n`");
+        await import(pathToFileURL(file).href);
 
-        const ax = axios.create({
-            baseURL: "https://comix.to/api/v1",
-            withCredentials: true,
-            timeout: 15000,
-            headers: {
-                "Accept": "application/json",
-                "X-Requested-With": "XMLHttpRequest",
-                "User-Agent": UA,
-                "Referer": "https://comix.to/",
-                "Cookie": [
-                    process.env.SESSION ? `session=${process.env.SESSION}` : "",
-                    process.env.CF_CLEARANCE ? `cf_clearance=${process.env.CF_CLEARANCE}` : "",
-                ].filter(Boolean).join("; "),
-            },
-        });
-        mod.n(ax);
+        const probed = probeBundle();
+        if (!probed.signer && !probed.reqIntercept) {
+            throw new Error("relay: could not detect signer or req-interceptor in bundle (rotation broke probe?)");
+        }
+        if (!probed.resIntercept) {
+            log("WARNING: could not capture response interceptor — /fetch will not be able to decrypt bodies");
+        }
 
         const next: BundleState = {
             cfg, mainUrl, secureUrl, bundleId,
             bootstrappedAt: Date.now(),
-            axios: ax,
+            signer: probed.signer,
+            reqIntercept: probed.reqIntercept,
+            resIntercept: probed.resIntercept,
+            signerRef: probed.signerRef,
+            installerRef: probed.installerRef,
         };
-        console.log("[relay] bootstrap OK — bundleId", bundleId);
+        log(`bootstrap OK — bundleId ${bundleId}`);
+        log(`    signer    : ${probed.signerRef || "(via req-interceptor)"}`);
+        log(`    installer : ${probed.installerRef}`);
+        log(`    res-interc: ${probed.resIntercept ? "captured" : "MISSING"}`);
         return next;
     })();
     try {
@@ -242,28 +416,84 @@ async function bootstrap(): Promise<BundleState> {
     }
 }
 
-// ----- sign --------------------------------------------------------------
-async function signPath(path: string): Promise<string> {
-    if (!state) await bootstrap();
-    let s = state!;
+// ----- sign helpers ---------------------------------------------------------
+const API_BASE = "https://comix.to/api/v1";
 
-    // Capture the URL the interceptor produces by short-circuiting via a custom adapter
-    // on a per-request basis (we don't want to fight the shared instance's adapter).
-    // Easiest: fire the request and read response.config.url after.
-    let signed = "";
-    s.axios.defaults.adapter = (config: any) => {
-        const params = config.params ?? {};
-        const qs: string[] = [];
-        for (const k of Object.keys(params)) qs.push(`${k}=${encodeURIComponent(String(params[k]))}`);
-        const sep = config.url.includes("?") ? "&" : (qs.length ? "?" : "");
-        signed = `${s.axios.defaults.baseURL ?? ""}${config.url}${qs.length ? sep + qs.join("&") : ""}`;
-        return Promise.resolve({ data: {}, status: 200, statusText: "OK", headers: {}, config, request: {} });
-    };
-    await s.axios.get(path);
-    return signed;
+function stripApi(path: string): string {
+    return path.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "");
 }
 
-// ----- HTTP server -------------------------------------------------------
+async function signToken(rawPath: string): Promise<string> {
+    if (!state) await bootstrap();
+    const s = state!;
+    const path = stripApi(rawPath).split("?")[0]!;
+    if (s.signer) {
+        const out = s.signer(path);
+        if (typeof out !== "string") throw new Error("signer returned non-string");
+        return out;
+    }
+    // Fallback: drive the request interceptor with a fake axios config and read back the URL.
+    if (!s.reqIntercept) throw new Error("relay: no signer and no request interceptor");
+    const config: any = { url: path, method: "get", baseURL: "/api/v1", headers: {}, params: {} };
+    const out = await s.reqIntercept(config);
+    const merged = (out && typeof out === "object" ? out : config) as any;
+    // The interceptor either rewrites url to include `?_=...`, or sets `params._`.
+    const urlWithToken: string = merged.url ?? "";
+    const m = urlWithToken.match(/[?&]_=([^&]+)/);
+    if (m) return decodeURIComponent(m[1]!);
+    if (merged.params && typeof merged.params._ === "string") return merged.params._;
+    throw new Error("could not extract token from req-interceptor output");
+}
+
+async function signedUrl(rawPath: string): Promise<string> {
+    const path = stripApi(rawPath);
+    const token = await signToken(path);
+    const justPath = path.split("?")[0]!;
+    const query = path.includes("?") ? path.slice(path.indexOf("?") + 1) : "";
+    const sep = query ? "&" : "?";
+    const qs = query ? `?${query}` : "";
+    return `${API_BASE}${justPath}${qs}${sep}_=${encodeURIComponent(token)}`;
+}
+
+async function fetchAndDecrypt(rawPath: string): Promise<{ status: number; data: any; raw?: string }> {
+    if (!state) await bootstrap();
+    const s = state!;
+    if (!s.resIntercept) throw new Error("relay: response interceptor not captured — cannot decrypt");
+
+    const url = await signedUrl(rawPath);
+    const upstream = await fetch(url, {
+        headers: {
+            "User-Agent": UA,
+            "Accept": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+            "Cookie": cookieHeader(),
+            "Referer": "https://comix.to/",
+        },
+    });
+    const text = await upstream.text();
+    if (!upstream.ok) {
+        return { status: upstream.status, data: null, raw: text.slice(0, 500) };
+    }
+    let parsed: any;
+    try { parsed = JSON.parse(text); }
+    catch { return { status: upstream.status, data: null, raw: text.slice(0, 500) }; }
+
+    if (parsed && typeof parsed === "object" && "e" in parsed) {
+        const fakeResp = {
+            data: parsed,
+            status: upstream.status,
+            statusText: upstream.statusText,
+            headers: Object.fromEntries(upstream.headers.entries()),
+            config: { url, method: "get", baseURL: API_BASE },
+            request: {},
+        };
+        const decoded: any = await s.resIntercept(fakeResp);
+        return { status: upstream.status, data: decoded?.data ?? decoded };
+    }
+    return { status: upstream.status, data: parsed };
+}
+
+// ----- HTTP server ----------------------------------------------------------
 const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
     res.setHeader("Content-Type", "application/json");
@@ -273,35 +503,68 @@ const server = createServer(async (req, res) => {
             res.end(JSON.stringify({
                 ok: true,
                 bundleId: state?.bundleId ?? null,
-                bundleSecureUrl: state?.secureUrl ?? null,
+                secureUrl: state?.secureUrl ?? null,
                 cfgPrefix: state?.cfg.slice(0, 40) ?? null,
                 bootstrappedAt: state?.bootstrappedAt ?? null,
+                signer: state?.signerRef ?? null,
+                installer: state?.installerRef ?? null,
+                hasResInterceptor: !!state?.resIntercept,
             }));
             return;
         }
         if (url.pathname === "/sign") {
             const path = url.searchParams.get("path");
             if (!path) { res.statusCode = 400; res.end(JSON.stringify({ ok: false, error: "missing ?path" })); return; }
-            const signed = await signPath(path);
-            res.end(JSON.stringify({ ok: true, signedUrl: signed, bundleId: state!.bundleId }));
+            try {
+                const signed = await signedUrl(path);
+                stats.sign.ok++;
+                res.end(JSON.stringify({ ok: true, signedUrl: signed, bundleId: state!.bundleId }));
+            } catch (e: any) {
+                stats.sign.error++;
+                throw e;
+            }
+            return;
+        }
+        if (url.pathname === "/fetch") {
+            const path = url.searchParams.get("path");
+            if (!path) { res.statusCode = 400; res.end(JSON.stringify({ ok: false, error: "missing ?path" })); return; }
+            try {
+                const result = await fetchAndDecrypt(path);
+                stats.fetch.byStatus.set(result.status, (stats.fetch.byStatus.get(result.status) ?? 0) + 1);
+                res.end(JSON.stringify({ ok: true, ...result, bundleId: state!.bundleId }));
+            } catch (e: any) {
+                stats.fetch.error++;
+                throw e;
+            }
             return;
         }
         if (url.pathname === "/rebootstrap") {
+            log("rebootstrap requested");
+            stats.rebootstrap++;
             state = null;
             await bootstrap();
             res.end(JSON.stringify({ ok: true, bundleId: state!.bundleId }));
             return;
         }
+        stats.other404++;
         res.statusCode = 404;
         res.end(JSON.stringify({ ok: false, error: "not found" }));
     } catch (e: any) {
+        // Sample errors at log level so we still see the first one in each
+        // failure mode without flooding when the same error repeats.
+        if (shouldLogError(e?.message ?? String(e))) {
+            log(`ERROR ${url.pathname}: ${e?.message ?? String(e)}`);
+        }
         res.statusCode = 500;
         res.end(JSON.stringify({ ok: false, error: e?.message ?? String(e) }));
     }
 });
 
 server.listen(PORT, async () => {
-    console.log(`[relay] listening on http://0.0.0.0:${PORT}`);
+    log(`listening on http://0.0.0.0:${PORT}`);
     try { await bootstrap(); }
-    catch (e: any) { console.log("[relay] bootstrap failed:", e?.message ?? e); }
+    catch (e: any) { log("bootstrap failed:", e?.message ?? e); }
+    // Use the real (pre-stub) interval so the bundle's setInterval override
+    // doesn't swallow our stats dumps.
+    realSetInterval(dumpStats, STATS_DUMP_MS);
 });

@@ -23,6 +23,7 @@ import {
 
 import { Parser } from "./Parser";
 import { signUrl } from "./ComixHash";
+import { fetchSigned } from "./RelayClient";
 import {
   API_BASE,
   DOMAIN,
@@ -56,7 +57,7 @@ import {
 } from "./Settings";
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.5.4",
+  version: "1.6.0",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -184,22 +185,14 @@ export class ComixTo
     let lastPage = 1;
 
     do {
-      const request = App.createRequest({
-        url: signUrl(`${API_BASE}/manga/${mangaId}/chapters?page=${page}&limit=100&order[number]=desc`),
-        method: "GET",
-      });
+      const result = await fetchSigned<APIChapterResult>(
+        this.requestManager,
+        `${API_BASE}/manga/${mangaId}/chapters?page=${page}&limit=100&order[number]=desc`,
+      );
 
-      const response = await this.requestManager.schedule(request, 1);
-      this.checkResponseError(response);
+      chapters.push(...result.items);
 
-      const json = JSON.parse(
-        response.data ?? "{}",
-      ) as APIResponse<APIChapterResult>;
-      if (json.status !== "ok") throw new Error(`Failed to fetch chapters (page ${page}) (API ${json.status}: ${json.message ?? "no message"})`);
-
-      chapters.push(...json.result.items);
-
-      lastPage = json.result.meta?.lastPage ?? 1;
+      lastPage = result.meta?.lastPage ?? 1;
       page++;
     } while (page <= lastPage);
 
@@ -217,20 +210,11 @@ export class ComixTo
     mangaId: string,
     chapterId: string,
   ): Promise<ChapterDetails> {
-    const request = App.createRequest({
-      url: signUrl(`${API_BASE}/chapters/${chapterId}`),
-      method: "GET",
-    });
-
-    const response = await this.requestManager.schedule(request, 1);
-    this.checkResponseError(response);
-
-    const json = JSON.parse(
-      response.data ?? "{}",
-    ) as APIResponse<APIPagesResult>;
-    if (json.status !== "ok") throw new Error(`Failed to fetch chapter pages (API ${json.status}: ${json.message ?? "no message"})`);
-
-    return this.parser.parseChapterDetails(json.result, mangaId, chapterId);
+    const result = await fetchSigned<APIPagesResult>(
+      this.requestManager,
+      `${API_BASE}/chapters/${chapterId}`,
+    );
+    return this.parser.parseChapterDetails(result, mangaId, chapterId);
   }
 
   async getHomePageSections(
