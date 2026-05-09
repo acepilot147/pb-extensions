@@ -1227,28 +1227,73 @@ var _Sources = (() => {
   async function fetchSigned(requestManager, fullUrl) {
     if (RELAY) {
       const apiPath = fullUrl.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "");
-      const relayFetchUrl = `${RELAY}/fetch?path=${encodeURIComponent(apiPath)}`;
-      const request2 = App.createRequest({ url: relayFetchUrl, method: "GET" });
-      const response2 = await requestManager.schedule(request2, 1);
-      if (response2.status < 200 || response2.status >= 300) {
-        const preview = (response2.data ?? "").slice(0, 200).replace(/\s+/g, " ");
-        throw new Error(`Comix relay unreachable (HTTP ${response2.status} from ${RELAY}${preview ? `: ${preview}` : ""})`);
+      const signRequest = App.createRequest({
+        url: `${RELAY}/sign?path=${encodeURIComponent(apiPath)}`,
+        method: "GET"
+      });
+      const signResponse = await requestManager.schedule(signRequest, 1);
+      if (signResponse.status < 200 || signResponse.status >= 300) {
+        const preview = (signResponse.data ?? "").slice(0, 200).replace(/\s+/g, " ");
+        throw new Error(`Comix relay unreachable (HTTP ${signResponse.status} from ${RELAY}${preview ? `: ${preview}` : ""})`);
       }
-      let wrapped;
+      let signedWrapped;
       try {
-        wrapped = JSON.parse(response2.data ?? "{}");
+        signedWrapped = JSON.parse(signResponse.data ?? "{}");
       } catch {
-        throw new Error(`Comix relay returned non-JSON: ${(response2.data ?? "").slice(0, 200)}`);
+        throw new Error(`Comix relay returned non-JSON: ${(signResponse.data ?? "").slice(0, 200)}`);
       }
-      if (!wrapped.ok) {
-        throw new Error(`Comix relay error: ${wrapped.error ?? "unknown"}`);
+      if (!signedWrapped.ok || typeof signedWrapped.signedUrl !== "string") {
+        throw new Error(`Comix relay error: ${signedWrapped.error ?? "missing signedUrl"}`);
       }
-      const upstreamStatus = wrapped.status;
-      if (upstreamStatus < 200 || upstreamStatus >= 300) {
-        const rawPreview = String(wrapped.raw ?? "").slice(0, 200);
-        throw new Error(`Comix API HTTP ${upstreamStatus} via relay${rawPreview ? `: ${rawPreview}` : ""}`);
+      const apiRequest = App.createRequest({
+        url: signedWrapped.signedUrl,
+        method: "GET",
+        headers: {
+          "Accept": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+          "Referer": "https://comix.to/"
+        }
+      });
+      const apiResponse = await requestManager.schedule(apiRequest, 1);
+      checkStaticResponseError(apiResponse);
+      let apiJson;
+      try {
+        apiJson = JSON.parse(apiResponse.data ?? "{}");
+      } catch {
+        throw new Error(`Comix API returned non-JSON: ${(apiResponse.data ?? "").slice(0, 200)}`);
       }
-      return wrapped.data;
+      if (!(apiJson && typeof apiJson === "object" && "e" in apiJson)) {
+        if (apiJson.status !== "ok") {
+          throw new Error(`Comix API ${apiJson.status}: ${apiJson.message ?? "no message"}`);
+        }
+        return apiJson.result;
+      }
+      const decryptRequest = App.createRequest({
+        url: `${RELAY}/decrypt`,
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        data: JSON.stringify({
+          path: apiPath,
+          status: apiResponse.status,
+          headers: apiResponse.headers ?? {},
+          payload: apiJson
+        })
+      });
+      const decryptResponse = await requestManager.schedule(decryptRequest, 1);
+      if (decryptResponse.status < 200 || decryptResponse.status >= 300) {
+        const preview = (decryptResponse.data ?? "").slice(0, 200).replace(/\s+/g, " ");
+        throw new Error(`Comix relay decrypt failed (HTTP ${decryptResponse.status} from ${RELAY}${preview ? `: ${preview}` : ""})`);
+      }
+      let decryptedWrapped;
+      try {
+        decryptedWrapped = JSON.parse(decryptResponse.data ?? "{}");
+      } catch {
+        throw new Error(`Comix relay decrypt returned non-JSON: ${(decryptResponse.data ?? "").slice(0, 200)}`);
+      }
+      if (!decryptedWrapped.ok) {
+        throw new Error(`Comix relay decrypt error: ${decryptedWrapped.error ?? "unknown"}`);
+      }
+      return decryptedWrapped.data;
     }
     const request = App.createRequest({ url: signUrl(fullUrl), method: "GET" });
     const response = await requestManager.schedule(request, 1);
@@ -1692,7 +1737,7 @@ var _Sources = (() => {
 
   // src/ComixTo/ComixTo.ts
   var ComixToInfo = {
-    version: "1.6.0",
+    version: "1.6.1",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
