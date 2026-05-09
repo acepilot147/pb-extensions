@@ -52,7 +52,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createHash } from "node:crypto";
-import { Worker, parentPort } from "node:worker_threads";
+import { fork, type ChildProcess } from "node:child_process";
 
 // Render / Railway / Fly / etc. inject $PORT; local dev defaults to 9091.
 const PORT       = Number(process.env.PORT ?? process.env.RELAY_PORT ?? 9091);
@@ -675,7 +675,7 @@ type PendingDecrypt = {
     reject: (reason?: any) => void;
 };
 
-let decryptWorker: Worker | null = null;
+let decryptWorker: ChildProcess | null = null;
 let decryptWorkerReady = false;
 let nextDecryptId = 1;
 const pendingDecrypts = new Map<number, PendingDecrypt>();
@@ -687,23 +687,27 @@ function rejectPendingDecrypts(error: Error): void {
     pendingDecrypts.clear();
 }
 
-function ensureDecryptWorker(): Worker {
+function ensureDecryptWorker(): ChildProcess {
     if (decryptWorker) return decryptWorker;
 
     const env = { ...process.env, RELAY_WORKER: "decrypt" };
-    log("starting decrypt worker with execArgv:", process.execArgv.join(" "));
-    const workerEntry = `import(${JSON.stringify(pathToFileURL(CURRENT_FILE).href)});`;
-    const worker = new Worker(workerEntry, {
-        eval: true,
+    const execArgv = process.execArgv;
+    log("starting decrypt worker process with execArgv:", execArgv.join(" "));
+    const worker = fork(CURRENT_FILE, [], {
         env,
-        execArgv: process.execArgv,
+        execArgv,
+        stdio: ["ignore", "inherit", "inherit", "ipc"],
     });
     decryptWorker = worker;
     decryptWorkerReady = false;
 
     worker.on("message", (msg: any) => {
         if (msg?.type === "ready") {
-            decryptWorkerReady = true;
+            decryptWorkerReady = !msg.error;
+            if (msg.error) {
+                log("decrypt worker bootstrap error:", msg.error);
+                return;
+            }
             log(`decrypt worker ready — bundleId ${msg.bundleId ?? "?"}`);
             return;
         }
@@ -738,22 +742,25 @@ function decryptInWorker(job: DecryptJob): Promise<any> {
     const id = nextDecryptId++;
     return new Promise((resolve, reject) => {
         pendingDecrypts.set(id, { resolve, reject });
-        worker.postMessage({ type: "decrypt", id, job });
+        if (!worker.send?.({ type: "decrypt", id, job })) {
+            pendingDecrypts.delete(id);
+            reject(new Error("decrypt worker IPC send failed"));
+        }
     });
 }
 
 function startDecryptWorker(): void {
-    if (!parentPort) throw new Error("decrypt worker started without parentPort");
+    if (!process.send) throw new Error("decrypt worker started without IPC");
     const ready = bootstrap()
         .then((s) => {
-            parentPort!.postMessage({ type: "ready", bundleId: s.bundleId });
+            process.send!({ type: "ready", bundleId: s.bundleId });
         })
         .catch((e: any) => {
-            parentPort!.postMessage({ type: "ready", error: e?.message ?? String(e) });
+            process.send!({ type: "ready", error: e?.message ?? String(e) });
             throw e;
         });
 
-    parentPort.on("message", async (msg: any) => {
+    process.on("message", async (msg: any) => {
         if (msg?.type !== "decrypt" || typeof msg.id !== "number") return;
         try {
             await ready;
@@ -766,9 +773,9 @@ function startDecryptWorker(): void {
                 job.headers,
                 job.configUrl,
             );
-            parentPort!.postMessage({ type: "result", id: msg.id, ok: true, data });
+            process.send!({ type: "result", id: msg.id, ok: true, data });
         } catch (e: any) {
-            parentPort!.postMessage({ type: "result", id: msg.id, ok: false, error: e?.message ?? String(e) });
+            process.send!({ type: "result", id: msg.id, ok: false, error: e?.message ?? String(e) });
         }
     });
 }
