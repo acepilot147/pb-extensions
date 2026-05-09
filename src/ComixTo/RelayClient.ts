@@ -19,7 +19,7 @@ import { signUrl } from "./ComixHash";
  * To disable the relay path entirely (after a fresh static signer ships),
  * set this to "" — fetchSigned() will fall back to the static path.
  */
-export const RELAY_URL: string = "http://192.168.0.215:9091";
+export const RELAY_URL: string = "https://comix-relay.onrender.com";
 
 const RELAY = RELAY_URL.trim().replace(/\/+$/, "");
 
