@@ -107,6 +107,13 @@ function shouldLogError(msg: string): boolean {
     return true;
 }
 
+process.on("SIGTERM", () => log("process received SIGTERM"));
+process.on("SIGINT", () => log("process received SIGINT"));
+process.on("exit", (code) => log("process exit", code));
+process.on("unhandledRejection", (reason) => {
+    log("unhandledRejection:", (reason as any)?.message ?? reason);
+});
+
 function dumpStats(): void {
     const fetchTotal = [...stats.fetch.byStatus.values()].reduce((a, b) => a + b, 0);
     const signTotal  = stats.sign.ok + stats.sign.error;
@@ -229,6 +236,29 @@ function installDomStub(cfg: string): void {
 
     process.on("uncaughtException", (e) => {
         log("uncaughtException (suppressed):", (e as any)?.message ?? e);
+    });
+}
+
+function restoreNodeTimers(): void {
+    Object.defineProperty(globalThis, "setTimeout", {
+        value: realSetTimeout,
+        writable: true,
+        configurable: true,
+    });
+    Object.defineProperty(globalThis, "clearTimeout", {
+        value: realClearTimeout,
+        writable: true,
+        configurable: true,
+    });
+    Object.defineProperty(globalThis, "setInterval", {
+        value: realSetInterval,
+        writable: true,
+        configurable: true,
+    });
+    Object.defineProperty(globalThis, "clearInterval", {
+        value: realClearInterval,
+        writable: true,
+        configurable: true,
     });
 }
 
@@ -383,7 +413,14 @@ async function bootstrap(): Promise<BundleState> {
 
         installDomStub(cfg);
 
-        await import(pathToFileURL(file).href);
+        try {
+            await import(pathToFileURL(file).href);
+        } finally {
+            // The bundle import wants browser-ish no-op timers, but the relay
+            // itself needs normal Node timers for fetch, HTTP keepalive, and
+            // platform health checks.
+            restoreNodeTimers();
+        }
 
         const probed = probeBundle();
         if (!probed.signer && !probed.reqIntercept) {
