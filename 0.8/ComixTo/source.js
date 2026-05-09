@@ -863,7 +863,10 @@ var _Sources = (() => {
       return chapters;
     }
     parseChapterDetails(data, mangaId, chapterId) {
-      const pages = data.pages.map((p) => p.url);
+      const baseUrl = data.pages.baseUrl ?? "";
+      const pages = data.pages.items.map(
+        (p) => /^https?:\/\//.test(p.url) ? p.url : `${baseUrl}${p.url}`
+      );
       return App.createChapterDetails({
         id: chapterId,
         mangaId,
@@ -1216,6 +1219,63 @@ var _Sources = (() => {
     const token = generateHash(path);
     const sep = url.includes("?") ? "&" : "?";
     return `${url}${sep}_=${token}`;
+  }
+
+  // src/ComixTo/RelayClient.ts
+  var RELAY_URL = "https://comix-relay.onrender.com";
+  var RELAY = RELAY_URL.trim().replace(/\/+$/, "");
+  async function fetchSigned(requestManager, fullUrl) {
+    if (RELAY) {
+      const apiPath = fullUrl.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "");
+      const relayFetchUrl = `${RELAY}/fetch?path=${encodeURIComponent(apiPath)}`;
+      const request2 = App.createRequest({ url: relayFetchUrl, method: "GET" });
+      const response2 = await requestManager.schedule(request2, 1);
+      if (response2.status < 200 || response2.status >= 300) {
+        const preview = (response2.data ?? "").slice(0, 200).replace(/\s+/g, " ");
+        throw new Error(`Comix relay unreachable (HTTP ${response2.status} from ${RELAY}${preview ? `: ${preview}` : ""})`);
+      }
+      let wrapped;
+      try {
+        wrapped = JSON.parse(response2.data ?? "{}");
+      } catch {
+        throw new Error(`Comix relay returned non-JSON: ${(response2.data ?? "").slice(0, 200)}`);
+      }
+      if (!wrapped.ok) {
+        throw new Error(`Comix relay error: ${wrapped.error ?? "unknown"}`);
+      }
+      const upstreamStatus = wrapped.status;
+      if (upstreamStatus < 200 || upstreamStatus >= 300) {
+        const rawPreview = String(wrapped.raw ?? "").slice(0, 200);
+        throw new Error(`Comix API HTTP ${upstreamStatus} via relay${rawPreview ? `: ${rawPreview}` : ""}`);
+      }
+      return wrapped.data;
+    }
+    const request = App.createRequest({ url: signUrl(fullUrl), method: "GET" });
+    const response = await requestManager.schedule(request, 1);
+    checkStaticResponseError(response);
+    const json = JSON.parse(response.data ?? "{}");
+    if (json.status !== "ok") {
+      throw new Error(`Comix API ${json.status}: ${json.message ?? "no message"}`);
+    }
+    return json.result;
+  }
+  function checkStaticResponseError(response) {
+    const data = response.data ?? "";
+    const preview = data.substring(0, 200).replace(/\s+/g, " ");
+    const headers = response.headers ?? {};
+    const ct = headers["Content-Type"] ?? headers["content-type"] ?? "?";
+    const cfRay = headers["Cf-Ray"] ?? headers["cf-ray"] ?? "?";
+    const reqUrl = response.request?.url ?? "?";
+    const ctx = `status=${response.status} ct=${ct} cf-ray=${cfRay} url=${reqUrl} preview="${preview}"`;
+    if (response.status === 403 || response.status === 503) {
+      throw new Error(`Cloudflare Bypass Required [${ctx}]`);
+    }
+    if (response.status < 200 || response.status >= 300) {
+      throw new Error(`HTTP ${response.status}: Unexpected response from server [${ctx}]`);
+    }
+    if (data.trimStart().startsWith("<")) {
+      throw new Error(`Cloudflare Bypass Required [${ctx}]`);
+    }
   }
 
   // src/ComixTo/Settings.ts
@@ -1632,7 +1692,7 @@ var _Sources = (() => {
 
   // src/ComixTo/ComixTo.ts
   var ComixToInfo = {
-    version: "1.5.4",
+    version: "1.6.0",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
@@ -1735,18 +1795,12 @@ var _Sources = (() => {
       let page = 1;
       let lastPage = 1;
       do {
-        const request = App.createRequest({
-          url: signUrl(`${API_BASE}/manga/${mangaId}/chapters?page=${page}&limit=100&order[number]=desc`),
-          method: "GET"
-        });
-        const response = await this.requestManager.schedule(request, 1);
-        this.checkResponseError(response);
-        const json = JSON.parse(
-          response.data ?? "{}"
+        const result = await fetchSigned(
+          this.requestManager,
+          `${API_BASE}/manga/${mangaId}/chapters?page=${page}&limit=100&order[number]=desc`
         );
-        if (json.status !== "ok") throw new Error(`Failed to fetch chapters (page ${page}) (API ${json.status}: ${json.message ?? "no message"})`);
-        chapters.push(...json.result.items);
-        lastPage = json.result.meta?.lastPage ?? 1;
+        chapters.push(...result.items);
+        lastPage = result.meta?.lastPage ?? 1;
         page++;
       } while (page <= lastPage);
       const [isFiltering, isWhitelist, isStrict, savedGroups] = await Promise.all([
@@ -1758,17 +1812,11 @@ var _Sources = (() => {
       return this.parser.parseChapters(chapters, isFiltering, isWhitelist, isStrict, savedGroups);
     }
     async getChapterDetails(mangaId, chapterId) {
-      const request = App.createRequest({
-        url: signUrl(`${API_BASE}/chapters/${chapterId}`),
-        method: "GET"
-      });
-      const response = await this.requestManager.schedule(request, 1);
-      this.checkResponseError(response);
-      const json = JSON.parse(
-        response.data ?? "{}"
+      const result = await fetchSigned(
+        this.requestManager,
+        `${API_BASE}/chapters/${chapterId}`
       );
-      if (json.status !== "ok") throw new Error(`Failed to fetch chapter pages (API ${json.status}: ${json.message ?? "no message"})`);
-      return this.parser.parseChapterDetails(json.result, mangaId, chapterId);
+      return this.parser.parseChapterDetails(result, mangaId, chapterId);
     }
     async getHomePageSections(sectionCallback) {
       const limitArray = await getTrendingLimit(this.stateManager);
