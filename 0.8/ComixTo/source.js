@@ -1495,11 +1495,14 @@ var _Sources = (() => {
       })
     }));
   };
+  var TAG_CACHE_TTL = 864e5;
   var getCachedTags = async (stateManager) => {
     const cached = await stateManager.retrieve("tag_cache_v1");
     if (!cached) return null;
     try {
-      return JSON.parse(cached);
+      const parsed = JSON.parse(cached);
+      if (!parsed.ts || Date.now() - parsed.ts > TAG_CACHE_TTL) return null;
+      return parsed;
     } catch {
       return null;
     }
@@ -1545,7 +1548,7 @@ var _Sources = (() => {
             fetchTerms("format"),
             fetchTerms("demographic")
           ]);
-          const cache = { genre, theme, format, demographic };
+          const cache = { genre, theme, format, demographic, ts: Date.now() };
           await stateManager.store("tag_cache_v1", JSON.stringify(cache));
           return cache;
         } catch {
@@ -1688,7 +1691,7 @@ var _Sources = (() => {
 
   // src/ComixTo/ComixTo.ts
   var ComixToInfo = {
-    version: "1.7.1",
+    version: "1.7.2",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
@@ -1953,22 +1956,35 @@ var _Sources = (() => {
     }
     // -- Advanced Search --
     async getSearchTags() {
-      const fetchTags = async (type) => {
-        try {
-          const res = await this.fetchTimed("search_tags", signUrl(`${API_BASE}/tags/search?type=${type}&limit=50`));
-          if (res.status < 200 || res.status >= 300) return [];
-          const json = JSON.parse(res.data ?? "{}");
-          return Array.isArray(json.result) ? json.result : [];
-        } catch {
-          return [];
-        }
-      };
-      const [genres, themes, formats, demographics] = await Promise.all([
-        fetchTags("genre"),
-        fetchTags("tag"),
-        fetchTags("format"),
-        fetchTags("demographic")
-      ]);
+      let genres, themes, formats, demographics;
+      const cached = await getCachedTags(this.stateManager);
+      if (cached) {
+        ({ genre: genres, theme: themes, format: formats, demographic: demographics } = cached);
+      } else {
+        const fetchTags = async (type) => {
+          try {
+            const res = await this.fetchTimed("search_tags", signUrl(`${API_BASE}/tags/search?type=${type}&limit=50`));
+            if (res.status < 200 || res.status >= 300) return [];
+            const json = JSON.parse(res.data ?? "{}");
+            return Array.isArray(json.result) ? json.result : [];
+          } catch {
+            return [];
+          }
+        };
+        [genres, themes, formats, demographics] = await Promise.all([
+          fetchTags("genre"),
+          fetchTags("tag"),
+          fetchTags("format"),
+          fetchTags("demographic")
+        ]);
+        await this.stateManager.store("tag_cache_v1", JSON.stringify({
+          genre: genres,
+          theme: themes,
+          format: formats,
+          demographic: demographics,
+          ts: Date.now()
+        }));
+      }
       const sections = [];
       sections.push(
         App.createTagSection({
