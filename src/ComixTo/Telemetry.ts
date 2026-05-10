@@ -29,10 +29,20 @@ function getRM(): RequestManager {
     return _rm;
 }
 
+// FNV-1a 32-bit — one-way hash so no manga/chapter IDs leave the device in plaintext
+function hashPath(path: string): string {
+    let h = 2166136261;
+    for (let i = 0; i < path.length; i++) {
+        h ^= path.charCodeAt(i);
+        h = Math.imul(h, 16777619) >>> 0;
+    }
+    return h.toString(16).padStart(8, "0");
+}
+
 export function emit(event: Omit<TelemetryEvent, "seq" | "ts">): void {
     if (!TELEMETRY_URL) return;
     try {
-        const full: TelemetryEvent = { seq: ++_seq, ts: Date.now(), ...event };
+        const full: TelemetryEvent = { seq: ++_seq, ts: Date.now(), ...event, path: hashPath(event.path) };
         const req = App.createRequest({
             url: TELEMETRY_URL,
             method: "POST",
