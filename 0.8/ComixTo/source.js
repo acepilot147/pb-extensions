@@ -1175,10 +1175,18 @@ var _Sources = (() => {
     }
     return _rm;
   }
+  function hashPath(path) {
+    let h = 2166136261;
+    for (let i = 0; i < path.length; i++) {
+      h ^= path.charCodeAt(i);
+      h = Math.imul(h, 16777619) >>> 0;
+    }
+    return h.toString(16).padStart(8, "0");
+  }
   function emit(event) {
     if (!TELEMETRY_URL) return;
     try {
-      const full = { seq: ++_seq, ts: Date.now(), ...event };
+      const full = { seq: ++_seq, ts: Date.now(), ...event, path: hashPath(event.path) };
       const req = App.createRequest({
         url: TELEMETRY_URL,
         method: "POST",
