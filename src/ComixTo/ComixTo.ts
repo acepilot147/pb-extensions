@@ -23,6 +23,7 @@ import {
 
 import { Parser } from "./Parser";
 import { fetchSigned, signUrl } from "./ComixHash";
+import { emit } from "./Telemetry";
 import {
   API_BASE,
   DOMAIN,
@@ -163,13 +164,19 @@ export class ComixTo
     return `${DOMAIN}/title/${mangaId}`;
   }
 
-  async getMangaDetails(mangaId: string): Promise<SourceManga> {
-    const request = App.createRequest({
-      url: signUrl(`${API_BASE}/manga/${mangaId}?includes[]=author&includes[]=artist`),
-      method: "GET",
-    });
-
+  private async fetchTimed(label: string, url: string): Promise<import("@paperback/types").Response> {
+    const path = url.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "").split("?")[0]!;
+    const t0 = Date.now();
+    const request = App.createRequest({ url, method: "GET" });
+    const fetchStart = Date.now();
     const response = await this.requestManager.schedule(request, 1);
+    const fetchMs = Date.now() - fetchStart;
+    emit({ label, path, status: response.status, bytes: (response.data ?? "").length, signMs: 0, fetchMs, parseMs: 0, decryptMs: 0, totalMs: Date.now() - t0 });
+    return response;
+  }
+
+  async getMangaDetails(mangaId: string): Promise<SourceManga> {
+    const response = await this.fetchTimed("manga_details", signUrl(`${API_BASE}/manga/${mangaId}?includes[]=author&includes[]=artist`));
     this.checkResponseError(response);
 
     const json = JSON.parse(response.data ?? "{}");
@@ -263,6 +270,7 @@ export class ComixTo
     promises.push(
       this.fetchHomeData(
         `${API_BASE}/manga/top?type=trending&days=${days}&limit=15&content_rating=${maxRating}${filterParams}`,
+        "home_trending",
         sections[0],
         sectionCallback,
       ),
@@ -272,6 +280,7 @@ export class ComixTo
     promises.push(
       this.fetchHomeData(
         `${API_BASE}/manga?order[chapter_updated_at]=desc&limit=15&includes[]=author${filterParams}`,
+        "home_latest",
         sections[1],
         sectionCallback,
       ),
@@ -281,6 +290,7 @@ export class ComixTo
     promises.push(
       this.fetchHomeData(
         `${API_BASE}/manga?order[created_at]=desc&limit=15&includes[]=author${filterParams}`,
+        "home_new",
         sections[2],
         sectionCallback,
       ),
@@ -290,6 +300,7 @@ export class ComixTo
     promises.push(
       this.fetchHomeData(
         `${API_BASE}/manga/top?type=follows&days=${days}&limit=15&content_rating=${maxRating}${filterParams}`,
+        "home_follows_new",
         sections[3],
         sectionCallback,
       ),
@@ -299,6 +310,7 @@ export class ComixTo
     promises.push(
       this.fetchHomeData(
         `${API_BASE}/manga?order[follows_total]=desc&limit=15&includes[]=author${filterParams}`,
+        "home_follows",
         sections[4],
         sectionCallback,
       ),
@@ -309,11 +321,11 @@ export class ComixTo
 
   async fetchHomeData(
     url: string,
+    label: string,
     section: HomeSection,
     callback: (section: HomeSection) => void,
   ) {
-    const request = App.createRequest({ url: signUrl(url), method: "GET" });
-    const response = await this.requestManager.schedule(request, 1);
+    const response = await this.fetchTimed(label, signUrl(url));
     this.checkResponseError(response);
     const json = JSON.parse(response.data ?? "{}");
     const maxRating = await getContentRatingMax(this.stateManager);
@@ -361,8 +373,7 @@ export class ComixTo
         return App.createPagedResults({ results: [], metadata: undefined });
     }
 
-    const request = App.createRequest({ url: signUrl(url), method: "GET" });
-    const response = await this.requestManager.schedule(request, 1);
+    const response = await this.fetchTimed(`view_more_${homepageSectionId}`, signUrl(url));
     this.checkResponseError(response);
     const json = JSON.parse(response.data ?? "{}");
 
@@ -386,12 +397,8 @@ export class ComixTo
   async getSearchTags(): Promise<TagSection[]> {
     const fetchTags = async (type: string) => {
       try {
-        const req = App.createRequest({
-          // /tags/search caps at limit=50 in v1; >50 returns 422.
-          url: signUrl(`${API_BASE}/tags/search?type=${type}&limit=50`),
-          method: "GET",
-        });
-        const res = await this.requestManager.schedule(req, 1);
+        // /tags/search caps at limit=50 in v1; >50 returns 422.
+        const res = await this.fetchTimed("search_tags", signUrl(`${API_BASE}/tags/search?type=${type}&limit=50`));
         if (res.status < 200 || res.status >= 300) return [];
         const json = JSON.parse(res.data ?? "{}") as APIResponse<APIGenreResult>;
         return Array.isArray(json.result) ? json.result : [];
@@ -519,8 +526,7 @@ export class ComixTo
     // Apply the user's saved global tag/type filter on top of the search-specific filter.
     url += await this.buildFilterParams();
 
-    const request = App.createRequest({ url: signUrl(url), method: "GET" });
-    const response = await this.requestManager.schedule(request, 1);
+    const response = await this.fetchTimed("search", signUrl(url));
     this.checkResponseError(response);
 
     const json = JSON.parse(

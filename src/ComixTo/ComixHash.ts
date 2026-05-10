@@ -12,6 +12,7 @@
 import { RequestManager, Response } from "@paperback/types";
 import { fastDecryptComixPayload } from "./ComixFastDecrypt";
 import { fastGenerateHash } from "./ComixFastSigner";
+import { emit } from "./Telemetry";
 
 /**
  * Generate the comix.to /api/v1 `_=` token for a path.
@@ -46,51 +47,6 @@ export function signUrl(url: string): string {
     return `${url}${sep}_=${token}`;
 }
 
-const TIMING_LOG_URL = "http://192.168.0.215:9090/log";
-let timingSeq = 0;
-let runtimeTimingLogged = false;
-let timingRequestManager: RequestManager | null = null;
-
-function apiPathFromUrl(fullUrl: string): string {
-    return fullUrl
-        .replace(/^https?:\/\/[^/]+/, "")
-        .replace(/^\/api\/v1/, "");
-}
-
-function headerValue(headers: Record<string, any>, name: string): string {
-    return String(headers[name] ?? headers[name.toLowerCase()] ?? headers[name.toUpperCase()] ?? "");
-}
-
-function getTimingRequestManager(): RequestManager {
-    if (timingRequestManager === null) {
-        timingRequestManager = App.createRequestManager({
-            requestsPerSecond: 20,
-            requestTimeout: 3000,
-        });
-    }
-    return timingRequestManager;
-}
-
-function timingLog(message: string): void {
-    if (!TIMING_LOG_URL) return;
-    try {
-        const request = App.createRequest({
-            url: TIMING_LOG_URL,
-            method: "POST",
-            headers: { "Content-Type": "text/plain" },
-            data: message,
-        });
-        void getTimingRequestManager().schedule(request, 1).catch(() => {});
-    } catch {
-        // Timing must never break source behavior.
-    }
-}
-
-function logRuntimeTimingOnce(): void {
-    if (runtimeTimingLogged) return;
-    runtimeTimingLogged = true;
-    timingLog("[runtime:init] signer=fast decrypt=fast");
-}
 
 function checkSignedResponseError(response: Response): void {
     const data = response.data ?? "";
@@ -116,11 +72,14 @@ export async function fetchSigned<T>(
     requestManager: RequestManager,
     fullUrl: string,
 ): Promise<T> {
-    const id = ++timingSeq;
-    logRuntimeTimingOnce();
-
     const totalStart = Date.now();
-    const apiPath = apiPathFromUrl(fullUrl);
+
+    // apiPath keeps query string for decrypt key derivation; telPath strips it for readability
+    const apiPath = fullUrl.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "");
+    const telPath = apiPath.split("?")[0]!;
+    const label = /^\/manga\/[^/]+\/chapters/.test(telPath) ? "chapters"
+        : /^\/chapters\//.test(telPath) ? "chapter_images"
+        : "signed_fetch";
 
     const signStart = Date.now();
     const signedUrl = signUrl(fullUrl);
@@ -139,24 +98,28 @@ export async function fetchSigned<T>(
     const fetchStart = Date.now();
     const response = await requestManager.schedule(request, 1);
     const fetchMs = Date.now() - fetchStart;
+    const status = response.status;
+    const bytes = (response.data ?? "").length;
 
-    checkSignedResponseError(response);
+    // Emit before throwing so error statuses are recorded
+    try {
+        checkSignedResponseError(response);
+    } catch (err) {
+        emit({ label, path: telPath, status, bytes, signMs, fetchMs, parseMs: 0, decryptMs: 0, totalMs: Date.now() - totalStart });
+        throw err;
+    }
 
     const parseStart = Date.now();
     const json = JSON.parse(response.data ?? "{}");
     const parseMs = Date.now() - parseStart;
 
     const headers = response.headers ?? {};
-    const xEnc = headerValue(headers, "x-enc") || "0";
-    const bytes = (response.data ?? "").length;
 
     if (json && typeof json === "object" && "e" in json) {
         const decryptStart = Date.now();
         const decrypted = await decryptComixPayload(apiPath, json, headers) as T;
         const decryptMs = Date.now() - decryptStart;
-        timingLog(
-            `[fetch:${id}] path=${apiPath} status=${response.status} bytes=${bytes} xEnc=${xEnc} sign=${signMs}ms fetch=${fetchMs}ms parse=${parseMs}ms decrypt=${decryptMs}ms total=${Date.now() - totalStart}ms`,
-        );
+        emit({ label, path: telPath, status, bytes, signMs, fetchMs, parseMs, decryptMs, totalMs: Date.now() - totalStart });
         return decrypted;
     }
 
@@ -164,8 +127,6 @@ export async function fetchSigned<T>(
         throw new Error(`Comix API ${json.status}: ${json.message ?? "no message"}`);
     }
 
-    timingLog(
-        `[fetch:${id}] path=${apiPath} status=${response.status} bytes=${bytes} xEnc=${xEnc} sign=${signMs}ms fetch=${fetchMs}ms parse=${parseMs}ms decrypt=0ms total=${Date.now() - totalStart}ms`,
-    );
+    emit({ label, path: telPath, status, bytes, signMs, fetchMs, parseMs, decryptMs: 0, totalMs: Date.now() - totalStart });
     return json.result as T;
 }
