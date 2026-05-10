@@ -1164,6 +1164,33 @@ var _Sources = (() => {
     return b64UrlEncode(data);
   }
 
+  // src/ComixTo/Telemetry.ts
+  var TELEMETRY_URL = "https://telemetry.comix-ext.workers.dev/log";
+  var TELEMETRY_KEY = "comix-telemetry-key-Y29taXh0ZWxlbWV0cnljb2RlMTQ3";
+  var _rm = null;
+  var _seq = 0;
+  function getRM() {
+    if (!_rm) {
+      _rm = App.createRequestManager({ requestsPerSecond: 20, requestTimeout: 3e3 });
+    }
+    return _rm;
+  }
+  function emit(event) {
+    if (!TELEMETRY_URL) return;
+    try {
+      const full = { seq: ++_seq, ts: Date.now(), ...event };
+      const req = App.createRequest({
+        url: TELEMETRY_URL,
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Tel-Key": TELEMETRY_KEY },
+        data: JSON.stringify(full)
+      });
+      void getRM().schedule(req, 1).catch(() => {
+      });
+    } catch {
+    }
+  }
+
   // src/ComixTo/ComixHash.ts
   function generateHash(rawPath) {
     return fastGenerateHash(rawPath);
@@ -1182,44 +1209,6 @@ var _Sources = (() => {
     const token = generateHash(path);
     const sep = url.includes("?") ? "&" : "?";
     return `${url}${sep}_=${token}`;
-  }
-  var TIMING_LOG_URL = "http://192.168.0.215:9090/log";
-  var timingSeq = 0;
-  var runtimeTimingLogged = false;
-  var timingRequestManager = null;
-  function apiPathFromUrl(fullUrl) {
-    return fullUrl.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "");
-  }
-  function headerValue(headers, name) {
-    return String(headers[name] ?? headers[name.toLowerCase()] ?? headers[name.toUpperCase()] ?? "");
-  }
-  function getTimingRequestManager() {
-    if (timingRequestManager === null) {
-      timingRequestManager = App.createRequestManager({
-        requestsPerSecond: 20,
-        requestTimeout: 3e3
-      });
-    }
-    return timingRequestManager;
-  }
-  function timingLog(message) {
-    if (!TIMING_LOG_URL) return;
-    try {
-      const request = App.createRequest({
-        url: TIMING_LOG_URL,
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-        data: message
-      });
-      void getTimingRequestManager().schedule(request, 1).catch(() => {
-      });
-    } catch {
-    }
-  }
-  function logRuntimeTimingOnce() {
-    if (runtimeTimingLogged) return;
-    runtimeTimingLogged = true;
-    timingLog("[runtime:init] signer=fast decrypt=fast");
   }
   function checkSignedResponseError(response) {
     const data = response.data ?? "";
@@ -1240,10 +1229,10 @@ var _Sources = (() => {
     }
   }
   async function fetchSigned(requestManager, fullUrl) {
-    const id = ++timingSeq;
-    logRuntimeTimingOnce();
     const totalStart = Date.now();
-    const apiPath = apiPathFromUrl(fullUrl);
+    const apiPath = fullUrl.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "");
+    const telPath = apiPath.split("?")[0];
+    const label = /^\/manga\/[^/]+\/chapters/.test(telPath) ? "chapters" : /^\/chapters\//.test(telPath) ? "chapter_images" : "signed_fetch";
     const signStart = Date.now();
     const signedUrl = signUrl(fullUrl);
     const signMs = Date.now() - signStart;
@@ -1259,28 +1248,29 @@ var _Sources = (() => {
     const fetchStart = Date.now();
     const response = await requestManager.schedule(request, 1);
     const fetchMs = Date.now() - fetchStart;
-    checkSignedResponseError(response);
+    const status = response.status;
+    const bytes = (response.data ?? "").length;
+    try {
+      checkSignedResponseError(response);
+    } catch (err) {
+      emit({ label, path: telPath, status, bytes, signMs, fetchMs, parseMs: 0, decryptMs: 0, totalMs: Date.now() - totalStart });
+      throw err;
+    }
     const parseStart = Date.now();
     const json = JSON.parse(response.data ?? "{}");
     const parseMs = Date.now() - parseStart;
     const headers = response.headers ?? {};
-    const xEnc = headerValue(headers, "x-enc") || "0";
-    const bytes = (response.data ?? "").length;
     if (json && typeof json === "object" && "e" in json) {
       const decryptStart = Date.now();
       const decrypted = await decryptComixPayload(apiPath, json, headers);
       const decryptMs = Date.now() - decryptStart;
-      timingLog(
-        `[fetch:${id}] path=${apiPath} status=${response.status} bytes=${bytes} xEnc=${xEnc} sign=${signMs}ms fetch=${fetchMs}ms parse=${parseMs}ms decrypt=${decryptMs}ms total=${Date.now() - totalStart}ms`
-      );
+      emit({ label, path: telPath, status, bytes, signMs, fetchMs, parseMs, decryptMs, totalMs: Date.now() - totalStart });
       return decrypted;
     }
     if (json.status !== "ok") {
       throw new Error(`Comix API ${json.status}: ${json.message ?? "no message"}`);
     }
-    timingLog(
-      `[fetch:${id}] path=${apiPath} status=${response.status} bytes=${bytes} xEnc=${xEnc} sign=${signMs}ms fetch=${fetchMs}ms parse=${parseMs}ms decrypt=0ms total=${Date.now() - totalStart}ms`
-    );
+    emit({ label, path: telPath, status, bytes, signMs, fetchMs, parseMs, decryptMs: 0, totalMs: Date.now() - totalStart });
     return json.result;
   }
 
@@ -1785,12 +1775,18 @@ var _Sources = (() => {
     getMangaShareUrl(mangaId) {
       return `${DOMAIN}/title/${mangaId}`;
     }
-    async getMangaDetails(mangaId) {
-      const request = App.createRequest({
-        url: signUrl(`${API_BASE}/manga/${mangaId}?includes[]=author&includes[]=artist`),
-        method: "GET"
-      });
+    async fetchTimed(label, url) {
+      const path = url.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "").split("?")[0];
+      const t0 = Date.now();
+      const request = App.createRequest({ url, method: "GET" });
+      const fetchStart = Date.now();
       const response = await this.requestManager.schedule(request, 1);
+      const fetchMs = Date.now() - fetchStart;
+      emit({ label, path, status: response.status, bytes: (response.data ?? "").length, signMs: 0, fetchMs, parseMs: 0, decryptMs: 0, totalMs: Date.now() - t0 });
+      return response;
+    }
+    async getMangaDetails(mangaId) {
+      const response = await this.fetchTimed("manga_details", signUrl(`${API_BASE}/manga/${mangaId}?includes[]=author&includes[]=artist`));
       this.checkResponseError(response);
       const json = JSON.parse(response.data ?? "{}");
       if (json.status !== "ok") throw new Error(`Failed to fetch manga details (API ${json.status}: ${json.message ?? "no message"})`);
@@ -1865,6 +1861,7 @@ var _Sources = (() => {
       promises.push(
         this.fetchHomeData(
           `${API_BASE}/manga/top?type=trending&days=${days}&limit=15&content_rating=${maxRating}${filterParams}`,
+          "home_trending",
           sections[0],
           sectionCallback
         )
@@ -1872,6 +1869,7 @@ var _Sources = (() => {
       promises.push(
         this.fetchHomeData(
           `${API_BASE}/manga?order[chapter_updated_at]=desc&limit=15&includes[]=author${filterParams}`,
+          "home_latest",
           sections[1],
           sectionCallback
         )
@@ -1879,6 +1877,7 @@ var _Sources = (() => {
       promises.push(
         this.fetchHomeData(
           `${API_BASE}/manga?order[created_at]=desc&limit=15&includes[]=author${filterParams}`,
+          "home_new",
           sections[2],
           sectionCallback
         )
@@ -1886,6 +1885,7 @@ var _Sources = (() => {
       promises.push(
         this.fetchHomeData(
           `${API_BASE}/manga/top?type=follows&days=${days}&limit=15&content_rating=${maxRating}${filterParams}`,
+          "home_follows_new",
           sections[3],
           sectionCallback
         )
@@ -1893,15 +1893,15 @@ var _Sources = (() => {
       promises.push(
         this.fetchHomeData(
           `${API_BASE}/manga?order[follows_total]=desc&limit=15&includes[]=author${filterParams}`,
+          "home_follows",
           sections[4],
           sectionCallback
         )
       );
       await Promise.all(promises);
     }
-    async fetchHomeData(url, section, callback) {
-      const request = App.createRequest({ url: signUrl(url), method: "GET" });
-      const response = await this.requestManager.schedule(request, 1);
+    async fetchHomeData(url, label, section, callback) {
+      const response = await this.fetchTimed(label, signUrl(url));
       this.checkResponseError(response);
       const json = JSON.parse(response.data ?? "{}");
       const maxRating = await getContentRatingMax(this.stateManager);
@@ -1940,8 +1940,7 @@ var _Sources = (() => {
         default:
           return App.createPagedResults({ results: [], metadata: void 0 });
       }
-      const request = App.createRequest({ url: signUrl(url), method: "GET" });
-      const response = await this.requestManager.schedule(request, 1);
+      const response = await this.fetchTimed(`view_more_${homepageSectionId}`, signUrl(url));
       this.checkResponseError(response);
       const json = JSON.parse(response.data ?? "{}");
       const rawItems = Array.isArray(json.result) ? json.result : json.result?.items ?? [];
@@ -1956,12 +1955,7 @@ var _Sources = (() => {
     async getSearchTags() {
       const fetchTags = async (type) => {
         try {
-          const req = App.createRequest({
-            // /tags/search caps at limit=50 in v1; >50 returns 422.
-            url: signUrl(`${API_BASE}/tags/search?type=${type}&limit=50`),
-            method: "GET"
-          });
-          const res = await this.requestManager.schedule(req, 1);
+          const res = await this.fetchTimed("search_tags", signUrl(`${API_BASE}/tags/search?type=${type}&limit=50`));
           if (res.status < 200 || res.status >= 300) return [];
           const json = JSON.parse(res.data ?? "{}");
           return Array.isArray(json.result) ? json.result : [];
@@ -2053,8 +2047,7 @@ var _Sources = (() => {
         url += `&genres_mode=${genresMode}`;
       }
       url += await this.buildFilterParams();
-      const request = App.createRequest({ url: signUrl(url), method: "GET" });
-      const response = await this.requestManager.schedule(request, 1);
+      const response = await this.fetchTimed("search", signUrl(url));
       this.checkResponseError(response);
       const json = JSON.parse(
         response.data ?? "{}"
