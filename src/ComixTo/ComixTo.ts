@@ -54,10 +54,11 @@ import {
     getTagWhitelistMode,
     getTagAndMode,
     getTypeFilter,
+    getCachedTags,
 } from "./Settings";
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.7.1",
+  version: "1.7.2",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -88,7 +89,6 @@ export class ComixTo
 {
   parser = new Parser();
   stateManager = App.createSourceStateManager();
-
   requestManager = App.createRequestManager({
     requestsPerSecond: 4,
     requestTimeout: 15000,
@@ -395,26 +395,38 @@ export class ComixTo
   // -- Advanced Search --
 
   async getSearchTags(): Promise<TagSection[]> {
-    const fetchTags = async (type: string) => {
-      try {
-        // /tags/search caps at limit=50 in v1; >50 returns 422.
-        const res = await this.fetchTimed("search_tags", signUrl(`${API_BASE}/tags/search?type=${type}&limit=50`));
-        if (res.status < 200 || res.status >= 300) return [];
-        const json = JSON.parse(res.data ?? "{}") as APIResponse<APIGenreResult>;
-        return Array.isArray(json.result) ? json.result : [];
-      } catch {
-        return [];
-      }
-    };
+    let genres: any[], themes: any[], formats: any[], demographics: any[];
 
-    // v1 renamed type=theme → type=tag.
-    const [genres, themes, formats, demographics] = await Promise.all([
-      fetchTags("genre"),
-      fetchTags("tag"),
-      fetchTags("format"),
-      fetchTags("demographic"),
-    ]);
+    const cached = await getCachedTags(this.stateManager);
+    if (cached) {
+      ({ genre: genres, theme: themes, format: formats, demographic: demographics } = cached);
+    } else {
+      const fetchTags = async (type: string) => {
+        try {
+          // /tags/search caps at limit=50 in v1; >50 returns 422.
+          const res = await this.fetchTimed("search_tags", signUrl(`${API_BASE}/tags/search?type=${type}&limit=50`));
+          if (res.status < 200 || res.status >= 300) return [];
+          const json = JSON.parse(res.data ?? "{}") as APIResponse<APIGenreResult>;
+          return Array.isArray(json.result) ? json.result : [];
+        } catch {
+          return [];
+        }
+      };
 
+      // v1 renamed type=theme → type=tag.
+      [genres, themes, formats, demographics] = await Promise.all([
+        fetchTags("genre"),
+        fetchTags("tag"),
+        fetchTags("format"),
+        fetchTags("demographic"),
+      ]);
+
+      await this.stateManager.store('tag_cache_v1', JSON.stringify({
+        genre: genres, theme: themes, format: formats, demographic: demographics, ts: Date.now(),
+      }));
+    }
+
+    // Sections are always rebuilt fresh — SDK objects must not be reused across calls.
     const sections: TagSection[] = [];
 
     // 1. Static Filters (Top)

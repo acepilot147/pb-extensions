@@ -13,6 +13,7 @@ interface TagCache {
     theme: APIGenreItem[];
     format: APIGenreItem[];
     demographic: APIGenreItem[];
+    ts?: number;
 }
 
 export const TRENDING_OPTIONS =[
@@ -265,10 +266,16 @@ export const groupSettings = (stateManager: SourceStateManager): DUINavigationBu
 }
 
 // --- HELPERS: TAG BLACKLIST ---
+const TAG_CACHE_TTL = 86400000; // 24 hours
+
 export const getCachedTags = async (stateManager: SourceStateManager): Promise<TagCache | null> => {
     const cached = await stateManager.retrieve('tag_cache_v1') as string | null;
     if (!cached) return null;
-    try { return JSON.parse(cached) as TagCache; } catch { return null; }
+    try {
+        const parsed = JSON.parse(cached) as TagCache;
+        if (!parsed.ts || Date.now() - parsed.ts > TAG_CACHE_TTL) return null;
+        return parsed;
+    } catch { return null; }
 }
 
 export const getTagBlacklist = async (stateManager: SourceStateManager): Promise<string[]> => {
@@ -324,7 +331,7 @@ const warmUpTagCache = (stateManager: SourceStateManager, requestManager: Reques
                     fetchTerms('demographic'),
                 ]);
 
-                const cache: TagCache = { genre, theme, format, demographic };
+                const cache: TagCache = { genre, theme, format, demographic, ts: Date.now() };
                 await stateManager.store('tag_cache_v1', JSON.stringify(cache));
                 return cache;
             } catch {
