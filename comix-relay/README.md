@@ -10,6 +10,32 @@ Endpoints:
 - `GET /health`
 - `GET /comix-fast-constants.json`
 - `GET /api/comix-fast-constants`
+- `GET /api/refresh`
+
+By default, constants requests also run the bundle cache check first:
+
+```text
+fetch live homepage/main/secure
+hash secure.js
+compare with cached bundleId
+skip analysis if unchanged
+refresh constants if changed
+serve comix-fast-constants.json
+```
+
+If one request is already checking/analyzing a bundle, later requests are queued
+onto the same in-flight analysis and do not start another extraction. Render logs
+include `bundle analysis started`, `bundle analysis already running; request
+queued`, and `bundle analysis finished`.
+
+Set `COMIX_RELAY_AUTO_REFRESH=0` to make constants endpoints serve only the
+cached JSON. You can still trigger a check manually:
+
+```text
+GET /api/refresh
+GET /api/refresh?force=1
+GET /api/comix-fast-constants?force=1
+```
 
 The constants response includes:
 

@@ -28,6 +28,18 @@ function run(label, command, args, cwd) {
   }
 }
 
+function runNpm(label, args, cwd) {
+  if (NPM_CLI) {
+    run(label, NODE, [NPM_CLI, ...args], cwd);
+    return;
+  }
+  if (process.platform === "win32") {
+    run(label, process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", ["npm", ...args].join(" ")], cwd);
+    return;
+  }
+  run(label, NPM, args, cwd);
+}
+
 function cookieHeader() {
   return [
     process.env.SESSION ? `session=${process.env.SESSION}` : "",
@@ -94,11 +106,7 @@ async function main() {
     console.log("[cache] force refresh requested");
   }
 
-  if (NPM_CLI) {
-    run("refresh Comix runtime from live site", NODE, [NPM_CLI, "run", "refresh:comix"], REPO_ROOT);
-  } else {
-    run("refresh Comix runtime from live site", NPM, ["run", "refresh:comix"], REPO_ROOT);
-  }
+  runNpm("refresh Comix runtime from live site", ["run", "refresh:comix"], REPO_ROOT);
   run("write relay constants JSON", NODE, ["update-constants.js"], RELAY_ROOT);
   run("validate standalone relay JSON", NODE, ["server.js", "--check"], RELAY_ROOT);
 }
