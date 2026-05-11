@@ -8,6 +8,9 @@
   "scripts": {
     "bundle": "paperback bundle --folder 0.8",
     "serve": "paperback serve",
+    "refresh:comix": "node -r ts-node/register/transpile-only experiment/RefreshComixRuntime.ts",
+    "simulate:comix-403": "node -r ts-node/register/transpile-only experiment/SimulateComixRelay403Recovery.ts",
+    "test:comix-candidates": "node -r ts-node/register/transpile-only experiment/TestComixCryptoCandidates.ts",
     "test": "paperback test"
   },
   "devDependencies": {

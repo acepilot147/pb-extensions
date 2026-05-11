@@ -2,7 +2,7 @@ temp_build
 bundles
 lib
 tmp
-experiment/
+experiment/extracted/
 
 #Private
 stuff/
