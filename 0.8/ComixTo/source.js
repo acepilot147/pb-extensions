@@ -1169,6 +1169,7 @@ var _Sources = (() => {
   var TELEMETRY_KEY = "comix-telemetry-key-Y29taXh0ZWxlbWV0cnljb2RlMTQ3";
   var _rm = null;
   var _seq = 0;
+  var _relaySeq = 0;
   function getRM() {
     if (!_rm) {
       _rm = App.createRequestManager({ requestsPerSecond: 20, requestTimeout: 3e3 });
@@ -1198,6 +1199,379 @@ var _Sources = (() => {
     } catch {
     }
   }
+  function emitRelay(event) {
+    if (!TELEMETRY_URL) return;
+    try {
+      const full = { seq: ++_relaySeq, ts: Date.now(), ...event, path: hashPath(event.path) };
+      const req = App.createRequest({
+        url: TELEMETRY_URL.replace(/\/log$/, "/relay-log"),
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Tel-Key": TELEMETRY_KEY },
+        data: JSON.stringify(full)
+      });
+      void getRM().schedule(req, 1).catch(() => {
+      });
+    } catch {
+    }
+  }
+
+  // src/ComixTo/ComixFastRemote.ts
+  var REMOTE_CONSTANTS_URL = "https://comix-fast-constants-relay.onrender.com/api/comix-fast-constants";
+  var REMOTE_CONSTANTS_STATE_KEY = "comix.remoteConstants.v2";
+  var B64_CHARS3 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  var PERIOD = 160;
+  var cachedConstants = null;
+  function b64Decode3(s) {
+    const lookup = new Array(128).fill(-1);
+    for (let i = 0; i < 64; i++) lookup[B64_CHARS3.charCodeAt(i)] = i;
+    const normalized = String(s || "").replace(/-/g, "+").replace(/_/g, "/");
+    const out = [];
+    let buf = 0, bits = 0;
+    for (let i = 0; i < normalized.length; i++) {
+      const c = normalized.charCodeAt(i);
+      if (c === 61) break;
+      const v = lookup[c] ?? -1;
+      if (v < 0) continue;
+      buf = buf << 6 | v;
+      bits += 6;
+      if (bits >= 8) {
+        bits -= 8;
+        out.push(buf >> bits & 255);
+      }
+    }
+    return out;
+  }
+  function b64UrlEncode2(bytes) {
+    let out = "", i = 0;
+    for (; i + 2 < bytes.length; i += 3) {
+      const n = bytes[i] << 16 | bytes[i + 1] << 8 | bytes[i + 2];
+      out += B64_CHARS3[n >> 18 & 63] + B64_CHARS3[n >> 12 & 63] + B64_CHARS3[n >> 6 & 63] + B64_CHARS3[n & 63];
+    }
+    if (i + 1 === bytes.length) {
+      const n = bytes[i] << 16;
+      out += B64_CHARS3[n >> 18 & 63] + B64_CHARS3[n >> 12 & 63];
+    } else if (i + 2 === bytes.length) {
+      const n = bytes[i] << 16 | bytes[i + 1] << 8;
+      out += B64_CHARS3[n >> 18 & 63] + B64_CHARS3[n >> 12 & 63] + B64_CHARS3[n >> 6 & 63];
+    }
+    return out.replace(/\+/g, "-").replace(/\//g, "_");
+  }
+  function bytesFromString2(s) {
+    const out = new Array(s.length);
+    for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i) & 255;
+    return out;
+  }
+  function bytesToBinaryString2(bytes) {
+    let out = "";
+    for (let i = 0; i < bytes.length; i += 8192) {
+      out += String.fromCharCode(...bytes.slice(i, i + 8192));
+    }
+    return out;
+  }
+  function rc43(key, data) {
+    const s = new Array(256);
+    for (let i2 = 0; i2 < 256; i2++) s[i2] = i2;
+    let j = 0;
+    for (let i2 = 0; i2 < 256; i2++) {
+      j = j + s[i2] + key[i2 % key.length] & 255;
+      const t = s[i2];
+      s[i2] = s[j];
+      s[j] = t;
+    }
+    const out = new Array(data.length);
+    let i = 0;
+    j = 0;
+    for (let n = 0; n < data.length; n++) {
+      i = i + 1 & 255;
+      j = j + s[i] & 255;
+      const t = s[i];
+      s[i] = s[j];
+      s[j] = t;
+      out[n] = data[n] ^ s[s[i] + s[j] & 255];
+    }
+    return out;
+  }
+  function rotL12(n) {
+    return (n << 1 | n >>> 7) & 255;
+  }
+  function rotR12(n) {
+    return (n >>> 1 | n << 7) & 255;
+  }
+  function rotL22(n) {
+    return (n << 2 | n >>> 6) & 255;
+  }
+  function rotR22(n) {
+    return (n >>> 2 | n << 6) & 255;
+  }
+  function rotL32(n) {
+    return (n << 3 | n >>> 5) & 255;
+  }
+  function rotR32(n) {
+    return (n >>> 3 | n << 5) & 255;
+  }
+  function nibSwap2(n) {
+    return (n << 4 | n >>> 4) & 255;
+  }
+  function transformSignerByte(b, op, key, extra) {
+    const n = b ^ key;
+    switch (op) {
+      case 0:
+        return n;
+      case 1:
+        return n + extra & 255;
+      case 2:
+        return rotL12(n);
+      case 3:
+        return rotR12(n);
+      case 4:
+        return rotL22(n);
+      case 5:
+        return rotR22(n);
+      case 6:
+        return nibSwap2(n);
+      case 7:
+        return rotL32(n);
+      case 8:
+        return rotR32(n);
+      default:
+        return n;
+    }
+  }
+  function transformDecryptByte(b, op, key, extra) {
+    switch (op) {
+      case 0:
+        return b ^ key;
+      case 1:
+        return b + extra & 255 ^ key;
+      case 2:
+        return rotL12(b) ^ key;
+      case 3:
+        return rotR12(b) ^ key;
+      case 4:
+        return rotL22(b) ^ key;
+      case 5:
+        return rotR22(b) ^ key;
+      case 6:
+        return nibSwap2(b) ^ key;
+      case 7:
+        return rotL32(b) ^ key;
+      case 8:
+        return rotR32(b) ^ key;
+      case 9:
+        return (b ^ key) + extra & 255;
+      case 10:
+        return rotL12(b ^ key);
+      case 11:
+        return rotR12(b ^ key);
+      case 12:
+        return rotL22(b ^ key);
+      case 13:
+        return rotR22(b ^ key);
+      case 14:
+        return nibSwap2(b ^ key);
+      case 15:
+        return rotL32(b ^ key);
+      case 16:
+        return rotR32(b ^ key);
+      default:
+        return b ^ key;
+    }
+  }
+  function encodedIndexForOutput2(outputIndex, prefixLimit) {
+    return outputIndex < prefixLimit ? outputIndex * 2 + 1 : outputIndex + prefixLimit;
+  }
+  function applyInsertStage2(data, stage) {
+    const prefixBytes = b64Decode3(stage.prefixBytesB64);
+    const ops = b64Decode3(stage.opsB64);
+    const out = new Array(data.length + stage.prefix);
+    for (let i = 0; i < data.length; i++) {
+      if (i < stage.prefix) out[i * 2] = prefixBytes[i];
+      const opIndex = i % PERIOD * 3;
+      out[i < stage.prefix ? i * 2 + 1 : i + stage.prefix] = transformSignerByte(
+        data[i] & 255,
+        ops[opIndex],
+        ops[opIndex + 1],
+        ops[opIndex + 2]
+      );
+    }
+    return out;
+  }
+  function applyMutationStage2(data, stage) {
+    const ops = b64Decode3(stage.opsB64);
+    const outLen = data.length - stage.prefix;
+    if (outLen < 0) throw new Error("Comix encrypted payload is too short");
+    const out = new Array(outLen);
+    for (let i = 0; i < outLen; i++) {
+      const opIndex = i % PERIOD * 3;
+      const encoded = data[encodedIndexForOutput2(i, stage.prefix)] & 255;
+      out[i] = transformDecryptByte(encoded, ops[opIndex], ops[opIndex + 1], ops[opIndex + 2]);
+    }
+    return out;
+  }
+  function normalizeSignPath2(rawPath) {
+    return rawPath.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "").split("?")[0];
+  }
+  function validateConstants(constants) {
+    if (constants.schemaVersion !== 2 || constants.encoding !== "compact-b64-ops" || constants.period !== PERIOD) {
+      throw new Error("Unsupported Comix remote constants schema");
+    }
+    if (constants.signer.rc4Keys.length !== constants.signer.insertStages.length) {
+      throw new Error("Comix remote signer constants mismatch");
+    }
+    if (constants.decrypt.rc4Keys.length !== constants.decrypt.mutationStages.length) {
+      throw new Error("Comix remote decrypt constants mismatch");
+    }
+  }
+  function emitRemoteConstantsTelemetry(constants, source, force, ctx, values) {
+    emitRelay({
+      reason: ctx?.reason ?? "constants-fetch",
+      path: ctx?.path ?? "",
+      method: ctx?.method ?? "GET",
+      attempt: ctx?.attempt ?? 1,
+      localStatus: ctx?.localStatus,
+      retryStatus: ctx?.retryStatus,
+      relayStatus: values.relayStatus,
+      relayOk: values.relayOk,
+      relayError: values.relayError,
+      bundleId: constants?.bundleId,
+      constantsSchema: constants?.schemaVersion,
+      signerOrder: constants?.signer.pipelineOrder,
+      signerRounds: constants?.signer.rc4Keys.length,
+      decryptOrder: constants?.decrypt.pipelineOrder,
+      decryptRounds: constants?.decrypt.rc4Keys.length,
+      constantsSource: source,
+      cacheHit: source === "memory" || source === "state",
+      forceRefresh: force,
+      relayMs: values.relayMs,
+      totalMs: values.totalMs,
+      bytes: values.bytes,
+      detail: ctx?.detail
+    });
+  }
+  async function loadStoredConstants(stateManager) {
+    if (!stateManager) return null;
+    try {
+      const raw = await stateManager.retrieve(REMOTE_CONSTANTS_STATE_KEY);
+      if (!raw) return null;
+      const constants = JSON.parse(raw);
+      validateConstants(constants);
+      return constants;
+    } catch {
+      await stateManager.store(REMOTE_CONSTANTS_STATE_KEY, null);
+      return null;
+    }
+  }
+  async function storeRemoteComixConstants(stateManager, constants) {
+    if (!stateManager) return;
+    validateConstants(constants);
+    await stateManager.store(REMOTE_CONSTANTS_STATE_KEY, JSON.stringify(constants));
+  }
+  async function getAvailableRemoteComixConstants(stateManager) {
+    if (cachedConstants) return cachedConstants;
+    const stored = await loadStoredConstants(stateManager);
+    if (!stored) return null;
+    cachedConstants = stored;
+    return stored;
+  }
+  async function fetchRemoteComixConstants(requestManager, stateManager, force = false, telemetry) {
+    const totalStart = Date.now();
+    if (cachedConstants && !force) {
+      emitRemoteConstantsTelemetry(cachedConstants, "memory", force, telemetry, {
+        relayOk: true,
+        relayMs: 0,
+        totalMs: Date.now() - totalStart,
+        bytes: 0
+      });
+      return cachedConstants;
+    }
+    if (!force) {
+      const stored = await loadStoredConstants(stateManager);
+      if (stored) {
+        cachedConstants = stored;
+        emitRemoteConstantsTelemetry(stored, "state", force, telemetry, {
+          relayOk: true,
+          relayMs: 0,
+          totalMs: Date.now() - totalStart,
+          bytes: 0
+        });
+        return stored;
+      }
+    }
+    let responseStatus = 0;
+    let responseBytes = 0;
+    const relayStart = Date.now();
+    try {
+      const response = await requestManager.schedule(App.createRequest({
+        url: `${REMOTE_CONSTANTS_URL}?t=${Date.now()}`,
+        method: "GET",
+        headers: { "Accept": "application/json" }
+      }), 1);
+      const relayMs = Date.now() - relayStart;
+      responseStatus = response.status;
+      responseBytes = (response.data ?? "").length;
+      if (response.status < 200 || response.status >= 300) {
+        throw new Error(`Comix remote constants HTTP ${response.status}`);
+      }
+      const constants = JSON.parse(response.data ?? "{}");
+      validateConstants(constants);
+      cachedConstants = constants;
+      await storeRemoteComixConstants(stateManager, constants);
+      emitRemoteConstantsTelemetry(constants, force ? "force-relay" : "relay", force, telemetry, {
+        relayStatus: response.status,
+        relayOk: true,
+        relayMs,
+        totalMs: Date.now() - totalStart,
+        bytes: responseBytes
+      });
+      return constants;
+    } catch (error) {
+      try {
+        console.error(`[ComixTo] Relay constants fetch failed: ${String(error?.message ?? error)}`);
+      } catch {
+      }
+      emitRemoteConstantsTelemetry(null, force ? "force-relay" : "relay", force, telemetry, {
+        relayStatus: responseStatus || void 0,
+        relayOk: false,
+        relayError: String(error?.message ?? error).slice(0, 160),
+        relayMs: Date.now() - relayStart,
+        totalMs: Date.now() - totalStart,
+        bytes: responseBytes
+      });
+      throw error;
+    }
+  }
+  function remoteGenerateHash(rawPath, constants) {
+    const path = normalizeSignPath2(rawPath);
+    let data = bytesFromString2(encodeURIComponent(path));
+    for (let i = 0; i < constants.signer.rc4Keys.length; i++) {
+      if (constants.signer.pipelineOrder === "rc4-then-insert") {
+        data = rc43(b64Decode3(constants.signer.rc4Keys[i]), data);
+        data = applyInsertStage2(data, constants.signer.insertStages[i]);
+      } else {
+        data = applyInsertStage2(data, constants.signer.insertStages[i]);
+        data = rc43(b64Decode3(constants.signer.rc4Keys[i]), data);
+      }
+    }
+    return b64UrlEncode2(data);
+  }
+  function remoteDecryptComixPayload(payload, headers, constants) {
+    if (!(payload && typeof payload === "object" && "e" in payload)) return payload;
+    const normalizedHeaders = {};
+    for (const key of Object.keys(headers ?? {})) normalizedHeaders[key.toLowerCase()] = String(headers[key]);
+    if (normalizedHeaders["x-enc"] && normalizedHeaders["x-enc"] !== "1") return payload;
+    let data = b64Decode3(String(payload.e ?? ""));
+    for (let i = 0; i < constants.decrypt.rc4Keys.length; i++) {
+      if (constants.decrypt.pipelineOrder === "mutation-then-rc4") {
+        data = applyMutationStage2(data, constants.decrypt.mutationStages[i]);
+        data = rc43(b64Decode3(constants.decrypt.rc4Keys[i]), data);
+      } else {
+        data = rc43(b64Decode3(constants.decrypt.rc4Keys[i]), data);
+        data = applyMutationStage2(data, constants.decrypt.mutationStages[i]);
+      }
+    }
+    const parsed = JSON.parse(decodeURIComponent(bytesToBinaryString2(data)));
+    return parsed && typeof parsed === "object" && parsed.status === "ok" ? parsed.result : parsed;
+  }
 
   // src/ComixTo/ComixHash.ts
   function generateHash(rawPath) {
@@ -1218,48 +1592,138 @@ var _Sources = (() => {
     const sep = url.includes("?") ? "&" : "?";
     return `${url}${sep}_=${token}`;
   }
-  function checkSignedResponseError(response) {
-    const data = response.data ?? "";
-    const preview = data.substring(0, 200).replace(/\s+/g, " ");
-    const headers = response.headers ?? {};
-    const ct = headers["Content-Type"] ?? headers["content-type"] ?? "?";
-    const cfRay = headers["Cf-Ray"] ?? headers["cf-ray"] ?? "?";
-    const reqUrl = response.request?.url ?? "?";
-    const ctx = `status=${response.status} ct=${ct} cf-ray=${cfRay} url=${reqUrl} preview="${preview}"`;
-    if (response.status === 403 || response.status === 503) {
-      throw new Error(`Cloudflare Bypass Required [${ctx}]`);
-    }
-    if (response.status < 200 || response.status >= 300) {
-      throw new Error(`HTTP ${response.status}: Unexpected response from server [${ctx}]`);
-    }
-    if (data.trimStart().startsWith("<")) {
-      throw new Error(`Cloudflare Bypass Required [${ctx}]`);
-    }
+  function signUrlWithRemoteConstants(url, constants) {
+    const path = url.replace("https://comix.to/api/v1", "").split("?")[0];
+    if (!SIGNED_PATTERNS.some((re) => re.test(path))) return url;
+    const token = remoteGenerateHash(path, constants);
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}_=${token}`;
   }
-  async function fetchSigned(requestManager, fullUrl) {
-    const totalStart = Date.now();
-    const apiPath = fullUrl.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "");
-    const telPath = apiPath.split("?")[0];
-    const label = /^\/manga\/[^/]+\/chapters/.test(telPath) ? "chapters" : /^\/chapters\//.test(telPath) ? "chapter_images" : "signed_fetch";
-    const signStart = Date.now();
-    const signedUrl = signUrl(fullUrl);
-    const signMs = Date.now() - signStart;
-    const request = App.createRequest({
-      url: signedUrl,
+  async function requestSignedUrl(requestManager, url) {
+    return requestManager.schedule(App.createRequest({
+      url,
       method: "GET",
       headers: {
         "Accept": "application/json",
         "X-Requested-With": "XMLHttpRequest",
         "Referer": "https://comix.to/"
       }
+    }), 1);
+  }
+  async function signUrlRemote(requestManager, stateManager, url, force = false, telemetry) {
+    const path = url.replace("https://comix.to/api/v1", "").split("?")[0];
+    if (!SIGNED_PATTERNS.some((re) => re.test(path))) return { signedUrl: url, constants: null };
+    const constants = await fetchRemoteComixConstants(requestManager, stateManager, force, {
+      reason: telemetry?.reason,
+      path: telemetry?.path ?? path,
+      attempt: telemetry?.attempt,
+      localStatus: telemetry?.localStatus,
+      retryStatus: telemetry?.retryStatus,
+      detail: telemetry?.detail
     });
-    const fetchStart = Date.now();
-    const response = await requestManager.schedule(request, 1);
-    const fetchMs = Date.now() - fetchStart;
-    const status = response.status;
-    const bytes = (response.data ?? "").length;
+    return { signedUrl: signUrlWithRemoteConstants(url, constants), constants };
+  }
+  function checkSignedResponseError(response, relayFallbackError) {
+    const data = response.data ?? "";
+    const preview = data.substring(0, 200).replace(/\s+/g, " ");
+    const headers = response.headers ?? {};
+    const ct = headers["Content-Type"] ?? headers["content-type"] ?? "?";
+    const cfRay = headers["Cf-Ray"] ?? headers["cf-ray"] ?? "?";
+    const reqUrl = response.request?.url ?? "?";
+    const relayCtx = relayFallbackError ? ` relay_fallback_failed="${relayFallbackError}"` : "";
+    const ctx = `status=${response.status} ct=${ct} cf-ray=${cfRay} url=${reqUrl}${relayCtx} preview="${preview}"`;
+    if (response.status < 200 || response.status >= 300) {
+      throw new Error(`HTTP ${response.status}: Unexpected response from server [${ctx}]`);
+    }
+    if (data.trimStart().startsWith("<")) {
+      throw new Error(`Cloudflare challenge page returned [${ctx}]`);
+    }
+  }
+  async function fetchSigned(requestManager, fullUrl, stateManager) {
+    const totalStart = Date.now();
+    const apiPath = fullUrl.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "");
+    const telPath = apiPath.split("?")[0];
+    const label = /^\/manga\/[^/]+\/chapters/.test(telPath) ? "chapters" : /^\/chapters\//.test(telPath) ? "chapter_images" : "signed_fetch";
+    let usedRemoteConstants = false;
+    let remoteFirst = false;
+    let localStatus;
+    let signStart = Date.now();
+    const availableRemoteConstants = await getAvailableRemoteComixConstants(stateManager);
+    let signedUrl;
+    if (availableRemoteConstants) {
+      signedUrl = signUrlWithRemoteConstants(fullUrl, availableRemoteConstants);
+      usedRemoteConstants = signedUrl !== fullUrl;
+      remoteFirst = usedRemoteConstants;
+    } else {
+      signedUrl = signUrl(fullUrl);
+    }
+    let signMs = Date.now() - signStart;
+    let fetchStart = Date.now();
+    let response = await requestSignedUrl(requestManager, signedUrl);
+    let fetchMs = Date.now() - fetchStart;
+    let status = response.status;
+    let bytes = (response.data ?? "").length;
+    if (!remoteFirst) localStatus = status;
+    let relayFallbackError = "";
+    if (status === 403 || status === 503) {
+      try {
+        if (remoteFirst) {
+          signStart = Date.now();
+          signedUrl = signUrl(fullUrl);
+          signMs = Date.now() - signStart;
+          usedRemoteConstants = false;
+          fetchStart = Date.now();
+          response = await requestSignedUrl(requestManager, signedUrl);
+          fetchMs = Date.now() - fetchStart;
+          status = response.status;
+          bytes = (response.data ?? "").length;
+          localStatus = status;
+        } else {
+          signStart = Date.now();
+          const remote = await signUrlRemote(requestManager, stateManager, fullUrl, false, {
+            reason: `local-${status}`,
+            path: telPath,
+            attempt: 1,
+            localStatus
+          });
+          signedUrl = remote.signedUrl;
+          signMs = Date.now() - signStart;
+          usedRemoteConstants = true;
+          fetchStart = Date.now();
+          response = await requestSignedUrl(requestManager, signedUrl);
+          fetchMs = Date.now() - fetchStart;
+          status = response.status;
+          bytes = (response.data ?? "").length;
+        }
+        if (status === 403 || status === 503) {
+          signStart = Date.now();
+          const freshRemote = await signUrlRemote(requestManager, stateManager, fullUrl, true, {
+            reason: `retry-${status}`,
+            path: telPath,
+            attempt: 2,
+            localStatus,
+            retryStatus: status,
+            detail: remoteFirst ? "persisted remote and local constants failed; forced relay refresh" : "cached remote constants failed; forced relay refresh"
+          });
+          signedUrl = freshRemote.signedUrl;
+          signMs = Date.now() - signStart;
+          usedRemoteConstants = true;
+          fetchStart = Date.now();
+          response = await requestSignedUrl(requestManager, signedUrl);
+          fetchMs = Date.now() - fetchStart;
+          status = response.status;
+          bytes = (response.data ?? "").length;
+        }
+      } catch (error) {
+        relayFallbackError = String(error?.message ?? error).slice(0, 180);
+        try {
+          console.error(`[ComixTo] Relay fallback failed; continuing with local response: ${relayFallbackError}`);
+        } catch {
+        }
+      }
+    }
     try {
-      checkSignedResponseError(response);
+      checkSignedResponseError(response, relayFallbackError);
     } catch (err) {
       emit({ label, path: telPath, status, bytes, signMs, fetchMs, parseMs: 0, decryptMs: 0, totalMs: Date.now() - totalStart });
       throw err;
@@ -1270,7 +1734,19 @@ var _Sources = (() => {
     const headers = response.headers ?? {};
     if (json && typeof json === "object" && "e" in json) {
       const decryptStart = Date.now();
-      const decrypted = await decryptComixPayload(apiPath, json, headers);
+      let decrypted;
+      if (usedRemoteConstants) {
+        const constants = await fetchRemoteComixConstants(requestManager, stateManager, false, {
+          reason: "remote-decrypt",
+          path: telPath,
+          localStatus,
+          retryStatus: status
+        });
+        decrypted = remoteDecryptComixPayload(json, headers, constants);
+        await storeRemoteComixConstants(stateManager, constants);
+      } else {
+        decrypted = await decryptComixPayload(apiPath, json, headers);
+      }
       const decryptMs = Date.now() - decryptStart;
       emit({ label, path: telPath, status, bytes, signMs, fetchMs, parseMs, decryptMs, totalMs: Date.now() - totalStart });
       return decrypted;
@@ -1692,6 +2168,7 @@ var _Sources = (() => {
         await stateManager.store("tag_whitelist_mode", null);
         await stateManager.store("tag_and_mode", null);
         await stateManager.store("type_filter", null);
+        await stateManager.store("comix.remoteConstants.v2", null);
         resetTagCacheWarmUp();
       }
     }));
@@ -1699,7 +2176,7 @@ var _Sources = (() => {
 
   // src/ComixTo/ComixTo.ts
   var ComixToInfo = {
-    version: "1.7.3",
+    version: "1.8.0",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
@@ -1810,7 +2287,8 @@ var _Sources = (() => {
       do {
         const result = await fetchSigned(
           this.requestManager,
-          `${API_BASE}/manga/${mangaId}/chapters?page=${page}&limit=100&order[number]=desc`
+          `${API_BASE}/manga/${mangaId}/chapters?page=${page}&limit=100&order[number]=desc`,
+          this.stateManager
         );
         chapters.push(...result.items);
         lastPage = result.meta?.lastPage ?? 1;
@@ -1827,7 +2305,8 @@ var _Sources = (() => {
     async getChapterDetails(mangaId, chapterId) {
       const result = await fetchSigned(
         this.requestManager,
-        `${API_BASE}/chapters/${chapterId}`
+        `${API_BASE}/chapters/${chapterId}`,
+        this.stateManager
       );
       return this.parser.parseChapterDetails(result, mangaId, chapterId);
     }
@@ -2108,14 +2587,11 @@ var _Sources = (() => {
       const cfRay = headers["Cf-Ray"] ?? headers["cf-ray"] ?? "?";
       const reqUrl = response.request?.url ?? "?";
       const ctx = `status=${response.status} ct=${ct} server=${server} cf-ray=${cfRay} url=${reqUrl} preview="${preview}"`;
-      if (response.status === 403 || response.status === 503) {
-        throw new Error(`Cloudflare Bypass Required [${ctx}]`);
-      }
       if (response.status < 200 || response.status >= 300) {
         throw new Error(`HTTP ${response.status}: Unexpected response from server [${ctx}]`);
       }
       if (data.trimStart().startsWith("<")) {
-        throw new Error(`Cloudflare Bypass Required [${ctx}]`);
+        throw new Error(`Cloudflare challenge page returned [${ctx}]`);
       }
     }
   };
