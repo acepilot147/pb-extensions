@@ -475,6 +475,7 @@ export const resetSettings = (stateManager: SourceStateManager): DUIButton => {
             await stateManager.store('tag_whitelist_mode', null);
             await stateManager.store('tag_and_mode', null);
             await stateManager.store('type_filter', null);
+            await stateManager.store('comix.remoteConstants.v2', null);
             resetTagCacheWarmUp();
         }
     }))

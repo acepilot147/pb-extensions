@@ -58,7 +58,7 @@ import {
 } from "./Settings";
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.7.3",
+  version: "1.8.0",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -194,6 +194,7 @@ export class ComixTo
       const result = await fetchSigned<APIChapterResult>(
         this.requestManager,
         `${API_BASE}/manga/${mangaId}/chapters?page=${page}&limit=100&order[number]=desc`,
+        this.stateManager,
       );
 
       chapters.push(...result.items);
@@ -219,6 +220,7 @@ export class ComixTo
     const result = await fetchSigned<APIPagesResult>(
       this.requestManager,
       `${API_BASE}/chapters/${chapterId}`,
+      this.stateManager,
     );
     return this.parser.parseChapterDetails(result, mangaId, chapterId);
   }
@@ -582,15 +584,12 @@ export class ComixTo
     const reqUrl = (response as any).request?.url ?? "?";
     const ctx = `status=${response.status} ct=${ct} server=${server} cf-ray=${cfRay} url=${reqUrl} preview="${preview}"`;
 
-    if (response.status === 403 || response.status === 503) {
-      throw new Error(`Cloudflare Bypass Required [${ctx}]`);
-    }
     if (response.status < 200 || response.status >= 300) {
       throw new Error(`HTTP ${response.status}: Unexpected response from server [${ctx}]`);
     }
     // Warn if server returned HTML instead of JSON (e.g. Cloudflare challenge slipped through)
     if (data.trimStart().startsWith("<")) {
-      throw new Error(`Cloudflare Bypass Required [${ctx}]`);
+      throw new Error(`Cloudflare challenge page returned [${ctx}]`);
     }
   }
 }

@@ -19,8 +19,36 @@ export interface TelemetryEvent {
     totalMs: number;
 }
 
+export interface RelayTelemetryEvent {
+    seq: number;
+    ts: number;
+    reason: string;
+    path: string;
+    method: string;
+    attempt: number;
+    localStatus?: number;
+    retryStatus?: number;
+    relayStatus?: number;
+    relayOk: boolean;
+    relayError?: string;
+    bundleId?: string;
+    constantsSchema?: number;
+    signerOrder?: string;
+    signerRounds?: number;
+    decryptOrder?: string;
+    decryptRounds?: number;
+    constantsSource?: string;
+    cacheHit: boolean;
+    forceRefresh: boolean;
+    relayMs: number;
+    totalMs: number;
+    bytes: number;
+    detail?: string;
+}
+
 let _rm: RequestManager | null = null;
 let _seq = 0;
+let _relaySeq = 0;
 
 function getRM(): RequestManager {
     if (!_rm) {
@@ -45,6 +73,20 @@ export function emit(event: Omit<TelemetryEvent, "seq" | "ts">): void {
         const full: TelemetryEvent = { seq: ++_seq, ts: Date.now(), ...event, path: hashPath(event.path) };
         const req = App.createRequest({
             url: TELEMETRY_URL,
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Tel-Key": TELEMETRY_KEY },
+            data: JSON.stringify(full),
+        });
+        void getRM().schedule(req, 1).catch(() => {});
+    } catch {}
+}
+
+export function emitRelay(event: Omit<RelayTelemetryEvent, "seq" | "ts">): void {
+    if (!TELEMETRY_URL) return;
+    try {
+        const full: RelayTelemetryEvent = { seq: ++_relaySeq, ts: Date.now(), ...event, path: hashPath(event.path) };
+        const req = App.createRequest({
+            url: TELEMETRY_URL.replace(/\/log$/, "/relay-log"),
             method: "POST",
             headers: { "Content-Type": "application/json", "X-Tel-Key": TELEMETRY_KEY },
             data: JSON.stringify(full),
