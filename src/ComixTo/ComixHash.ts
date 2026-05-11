@@ -8,7 +8,7 @@
 import { RequestManager, Response, SourceStateManager } from "@paperback/types";
 import { fastDecryptComixPayload } from "./ComixFastDecrypt";
 import { fastGenerateHash } from "./ComixFastSigner";
-import { fetchRemoteComixConstants, remoteDecryptComixPayload, remoteGenerateHash, storeRemoteComixConstants } from "./ComixFastRemote";
+import { fetchRemoteComixConstants, getAvailableRemoteComixConstants, RemoteConstants, remoteDecryptComixPayload, remoteGenerateHash, storeRemoteComixConstants } from "./ComixFastRemote";
 import { emit } from "./Telemetry";
 
 /**
@@ -44,6 +44,26 @@ export function signUrl(url: string): string {
     return `${url}${sep}_=${token}`;
 }
 
+function signUrlWithRemoteConstants(url: string, constants: RemoteConstants): string {
+    const path = url.replace("https://comix.to/api/v1", "").split("?")[0]!;
+    if (!SIGNED_PATTERNS.some(re => re.test(path))) return url;
+    const token = remoteGenerateHash(path, constants);
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}_=${token}`;
+}
+
+async function requestSignedUrl(requestManager: RequestManager, url: string): Promise<Response> {
+    return requestManager.schedule(App.createRequest({
+        url,
+        method: "GET",
+        headers: {
+            "Accept": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+            "Referer": "https://comix.to/",
+        },
+    }), 1);
+}
+
 async function signUrlRemote(
     requestManager: RequestManager,
     stateManager: SourceStateManager | undefined,
@@ -61,9 +81,7 @@ async function signUrlRemote(
         retryStatus: telemetry?.retryStatus,
         detail: telemetry?.detail,
     });
-    const token = remoteGenerateHash(path, constants);
-    const sep = url.includes("?") ? "&" : "?";
-    return { signedUrl: `${url}${sep}_=${token}`, constants };
+    return { signedUrl: signUrlWithRemoteConstants(url, constants), constants };
 }
 
 
@@ -100,50 +118,57 @@ export async function fetchSigned<T>(
         : "signed_fetch";
 
     let usedRemoteConstants = false;
+    let remoteFirst = false;
+    let localStatus: number | undefined;
     let signStart = Date.now();
-    let signedUrl = signUrl(fullUrl);
+    const availableRemoteConstants = await getAvailableRemoteComixConstants(stateManager);
+    let signedUrl: string;
+    if (availableRemoteConstants) {
+        signedUrl = signUrlWithRemoteConstants(fullUrl, availableRemoteConstants);
+        usedRemoteConstants = signedUrl !== fullUrl;
+        remoteFirst = usedRemoteConstants;
+    } else {
+        signedUrl = signUrl(fullUrl);
+    }
     let signMs = Date.now() - signStart;
     let fetchStart = Date.now();
-    let response = await requestManager.schedule(App.createRequest({
-        url: signedUrl,
-        method: "GET",
-        headers: {
-            "Accept": "application/json",
-            "X-Requested-With": "XMLHttpRequest",
-            "Referer": "https://comix.to/",
-        },
-    }), 1);
+    let response = await requestSignedUrl(requestManager, signedUrl);
     let fetchMs = Date.now() - fetchStart;
     let status = response.status;
     let bytes = (response.data ?? "").length;
-    const localStatus = status;
+    if (!remoteFirst) localStatus = status;
     let relayFallbackError = "";
 
     if (status === 403 || status === 503) {
         try {
-            signStart = Date.now();
-            const remote = await signUrlRemote(requestManager, stateManager, fullUrl, false, {
-                reason: `local-${status}`,
-                path: telPath,
-                attempt: 1,
-                localStatus,
-            });
-            signedUrl = remote.signedUrl;
-            signMs = Date.now() - signStart;
-            usedRemoteConstants = true;
-            fetchStart = Date.now();
-            response = await requestManager.schedule(App.createRequest({
-                url: signedUrl,
-                method: "GET",
-                headers: {
-                    "Accept": "application/json",
-                    "X-Requested-With": "XMLHttpRequest",
-                    "Referer": "https://comix.to/",
-                },
-            }), 1);
-            fetchMs = Date.now() - fetchStart;
-            status = response.status;
-            bytes = (response.data ?? "").length;
+            if (remoteFirst) {
+                signStart = Date.now();
+                signedUrl = signUrl(fullUrl);
+                signMs = Date.now() - signStart;
+                usedRemoteConstants = false;
+                fetchStart = Date.now();
+                response = await requestSignedUrl(requestManager, signedUrl);
+                fetchMs = Date.now() - fetchStart;
+                status = response.status;
+                bytes = (response.data ?? "").length;
+                localStatus = status;
+            } else {
+                signStart = Date.now();
+                const remote = await signUrlRemote(requestManager, stateManager, fullUrl, false, {
+                    reason: `local-${status}`,
+                    path: telPath,
+                    attempt: 1,
+                    localStatus,
+                });
+                signedUrl = remote.signedUrl;
+                signMs = Date.now() - signStart;
+                usedRemoteConstants = true;
+                fetchStart = Date.now();
+                response = await requestSignedUrl(requestManager, signedUrl);
+                fetchMs = Date.now() - fetchStart;
+                status = response.status;
+                bytes = (response.data ?? "").length;
+            }
 
             if (status === 403 || status === 503) {
                 signStart = Date.now();
@@ -153,20 +178,13 @@ export async function fetchSigned<T>(
                     attempt: 2,
                     localStatus,
                     retryStatus: status,
-                    detail: "cached remote constants failed; forced relay refresh",
+                    detail: remoteFirst ? "persisted remote and local constants failed; forced relay refresh" : "cached remote constants failed; forced relay refresh",
                 });
                 signedUrl = freshRemote.signedUrl;
                 signMs = Date.now() - signStart;
+                usedRemoteConstants = true;
                 fetchStart = Date.now();
-                response = await requestManager.schedule(App.createRequest({
-                    url: signedUrl,
-                    method: "GET",
-                    headers: {
-                        "Accept": "application/json",
-                        "X-Requested-With": "XMLHttpRequest",
-                        "Referer": "https://comix.to/",
-                    },
-                }), 1);
+                response = await requestSignedUrl(requestManager, signedUrl);
                 fetchMs = Date.now() - fetchStart;
                 status = response.status;
                 bytes = (response.data ?? "").length;

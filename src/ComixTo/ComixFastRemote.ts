@@ -19,7 +19,7 @@ interface MutationStage {
     opsB64: string;
 }
 
-interface RemoteConstants {
+export interface RemoteConstants {
     schemaVersion: number;
     encoding: string;
     period: number;
@@ -269,6 +269,14 @@ export async function storeRemoteComixConstants(stateManager: SourceStateManager
     if (!stateManager) return;
     validateConstants(constants);
     await stateManager.store(REMOTE_CONSTANTS_STATE_KEY, JSON.stringify(constants));
+}
+
+export async function getAvailableRemoteComixConstants(stateManager?: SourceStateManager): Promise<RemoteConstants | null> {
+    if (cachedConstants) return cachedConstants;
+    const stored = await loadStoredConstants(stateManager);
+    if (!stored) return null;
+    cachedConstants = stored;
+    return stored;
 }
 
 export async function fetchRemoteComixConstants(
