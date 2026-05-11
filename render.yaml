@@ -1,28 +1,13 @@
-# Render blueprint for the comix.to URL-signing + response-decrypt relay.
-#
-# Deploys experiment/relay/Server.ts as a Node web service. Free tier sleeps
-# after 15 min of idle; first request after a sleep takes ~30s while the
-# bundle re-bootstraps (homepage scrape + DOM stub install + secure-*.js eval).
-# Subsequent requests are fast.
-#
-# Environment variables to set in the dashboard (or via the secrets UI):
-#   SESSION       — comix.to session cookie value
-#   CF_CLEARANCE  — Cloudflare clearance cookie value
-#   USER_AGENT    — should match the browser that produced CF_CLEARANCE so
-#                   Cloudflare does not invalidate the token
-#
-# The cf_clearance cookie is bound to client IP + UA + TLS fingerprint, so a
-# token earned in your home browser may NOT validate when sent from Render's
-# egress IP. If the relay's bootstrap fails with 403 from the homepage scrape,
-# either run the relay from a different host (Cloudflare Tunnel from home box,
-# Oracle ARM free VM, etc.) or pre-warm with a fresh challenge from inside
-# the Render container.
+# Render blueprint for the Comix fast constants JSON relay.
+# This service only serves comix-relay/comix-fast-constants.json at runtime.
+# To refresh that JSON from the live site, run `npm run refresh` inside
+# comix-relay before deploying, or from a shell on the Render instance.
 
 services:
     - type: web
-      name: comix-relay
+      name: comix-fast-constants-relay
       runtime: node
-      rootDir: experiment/relay
+      rootDir: comix-relay
       buildCommand: npm install
       startCommand: npm start
       plan: free
@@ -31,11 +16,3 @@ services:
       envVars:
           - key: NODE_VERSION
             value: "20"
-          - key: SESSION
-            sync: false
-          - key: CF_CLEARANCE
-            sync: false
-          - key: USER_AGENT
-            sync: false
-          - key: RELAY_STATS_DUMP_MS
-            value: "300000"

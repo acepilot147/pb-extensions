@@ -1,0 +1,17 @@
+{
+  "name": "comix-fast-constants-relay",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Small Render service that publishes Comix fast runtime constants as JSON.",
+  "main": "server.js",
+  "scripts": {
+    "refresh": "node refresh-constants.js",
+    "refresh:force": "node refresh-constants.js --force",
+    "update": "node update-constants.js",
+    "start": "node server.js",
+    "check": "node server.js --check"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
