@@ -2176,7 +2176,7 @@ var _Sources = (() => {
 
   // src/ComixTo/ComixTo.ts
   var ComixToInfo = {
-    version: "1.8.0",
+    version: "1.8.1",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
@@ -2281,19 +2281,18 @@ var _Sources = (() => {
       return this.parser.parseMangaDetails(json.result, mangaId);
     }
     async getChapters(mangaId) {
-      const chapters = [];
-      let page = 1;
-      let lastPage = 1;
-      do {
-        const result = await fetchSigned(
-          this.requestManager,
-          `${API_BASE}/manga/${mangaId}/chapters?page=${page}&limit=100&order[number]=desc`,
-          this.stateManager
-        );
-        chapters.push(...result.items);
-        lastPage = result.meta?.lastPage ?? 1;
-        page++;
-      } while (page <= lastPage);
+      const fetchPage = (page) => fetchSigned(
+        this.requestManager,
+        `${API_BASE}/manga/${mangaId}/chapters?page=${page}&limit=100&order[number]=desc`,
+        this.stateManager
+      );
+      const firstResult = await fetchPage(1);
+      const lastPage = firstResult.meta?.lastPage ?? 1;
+      const restResults = lastPage > 1 ? await Promise.all(Array.from({ length: lastPage - 1 }, (_, i) => fetchPage(i + 2))) : [];
+      const chapters = [
+        ...firstResult.items,
+        ...restResults.flatMap((r) => r.items)
+      ];
       const [isFiltering, isWhitelist, isStrict, savedGroups] = await Promise.all([
         getUploadersFiltering(this.stateManager),
         getUploadersWhitelisted(this.stateManager),
