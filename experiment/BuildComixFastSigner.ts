@@ -141,6 +141,28 @@ function findVmNamespace(): { name: string; ns: any } {
     throw new Error(`Could not find VM namespace (expected ${expected} with .${SIGNER_PROP} and .${INSTALLER_PROP})`);
 }
 
+/**
+ * Find the array field in a __vmEnv object. The VM rotates the property name
+ * each build (e.g. _$lW6rn8 -> _$pYjPHz -> _$Wul71U), so locate it structurally
+ * by finding the first own property whose value is a JS array.
+ */
+function getVmEnvArray(envObj: any): any[] | null {
+    if (!envObj || typeof envObj !== "object") return null;
+    for (const key of Object.getOwnPropertyNames(envObj)) {
+        const v = envObj[key];
+        if (Array.isArray(v)) return v;
+    }
+    return null;
+}
+
+function getVmEnvArrayKey(envObj: any): string | null {
+    if (!envObj || typeof envObj !== "object") return null;
+    for (const key of Object.getOwnPropertyNames(envObj)) {
+        if (Array.isArray(envObj[key])) return key;
+    }
+    return null;
+}
+
 function detectInsertPrefix(fn: any): number | null {
     // Verify with two input sizes so we don't match helper functions that
     // ignore arguments and return a constant-length array.
@@ -409,8 +431,14 @@ function computeSboxCbcHash(path: string, stages: SboxCbcStage[]): string {
     return b64UrlEncode(data);
 }
 
-function findSboxCbcMethod(root: any, testPath: string, liveToken: string): Function | null {
+function findSboxCbcMethod(root: any, testPath: string, liveToken: string): { fn: Function; thisArg: any } | null {
     const seen = new Set<any>();
+
+    function tryCall(fn: any, thisArg: any): boolean {
+        try { if (fn.call(thisArg, testPath) === liveToken) return true; } catch {}
+        try { if (fn(testPath) === liveToken) return true; } catch {}
+        return false;
+    }
 
     for (const objKey of Object.getOwnPropertyNames(root)) {
         let obj: any;
@@ -419,14 +447,12 @@ function findSboxCbcMethod(root: any, testPath: string, liveToken: string): Func
         for (const fnKey of Object.getOwnPropertyNames(obj)) {
             let fn: any;
             try { fn = obj[fnKey]; } catch { continue; }
-            if (typeof fn !== "function" || !Array.isArray(fn.__vmEnv?._$lW6rn8)) continue;
-            try {
-                if (fn(testPath) === liveToken) return fn;
-            } catch {}
+            if (typeof fn !== "function" || !getVmEnvArray(fn.__vmEnv)) continue;
+            if (tryCall(fn, obj)) return { fn, thisArg: obj };
         }
     }
 
-    function walk(obj: any, depth: number): Function | null {
+    function walk(obj: any, depth: number, parent: any): { fn: Function; thisArg: any } | null {
         if (!obj || seen.has(obj) || depth > 5) return null;
         if (typeof obj !== "object" && typeof obj !== "function") return null;
         seen.add(obj);
@@ -436,25 +462,22 @@ function findSboxCbcMethod(root: any, testPath: string, liveToken: string): Func
             let value: any;
             try { value = obj[key]; } catch { continue; }
             if (typeof value === "function") {
-                const envArray = value.__vmEnv?._$lW6rn8;
-                if (Array.isArray(envArray)) {
-                    try {
-                        if (value(testPath) === liveToken) return value;
-                    } catch {}
+                if (getVmEnvArray(value.__vmEnv)) {
+                    if (tryCall(value, obj)) return { fn: value, thisArg: obj };
                 }
             }
-            const nested = walk(value, depth + 1);
+            const nested = walk(value, depth + 1, obj);
             if (nested) return nested;
         }
         return null;
     }
 
-    return walk(root, 0);
+    return walk(root, 0, null);
 }
 
 function captureSboxCbcRounds(method: Function, testPath: string, thisArg?: any): SboxRoundTrace[] {
-    const envArray = method.__vmEnv?._$lW6rn8;
-    if (!Array.isArray(envArray)) throw new Error("S-box signer method has no VM env function array");
+    const envArray = getVmEnvArray(method.__vmEnv);
+    if (!envArray) throw new Error("S-box signer method has no VM env function array");
 
     const originals = envArray.slice();
     const rounds: SboxRoundTrace[] = [];
@@ -805,15 +828,9 @@ async function main(): Promise<void> {
     console.log(`VM namespace: ${nsName}`);
 
     const liveToken = ns[SIGNER_PROP](TEST_PATH) as string;
-    let sboxMethod: Function | null = null;
-    let sboxThisArg: any = undefined;
-    try {
-        if (typeof ns.Ai?.T === "function") {
-            sboxMethod = ns.Ai.T;
-            sboxThisArg = ns.Ai;
-        }
-    } catch {}
-    if (!sboxMethod) sboxMethod = findSboxCbcMethod(ns, TEST_PATH, liveToken);
+    const found = findSboxCbcMethod(ns, TEST_PATH, liveToken);
+    let sboxMethod: Function | null = found?.fn ?? null;
+    let sboxThisArg: any = found?.thisArg;
     if (sboxMethod) {
         const rounds = captureSboxCbcRounds(sboxMethod, TEST_PATH, sboxThisArg);
         if (rounds.length >= 1) {

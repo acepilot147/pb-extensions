@@ -157,23 +157,41 @@ function applySboxCbcInverseStage(data: number[], stage: SboxCbcInverseStage): n
 }
 
 /**
- * Find a decrypt method whose __vmEnv._$lW6rn8 contains the stage primitives.
- * Tries ns.Ai.I directly, then walks reachable objects looking for any fn that
- * round-trips a fixture: signer(decrypted) === encrypted (Ai.T is the inverse
- * of Ai.I), or whose output JSON.parses to fixture.decrypted.
+ * Find the array field in a __vmEnv object. The VM rotates the property name
+ * each build, so locate it structurally by finding the first own property
+ * whose value is a JS array.
+ */
+function getVmEnvArray(envObj: any): any[] | null {
+    if (!envObj || typeof envObj !== "object") return null;
+    for (const key of Object.getOwnPropertyNames(envObj)) {
+        if (Array.isArray(envObj[key])) return envObj[key];
+    }
+    return null;
+}
+
+/**
+ * Find a decrypt method whose __vmEnv contains the stage primitives array.
+ * Scans all VM-method-bearing objects in the namespace; the method we want is
+ * the one whose output on the encrypted fixture equals expectedJsonString.
  */
 function findSboxCbcDecryptMethod(ns: any, encryptedB64: string, expectedJsonString: string): { fn: Function; thisArg: any } | null {
-    // Direct hit
-    try {
-        if (typeof ns.Ai?.I === "function") {
-            const out = ns.Ai.I(encryptedB64);
-            if (typeof out === "string" && out === expectedJsonString) {
-                return { fn: ns.Ai.I, thisArg: ns.Ai };
-            }
+    for (const k of Object.getOwnPropertyNames(ns)) {
+        let obj: any;
+        try { obj = (ns as any)[k]; } catch { continue; }
+        if (!obj || typeof obj !== "object") continue;
+        for (const k2 of Object.getOwnPropertyNames(obj)) {
+            let fn: any;
+            try { fn = obj[k2]; } catch { continue; }
+            if (typeof fn !== "function" || !getVmEnvArray(fn.__vmEnv)) continue;
+            try {
+                const out = fn.call(obj, encryptedB64);
+                if (typeof out === "string" && out === expectedJsonString) {
+                    return { fn, thisArg: obj };
+                }
+            } catch {}
         }
-    } catch {}
+    }
 
-    // Walk reachable namespace objects for any fn with env._$lW6rn8 that produces expected
     const seen = new Set<any>();
     function walk(obj: any, depth: number): { fn: Function; thisArg: any } | null {
         if (!obj || seen.has(obj) || depth > 5) return null;
@@ -183,16 +201,13 @@ function findSboxCbcDecryptMethod(ns: any, encryptedB64: string, expectedJsonStr
             if (key === "constructor" || key === "prototype" || key === "caller" || key === "arguments") continue;
             let value: any;
             try { value = obj[key]; } catch { continue; }
-            if (typeof value === "function") {
-                const env = (value as any).__vmEnv?._$lW6rn8;
-                if (Array.isArray(env)) {
-                    try {
-                        const out = value.call(obj, encryptedB64);
-                        if (typeof out === "string" && out === expectedJsonString) {
-                            return { fn: value, thisArg: obj };
-                        }
-                    } catch {}
-                }
+            if (typeof value === "function" && getVmEnvArray((value as any).__vmEnv)) {
+                try {
+                    const out = value.call(obj, encryptedB64);
+                    if (typeof out === "string" && out === expectedJsonString) {
+                        return { fn: value, thisArg: obj };
+                    }
+                } catch {}
             }
             const nested = walk(value, depth + 1);
             if (nested) return nested;
@@ -209,8 +224,8 @@ function findSboxCbcDecryptMethod(ns: any, encryptedB64: string, expectedJsonStr
  * env slot is the decoder vs which is the stage applier.
  */
 function captureSboxCbcDecryptRounds(method: Function, encryptedB64: string, thisArg?: any): SboxRoundTrace[] {
-    const envArray = (method as any).__vmEnv?._$lW6rn8;
-    if (!Array.isArray(envArray)) throw new Error("decrypt method has no VM env function array");
+    const envArray = getVmEnvArray((method as any).__vmEnv);
+    if (!envArray) throw new Error("decrypt method has no VM env function array");
 
     const originals = envArray.slice();
     const rounds: SboxRoundTrace[] = [];
@@ -397,14 +412,26 @@ function tryBuildSboxCbcDecrypt(ns: any): boolean {
     const encryptedB64 = String(fixture.encryptedPayload?.e ?? "");
     if (!encryptedB64) return false;
     // Probe via direct decrypt to derive the expected raw plaintext (UTF-8 JSON string with status wrapping).
-    let expectedRaw: string;
-    try {
-        const direct = ns.Ai?.I?.(encryptedB64);
-        if (typeof direct !== "string") return false;
-        expectedRaw = direct;
-    } catch {
-        return false;
+    // Container/method names rotate (Ai.I -> yi.J -> wi.J); scan all VM-method-bearing objects in the namespace.
+    let expectedRaw: string | null = null;
+    outer: for (const k of Object.getOwnPropertyNames(ns)) {
+        let obj: any;
+        try { obj = (ns as any)[k]; } catch { continue; }
+        if (!obj || typeof obj !== "object") continue;
+        for (const k2 of Object.getOwnPropertyNames(obj)) {
+            let fn: any;
+            try { fn = obj[k2]; } catch { continue; }
+            if (typeof fn !== "function" || !getVmEnvArray(fn.__vmEnv)) continue;
+            try {
+                const direct = fn.call(obj, encryptedB64);
+                if (typeof direct === "string" && direct.length > 0 && (direct.startsWith("{") || direct.startsWith("[") || direct.startsWith("\""))) {
+                    expectedRaw = direct;
+                    break outer;
+                }
+            } catch {}
+        }
     }
+    if (expectedRaw === null) return false;
 
     const method = findSboxCbcDecryptMethod(ns, encryptedB64, expectedRaw);
     if (!method) return false;
