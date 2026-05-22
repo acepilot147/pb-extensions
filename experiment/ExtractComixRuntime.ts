@@ -203,8 +203,40 @@ const awaitTimers = {
     clearInterval: globalThis.clearInterval.bind(globalThis),
 };
 
-const TOKEN_RE = /^[A-Za-z0-9_-]{40,220}$/;
+const TOKEN_RE = /^[A-Za-z0-9_-]{16,220}$/;
+const SIGNER_PROBE_PATH = "/manga/xlyyj/chapters";
 
+function extractTokenFromCfg(cfg: any): string | null {
+    if (!cfg || typeof cfg !== "object") return null;
+    if (cfg.params && typeof cfg.params === "object" && typeof cfg.params._ === "string") return cfg.params._;
+    if (typeof cfg.url === "string") {
+        const m = cfg.url.match(/[?&]_=([^&]+)/);
+        if (m) {
+            try { return decodeURIComponent(m[1]); } catch { return m[1]; }
+        }
+    }
+    if (cfg.headers && typeof cfg.headers === "object") {
+        for (const v of Object.values(cfg.headers)) {
+            if (typeof v === "string" && TOKEN_RE.test(v)) return v;
+        }
+    }
+    return null;
+}
+
+/**
+ * Probe the loaded bundle to find:
+ *   - installer: axios-init function (registers req+res interceptors)
+ *   - reqIntercept / resIntercept: the interceptors themselves
+ *   - signer: the underlying token-producing fn (identified by matching the
+ *     token that the request interceptor injects into the request config)
+ *
+ * Pass 1: discover installer + interceptors (axios-shape probe).
+ * Pass 2: drive the request interceptor with a known path, read back the
+ *         token wherever it lands (params._, ?_=, header). That is ground
+ *         truth — no name/length heuristics needed.
+ * Pass 3: scan namespace fns for the one whose output equals the ground-truth
+ *         token. Names rotate per bundle, output equality does not.
+ */
 function probeBundle(): ProbeResult {
     const G = globalThis as any;
     let signer: ((p: string) => string) | null = null;
@@ -218,61 +250,81 @@ function probeBundle(): ProbeResult {
     let resIntercept: ResInterceptor | null = null;
     let resInterceptSource = "";
 
-    const nsNames = Object.keys(G).filter(k => /^vm[a-z]_[a-f0-9]+$/.test(k));
+    const nsNames = Object.keys(G).filter(k => /^vm[a-zA-Z]_[a-f0-9]+$/.test(k));
     if (nsNames.length === 0) nsNames.push("__globalThis_fallback__");
+    const refFor = (ns: string, key: string) => ns === "__globalThis_fallback__" ? `globalThis.${key}` : `${ns}.${key}`;
 
+    // Pass 1: installer + interceptors
     for (const ns of nsNames) {
+        if (installer) break;
         const obj = ns === "__globalThis_fallback__" ? G : G[ns];
         if (!obj || typeof obj !== "object") continue;
-
         for (const key of Object.keys(obj)) {
             const fn = obj[key];
             if (typeof fn !== "function") continue;
-            const ref = ns === "__globalThis_fallback__" ? `globalThis.${key}` : `${ns}.${key}`;
 
-            if (!signer) {
-                try {
-                    const out = fn("/manga/xlyyj/chapters");
-                    if (typeof out === "string" && out !== "/manga/xlyyj/chapters" && TOKEN_RE.test(out)) {
-                        signer = fn.bind(null);
-                        signerRef = ref;
-                        signerSource = Function.prototype.toString.call(fn);
-                    }
-                } catch {}
-            }
-
-            if (!installer) {
-                let gotRes = false;
-                let req: ReqInterceptor | null = null;
-                let res: ResInterceptor | null = null;
-                const fakeAxios: any = {
-                    interceptors: {
-                        request: { use: (h: ReqInterceptor) => { req = h; } },
-                        response: { use: (h: ResInterceptor) => { res = h; gotRes = true; } },
-                    },
-                    defaults: {
-                        headers: { common: {}, get: {}, post: {}, put: {}, delete: {}, patch: {}, head: {} },
-                        transformRequest: [],
-                        transformResponse: [],
-                    },
-                };
-                try {
-                    fn(fakeAxios);
-                    if (gotRes) {
-                        installer = fn.bind(null);
-                        installerRef = ref;
-                        installerSource = Function.prototype.toString.call(fn);
-                        reqIntercept = req;
-                        resIntercept = res;
-                        reqInterceptSource = req ? Function.prototype.toString.call(req) : "";
-                        resInterceptSource = res ? Function.prototype.toString.call(res) : "";
-                    }
-                } catch {}
-            }
-
-            if (signer && installer) break;
+            let gotRes = false;
+            let req: ReqInterceptor | null = null;
+            let res: ResInterceptor | null = null;
+            const fakeAxios: any = {
+                interceptors: {
+                    request: { use: (h: ReqInterceptor) => { req = h; } },
+                    response: { use: (h: ResInterceptor) => { res = h; gotRes = true; } },
+                },
+                defaults: {
+                    headers: { common: {}, get: {}, post: {}, put: {}, delete: {}, patch: {}, head: {} },
+                    transformRequest: [],
+                    transformResponse: [],
+                },
+                get: () => {}, post: () => {}, put: () => {}, delete: () => {}, patch: () => {}, head: () => {},
+            };
+            try {
+                fn(fakeAxios);
+                if (gotRes) {
+                    installer = fn.bind(null);
+                    installerRef = refFor(ns, key);
+                    installerSource = Function.prototype.toString.call(fn);
+                    reqIntercept = req;
+                    resIntercept = res;
+                    reqInterceptSource = req ? Function.prototype.toString.call(req) : "";
+                    resInterceptSource = res ? Function.prototype.toString.call(res) : "";
+                    break;
+                }
+            } catch {}
         }
-        if (signer && installer) break;
+    }
+
+    // Pass 2: derive expected token via the request interceptor
+    let expectedToken: string | null = null;
+    if (reqIntercept) {
+        try {
+            const cfgIn = { url: SIGNER_PROBE_PATH, method: "get", baseURL: API_BASE, headers: {}, params: {} };
+            const result = (reqIntercept as any)(cfgIn);
+            const final = (result && typeof result === "object") ? result : cfgIn;
+            expectedToken = extractTokenFromCfg(final);
+        } catch {}
+    }
+
+    // Pass 3: identify underlying signer by output equality
+    if (expectedToken) {
+        for (const ns of nsNames) {
+            if (signer) break;
+            const obj = ns === "__globalThis_fallback__" ? G : G[ns];
+            if (!obj || typeof obj !== "object") continue;
+            for (const key of Object.keys(obj)) {
+                const fn = obj[key];
+                if (typeof fn !== "function") continue;
+                try {
+                    const out = fn(SIGNER_PROBE_PATH);
+                    if (typeof out === "string" && out === expectedToken) {
+                        signer = fn.bind(null);
+                        signerRef = refFor(ns, key);
+                        signerSource = Function.prototype.toString.call(fn);
+                        break;
+                    }
+                } catch {}
+            }
+        }
     }
 
     return {
@@ -423,6 +475,32 @@ function writeSourceNeighborhoods(secureText: string, references: SourceReferenc
     writeFileSync(join(OUT_DIR, "source-neighborhoods.txt"), chunks.join("\n"));
 }
 
+/**
+ * Patch secure.js to expose __vmBytecode/__vmEnv/__vmThisArg on every VM
+ * closure. Saved as secure-patched.js so build scripts don't re-run regex.
+ */
+function patchSecure(text: string): { patched: string; count: number } {
+    let count = 0;
+
+    // Pattern 1: arrow-style closure factory
+    const pattern1 = /return ([A-Za-z_$]\w*)=\(\.\.\.([A-Za-z_$]\w*)\)=>\(void 0!==([A-Za-z_$]\w*)&&\(([A-Za-z_$]\w*)\._\$\w+=!0,\4\._\$\w+=\3\),([A-Za-z_$]\w*)\(([A-Za-z_$]\w*),\2,([A-Za-z_$]\w*),\1,void 0,([A-Za-z_$]\w*)\)\),\1\}/g;
+    let patched = text.replace(pattern1, (match, closure, _args, _qf, _ns, _invoker, bytecode, env, thisArg) => {
+        count++;
+        const oldSuffix = `),${closure}}`;
+        const newSuffix = `),${closure}.__vmBytecode=${bytecode},${closure}.__vmEnv=${env},${closure}.__vmThisArg=${thisArg},${closure}}`;
+        return match.slice(0, -oldSuffix.length) + newSuffix;
+    });
+
+    // Pattern 2: direct d.call(O,Qd,{b:Qi,e:Qx}) registration
+    const pattern2 = /return ([A-Za-z_$]\w*)\.call\(([A-Za-z_$]\w*),([A-Za-z_$]\w*),\{b:([A-Za-z_$]\w*),e:([A-Za-z_$]\w*)\}\),\3\}/g;
+    patched = patched.replace(pattern2, (_match, d, O, qd, qi, qx) => {
+        count++;
+        return `return ${qd}.__vmBytecode=${qi},${qd}.__vmEnv=${qx},${qd}.__vmThisArg=this,${d}.call(${O},${qd},{b:${qi},e:${qx}}),${qd}}`;
+    });
+
+    return { patched, count };
+}
+
 async function main(): Promise<void> {
     process.on("uncaughtException", (e) => {
         console.log("[extract] suppressed bundle background error:", (e as any)?.message ?? e);
@@ -450,6 +528,11 @@ async function main(): Promise<void> {
     mkdirSync(OUT_DIR, { recursive: true });
     writeFileSync(join(OUT_DIR, "main.js"), mainText);
     writeFileSync(join(OUT_DIR, "secure.js"), secureText);
+
+    const { patched: securePatched, count: patchCount } = patchSecure(secureText);
+    if (patchCount === 0) throw new Error("patchSecure made no patches - bundle closure patterns may have changed");
+    console.log(`[extract] patchSecure applied ${patchCount} patches`);
+    writeFileSync(join(OUT_DIR, "secure-patched.js"), securePatched);
 
     installDomStub(cfg);
     const tmpFile = join(tmpdir(), `comix-secure-${bundleId}.mjs`);

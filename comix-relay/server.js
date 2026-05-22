@@ -38,25 +38,61 @@ function buildPayload() {
   if (payload.kind !== "comix-fast-runtime-constants") throw new Error("Unexpected constants kind");
   if (payload.encoding !== "compact-b64-ops") throw new Error("Unexpected constants encoding");
   if (payload.period !== PERIOD) throw new Error("Unexpected constants period");
-  assertOrder(payload.signer?.pipelineOrder, ["rc4-then-insert", "insert-then-rc4"], "signer");
-  assertOrder(payload.decrypt?.pipelineOrder, ["mutation-then-rc4", "rc4-then-mutation"], "decrypt");
-  if (payload.signer.rc4Keys.length !== payload.signer.insertStages.length) {
+  assertOrder(payload.signer?.pipelineOrder, ["rc4-then-insert", "insert-then-rc4", "sbox-cbc"], "signer");
+  assertOrder(payload.decrypt?.pipelineOrder, ["mutation-then-rc4", "rc4-then-mutation", "sbox-cbc-inverse"], "decrypt");
+  if (payload.signer.pipelineOrder === "sbox-cbc") {
+    if (!Array.isArray(payload.signer.sboxCbcStages) || payload.signer.sboxCbcStages.length === 0) {
+      throw new Error("Signer S-box/CBC stages missing");
+    }
+  } else if (payload.signer.rc4Keys.length !== payload.signer.insertStages.length) {
     throw new Error("Signer key/stage count mismatch");
   }
-  if (payload.decrypt.rc4Keys.length !== payload.decrypt.mutationStages.length) {
+  if (payload.decrypt.pipelineOrder === "sbox-cbc-inverse") {
+    if (!Array.isArray(payload.decrypt.sboxInverseStages) || payload.decrypt.sboxInverseStages.length === 0) {
+      throw new Error("Decrypt S-box inverse stages missing");
+    }
+  } else if (payload.decrypt.rc4Keys.length !== payload.decrypt.mutationStages.length) {
     throw new Error("Decrypt key/stage count mismatch");
   }
-  for (const stage of payload.signer.insertStages) {
-    if (decodeB64(stage.prefixBytesB64).length !== stage.prefix) {
-      throw new Error("Signer prefix byte count mismatch");
+  if (payload.signer.pipelineOrder === "sbox-cbc") {
+    for (const stage of payload.signer.sboxCbcStages) {
+      if (decodeB64(stage.tableB64).length !== 256) {
+        throw new Error("Signer S-box table length mismatch");
+      }
+      if (decodeB64(stage.keyB64).length === 0) {
+        throw new Error("Signer S-box key missing");
+      }
+      if (!Number.isInteger(stage.iv) || stage.iv < 0 || stage.iv > 255) {
+        throw new Error("Signer S-box IV mismatch");
+      }
     }
-    if (decodeB64(stage.opsB64).length !== PERIOD * 3) {
-      throw new Error("Signer ops length mismatch");
+  } else {
+    for (const stage of payload.signer.insertStages) {
+      if (decodeB64(stage.prefixBytesB64).length !== stage.prefix) {
+        throw new Error("Signer prefix byte count mismatch");
+      }
+      if (decodeB64(stage.opsB64).length !== PERIOD * 3) {
+        throw new Error("Signer ops length mismatch");
+      }
     }
   }
-  for (const stage of payload.decrypt.mutationStages) {
-    if (decodeB64(stage.opsB64).length !== PERIOD * 3) {
-      throw new Error("Decrypt ops length mismatch");
+  if (payload.decrypt.pipelineOrder === "sbox-cbc-inverse") {
+    for (const stage of payload.decrypt.sboxInverseStages) {
+      if (decodeB64(stage.tableB64).length !== 256) {
+        throw new Error("Decrypt S-box table length mismatch");
+      }
+      if (decodeB64(stage.keyB64).length === 0) {
+        throw new Error("Decrypt S-box key missing");
+      }
+      if (!Number.isInteger(stage.iv) || stage.iv < 0 || stage.iv > 255) {
+        throw new Error("Decrypt S-box IV mismatch");
+      }
+    }
+  } else {
+    for (const stage of payload.decrypt.mutationStages) {
+      if (decodeB64(stage.opsB64).length !== PERIOD * 3) {
+        throw new Error("Decrypt ops length mismatch");
+      }
     }
   }
 
@@ -209,9 +245,9 @@ if (process.argv.includes("--check")) {
     schemaVersion: payload.schemaVersion,
     encoding: payload.encoding,
     signerOrder: payload.signer.pipelineOrder,
-    signerRounds: payload.signer.rc4Keys.length,
+    signerRounds: payload.signer.pipelineOrder === "sbox-cbc" ? payload.signer.sboxCbcStages.length : payload.signer.rc4Keys.length,
     decryptOrder: payload.decrypt.pipelineOrder,
-    decryptRounds: payload.decrypt.rc4Keys.length
+    decryptRounds: payload.decrypt.pipelineOrder === "sbox-cbc-inverse" ? payload.decrypt.sboxInverseStages.length : payload.decrypt.rc4Keys.length
   }, null, 2));
 } else {
   http.createServer(requestHandler).listen(PORT, () => {

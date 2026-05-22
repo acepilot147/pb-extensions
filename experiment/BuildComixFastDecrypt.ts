@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url";
 
 const ROOT = process.cwd();
 const RUNTIME = JSON.parse(readFileSync(resolve(ROOT, "experiment/extracted/comix-runtime-latest/runtime.json"), "utf8"));
-const SECURE_TEXT = readFileSync(resolve(ROOT, "experiment/extracted/comix-runtime-latest/secure.js"), "utf8");
+const SECURE_PATCHED_TEXT = readFileSync(resolve(ROOT, "experiment/extracted/comix-runtime-latest/secure-patched.js"), "utf8");
 const FIXTURES = JSON.parse(readFileSync(resolve(ROOT, "experiment/extracted/comix-runtime-latest/fixtures.json"), "utf8")) as Fixture[];
 const OUT_FILE = resolve(ROOT, "src/ComixTo/ComixFastDecrypt.ts");
 
@@ -26,26 +26,6 @@ const realTimers = {
     setInterval: globalThis.setInterval.bind(globalThis),
     clearInterval: globalThis.clearInterval.bind(globalThis),
 };
-
-function patchSecure(text: string): { patched: string; count: number } {
-    let count = 0;
-
-    const pattern1 = /return ([A-Za-z_$]\w*)=\(\.\.\.([A-Za-z_$]\w*)\)=>\(void 0!==([A-Za-z_$]\w*)&&\(([A-Za-z_$]\w*)\._\$\w+=!0,\4\._\$\w+=\3\),([A-Za-z_$]\w*)\(([A-Za-z_$]\w*),\2,([A-Za-z_$]\w*),\1,void 0,([A-Za-z_$]\w*)\)\),\1\}/g;
-    let patched = text.replace(pattern1, (match, closure, _args, _qf, _ns, _invoker, bytecode, env, thisArg) => {
-        count++;
-        const oldSuffix = `),${closure}}`;
-        const newSuffix = `),${closure}.__vmBytecode=${bytecode},${closure}.__vmEnv=${env},${closure}.__vmThisArg=${thisArg},${closure}}`;
-        return match.slice(0, -oldSuffix.length) + newSuffix;
-    });
-
-    const pattern2 = /return ([A-Za-z_$]\w*)\.call\(([A-Za-z_$]\w*),([A-Za-z_$]\w*),\{b:([A-Za-z_$]\w*),e:([A-Za-z_$]\w*)\}\),\3\}/g;
-    patched = patched.replace(pattern2, (_match, d, O, qd, qi, qx) => {
-        count++;
-        return `return ${qd}.__vmBytecode=${qi},${qd}.__vmEnv=${qx},${qd}.__vmThisArg=this,${d}.call(${O},${qd},{b:${qi},e:${qx}}),${qd}}`;
-    });
-
-    return { patched, count };
-}
 
 function installDomStub(cfg: string): void {
     const G = globalThis as any;
@@ -142,6 +122,319 @@ function encodedIndexForOutput(outputIndex: number, prefixLimit: number): number
 interface MutationOps {
     prefix: number;
     tableB64: string;
+}
+
+// ===== sbox-cbc inverse (new algorithm in bundle 3a0786b685ca onward) =====
+
+interface SboxCbcInverseStage {
+    table: number[];      // forward sbox (256-byte permutation)
+    inverseTable: number[]; // inverse permutation
+    key: number[];
+    iv: number;
+}
+
+interface SboxRoundTrace {
+    tableB64: string;
+    keyB64: string;
+    decodeFn: Function;
+    stageFn: (data: number[]) => number[];
+    stageThis: any;
+    stageIndex: number;
+    sampleIn: number[];
+    sampleOut: number[];
+}
+
+function applySboxCbcInverseStage(data: number[], stage: SboxCbcInverseStage): number[] {
+    const out: number[] = new Array(data.length);
+    let prev = stage.iv & 0xff;
+    for (let i = 0; i < data.length; i++) {
+        const cipherByte = data[i]! & 0xff;
+        const idx = stage.inverseTable[cipherByte]! & 0xff;
+        out[i] = (idx ^ stage.key[i % stage.key.length]! ^ prev) & 0xff;
+        prev = cipherByte;
+    }
+    return out;
+}
+
+/**
+ * Find a decrypt method whose __vmEnv._$lW6rn8 contains the stage primitives.
+ * Tries ns.Ai.I directly, then walks reachable objects looking for any fn that
+ * round-trips a fixture: signer(decrypted) === encrypted (Ai.T is the inverse
+ * of Ai.I), or whose output JSON.parses to fixture.decrypted.
+ */
+function findSboxCbcDecryptMethod(ns: any, encryptedB64: string, expectedJsonString: string): { fn: Function; thisArg: any } | null {
+    // Direct hit
+    try {
+        if (typeof ns.Ai?.I === "function") {
+            const out = ns.Ai.I(encryptedB64);
+            if (typeof out === "string" && out === expectedJsonString) {
+                return { fn: ns.Ai.I, thisArg: ns.Ai };
+            }
+        }
+    } catch {}
+
+    // Walk reachable namespace objects for any fn with env._$lW6rn8 that produces expected
+    const seen = new Set<any>();
+    function walk(obj: any, depth: number): { fn: Function; thisArg: any } | null {
+        if (!obj || seen.has(obj) || depth > 5) return null;
+        if (typeof obj !== "object" && typeof obj !== "function") return null;
+        seen.add(obj);
+        for (const key of Object.getOwnPropertyNames(obj)) {
+            if (key === "constructor" || key === "prototype" || key === "caller" || key === "arguments") continue;
+            let value: any;
+            try { value = obj[key]; } catch { continue; }
+            if (typeof value === "function") {
+                const env = (value as any).__vmEnv?._$lW6rn8;
+                if (Array.isArray(env)) {
+                    try {
+                        const out = value.call(obj, encryptedB64);
+                        if (typeof out === "string" && out === expectedJsonString) {
+                            return { fn: value, thisArg: obj };
+                        }
+                    } catch {}
+                }
+            }
+            const nested = walk(value, depth + 1);
+            if (nested) return nested;
+        }
+        return null;
+    }
+    return walk(ns, 0);
+}
+
+/**
+ * Capture (table, key, sample-in, sample-out) for each round by intercepting
+ * the env array fns. Watches for decoded 256-byte tables, decoded small keys,
+ * and array→array stage invocations of matching length. Insensitive to which
+ * env slot is the decoder vs which is the stage applier.
+ */
+function captureSboxCbcDecryptRounds(method: Function, encryptedB64: string, thisArg?: any): SboxRoundTrace[] {
+    const envArray = (method as any).__vmEnv?._$lW6rn8;
+    if (!Array.isArray(envArray)) throw new Error("decrypt method has no VM env function array");
+
+    const originals = envArray.slice();
+    const rounds: SboxRoundTrace[] = [];
+    let pendingTable: { b64: string; decodeFn: Function } | null = null;
+    let pendingKey: { b64: string; decodeFn: Function } | null = null;
+    const encryptedByteLen = b64Decode(encryptedB64).length;
+
+    for (let i = 0; i < envArray.length; i++) {
+        const original = originals[i];
+        if (typeof original !== "function") continue;
+        envArray[i] = function (...args: any[]) {
+            const ret = original.apply(this, args);
+            if (typeof args[0] === "string") {
+                let decodedLen = 0;
+                try { decodedLen = b64Decode(args[0]).length; } catch {}
+                if (decodedLen === 256) {
+                    pendingTable = { b64: args[0], decodeFn: original };
+                    pendingKey = null;
+                } else if (pendingTable && decodedLen > 0 && decodedLen <= 64) {
+                    pendingKey = { b64: args[0], decodeFn: original };
+                }
+            } else if (
+                pendingTable &&
+                pendingKey &&
+                Array.isArray(args[0]) &&
+                Array.isArray(ret) &&
+                ret.length === args[0].length &&
+                args[0].length >= Math.min(encryptedByteLen, 16)
+            ) {
+                rounds.push({
+                    tableB64: pendingTable.b64,
+                    keyB64: pendingKey.b64,
+                    decodeFn: pendingKey.decodeFn,
+                    stageFn: original as (data: number[]) => number[],
+                    stageThis: this,
+                    stageIndex: i,
+                    sampleIn: args[0].slice(),
+                    sampleOut: ret.slice(),
+                });
+                pendingTable = null;
+                pendingKey = null;
+            }
+            return ret;
+        };
+    }
+
+    try {
+        method.call(thisArg, encryptedB64);
+    } finally {
+        for (let i = 0; i < originals.length; i++) envArray[i] = originals[i];
+    }
+
+    return rounds;
+}
+
+/**
+ * Build inverse stages from observed rounds. The decrypt method applies rounds
+ * in reverse order from sign, but we record them in the order traced — which
+ * IS the application order for the inverse pipeline.
+ */
+function buildSboxCbcInverseStages(rounds: SboxRoundTrace[]): SboxCbcInverseStage[] {
+    return rounds.map(round => {
+        const table = b64Decode(round.tableB64);
+        const key = b64Decode(round.keyB64);
+        if (table.length !== 256) throw new Error(`sbox table for stage ${round.stageIndex} decoded to ${table.length} bytes`);
+        if (key.length === 0) throw new Error(`sbox key for stage ${round.stageIndex} is empty`);
+
+        const inverse = new Array(256).fill(-1);
+        for (let i = 0; i < 256; i++) inverse[table[i]!] = i;
+        if (inverse.some(v => v < 0)) throw new Error(`sbox table for stage ${round.stageIndex} is not a permutation`);
+
+        // Recover iv from observed sample.
+        // Inverse stage: out[0] = inverse[in[0]] ^ key[0] ^ iv  =>  iv = inverse[in[0]] ^ key[0] ^ out[0]
+        const idx0 = inverse[round.sampleIn[0]! & 0xff]!;
+        const iv = (idx0 ^ key[0]! ^ (round.sampleOut[0]! & 0xff)) & 0xff;
+
+        // Sanity-check against the full trace
+        const recomputed = applySboxCbcInverseStage(round.sampleIn.slice(), { table, inverseTable: inverse, key, iv });
+        const expected = round.sampleOut.map(b => b & 0xff);
+        if (JSON.stringify(recomputed) !== JSON.stringify(expected)) {
+            throw new Error(`sbox-cbc inverse formula mismatch for stage ${round.stageIndex}`);
+        }
+
+        return { table, inverseTable: inverse, key, iv };
+    });
+}
+
+function buildSboxCbcDecryptSource(stages: SboxCbcInverseStage[]): string {
+    const compact = stages.map(s => ({
+        tableB64: Buffer.from(s.table).toString("base64"),
+        keyB64: Buffer.from(s.key).toString("base64"),
+        iv: s.iv,
+    }));
+
+    return `/* Generated by experiment/BuildComixFastDecrypt.ts.
+ * Bundle ID: ${RUNTIME.bundleId}
+ * Algorithm: sbox-cbc-inverse
+ * Pipeline order: sbox-cbc-inverse
+ * This is the de-VM'd Comix response decrypt pipeline.
+ */
+
+const B64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+const SBOX_INVERSE_STAGES = ${JSON.stringify(compact, null, 4)};
+let SBOX_INVERSE_RUNTIME: { table: number[]; inverseTable: number[]; key: number[]; iv: number }[] | null = null;
+
+function b64Decode(s: string): number[] {
+    const lookup: number[] = new Array(128).fill(-1);
+    for (let i = 0; i < 64; i++) lookup[B64_CHARS.charCodeAt(i)] = i;
+    const normalized = s.replace(/-/g, "+").replace(/_/g, "/");
+    const out: number[] = [];
+    let buf = 0, bits = 0;
+    for (let i = 0; i < normalized.length; i++) {
+        const c = normalized.charCodeAt(i);
+        if (c === 61) break;
+        const v = lookup[c] ?? -1;
+        if (v < 0) continue;
+        buf = (buf << 6) | v;
+        bits += 6;
+        if (bits >= 8) {
+            bits -= 8;
+            out.push((buf >> bits) & 0xff);
+        }
+    }
+    return out;
+}
+
+function bytesToBinaryString(bytes: number[]): string {
+    let out = "";
+    for (let i = 0; i < bytes.length; i += 8192) {
+        out += String.fromCharCode(...bytes.slice(i, i + 8192));
+    }
+    return out;
+}
+
+function getSboxInverseRuntime() {
+    if (SBOX_INVERSE_RUNTIME === null) {
+        SBOX_INVERSE_RUNTIME = SBOX_INVERSE_STAGES.map(stage => {
+            const table = b64Decode(stage.tableB64);
+            const inverseTable: number[] = new Array(256).fill(0);
+            for (let i = 0; i < 256; i++) inverseTable[table[i]!] = i;
+            return { table, inverseTable, key: b64Decode(stage.keyB64), iv: stage.iv };
+        });
+    }
+    return SBOX_INVERSE_RUNTIME;
+}
+
+function applySboxCbcInverseStage(data: number[], stage: { inverseTable: number[]; key: number[]; iv: number }): number[] {
+    const out: number[] = new Array(data.length);
+    let prev = stage.iv & 0xff;
+    for (let i = 0; i < data.length; i++) {
+        const cipherByte = data[i]! & 0xff;
+        const idx = stage.inverseTable[cipherByte]! & 0xff;
+        out[i] = (idx ^ stage.key[i % stage.key.length]! ^ prev) & 0xff;
+        prev = cipherByte;
+    }
+    return out;
+}
+
+function normalizeHeaders(headers: Record<string, string>): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const key of Object.keys(headers ?? {})) out[key.toLowerCase()] = String(headers[key]);
+    return out;
+}
+
+export function fastDecryptComixPayload(rawPath: string, payload: any, headers: Record<string, string> = {}): any {
+    void rawPath;
+    if (!(payload && typeof payload === "object" && "e" in payload)) return payload;
+    const normalizedHeaders = normalizeHeaders(headers);
+    if (normalizedHeaders["x-enc"] && normalizedHeaders["x-enc"] !== "1") return payload;
+
+    let data = b64Decode(String(payload.e ?? ""));
+    const stages = getSboxInverseRuntime();
+    for (const stage of stages) data = applySboxCbcInverseStage(data, stage);
+
+    const parsed = JSON.parse(decodeURIComponent(bytesToBinaryString(data)));
+    return parsed && typeof parsed === "object" && parsed.status === "ok" ? parsed.result : parsed;
+}
+`;
+}
+
+function tryBuildSboxCbcDecrypt(ns: any): boolean {
+    if (!Array.isArray(FIXTURES) || FIXTURES.length === 0) return false;
+    const fixture = FIXTURES[0]!;
+    const encryptedB64 = String(fixture.encryptedPayload?.e ?? "");
+    if (!encryptedB64) return false;
+    // Probe via direct decrypt to derive the expected raw plaintext (UTF-8 JSON string with status wrapping).
+    let expectedRaw: string;
+    try {
+        const direct = ns.Ai?.I?.(encryptedB64);
+        if (typeof direct !== "string") return false;
+        expectedRaw = direct;
+    } catch {
+        return false;
+    }
+
+    const method = findSboxCbcDecryptMethod(ns, encryptedB64, expectedRaw);
+    if (!method) return false;
+
+    const rounds = captureSboxCbcDecryptRounds(method.fn, encryptedB64, method.thisArg);
+    if (rounds.length === 0) {
+        console.log("sbox-cbc decrypt: no rounds captured, falling back");
+        return false;
+    }
+    console.log(`Detected decrypt algorithm: sbox-cbc-inverse (${rounds.length} rounds)`);
+
+    const stages = buildSboxCbcInverseStages(rounds);
+
+    // Validate against all fixtures
+    for (const fx of FIXTURES) {
+        const cipherBytes = b64Decode(String(fx.encryptedPayload?.e ?? ""));
+        let data = cipherBytes.slice();
+        for (const stage of stages) data = applySboxCbcInverseStage(data, stage);
+        const rawJson = decodeURIComponent(bytesToBinaryString(data));
+        const parsed = JSON.parse(rawJson);
+        const result = parsed && typeof parsed === "object" && parsed.status === "ok" ? parsed.result : parsed;
+        if (stable(result) !== stable(fx.decrypted)) {
+            throw new Error(`sbox-cbc inverse mismatch on ${fx.path}`);
+        }
+        console.log(`  OK  ${fx.path}`);
+    }
+
+    writeFileSync(OUT_FILE, buildSboxCbcDecryptSource(stages));
+    console.log(`wrote ${OUT_FILE}`);
+    return true;
 }
 
 const OP_XOR = 0;
@@ -343,7 +636,7 @@ export function fastDecryptComixPayload(rawPath: string, payload: any, headers: 
 
     let data = b64Decode(String(payload.e ?? ""));
     const mutationTables = getMutationTables();
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < RC4_KEYS.length; i++) {
 ${loopBody}
     }
 
@@ -474,7 +767,7 @@ function computeDecrypt(payload: any, headers: Record<string, string> | undefine
 
     let data = b64Decode(String(payload.e ?? ""));
     const mutationTables = stages.map(stage => b64Decode(stage.tableB64));
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < rc4Keys.length; i++) {
         if (order === "mutation-then-rc4") {
             data = applyMutationStage(data, stages[i]!, mutationTables[i]!);
             data = rc4(b64Decode(rc4Keys[i]!), data);
@@ -526,16 +819,21 @@ function validateAgainstFixtures(rc4Keys: string[], stages: MutationOps[]): Pipe
 async function main(): Promise<void> {
     installDomStub(RUNTIME.cfg);
     const file = join(tmpdir(), `secure-fast-build-${RUNTIME.bundleId}.mjs`);
-    const { patched, count } = patchSecure(SECURE_TEXT);
-    if (count === 0) throw new Error("patchSecure made no patches - bundle closure patterns may have changed");
-    console.log(`patchSecure applied ${count} patches`);
-    writeFileSync(file, patched);
+    writeFileSync(file, SECURE_PATCHED_TEXT);
     const dynamicImport = new Function("specifier", "return import(specifier)") as (specifier: string) => Promise<unknown>;
     await dynamicImport(pathToFileURL(file).href);
     restoreNodeTimers();
 
     const { name: nsName, ns } = findVmNamespace();
     console.log(`VM namespace: ${nsName}`);
+
+    // Try the new sbox-cbc-inverse path first; fall back to legacy mutation+RC4.
+    try {
+        if (tryBuildSboxCbcDecrypt(ns)) return;
+    } catch (e: any) {
+        console.log(`sbox-cbc decrypt build failed: ${e?.message ?? e}; falling back to legacy detection`);
+    }
+
     const responseHandler = captureResponseHandler(ns);
     const locals = findDecryptLocals(responseHandler);
     const keys = Object.getOwnPropertyNames(locals);
@@ -551,8 +849,11 @@ async function main(): Promise<void> {
             if (prefix !== null) mutationCandidates.set(key, { fn, prefix });
         }
     }
-    if (rc4KeyCandidates.size !== 5) throw new Error(`Expected 5 RC4 key getters, got ${rc4KeyCandidates.size}: ${[...rc4KeyCandidates.keys()].join(",")}`);
-    if (mutationCandidates.size !== 5) throw new Error(`Expected 5 mutation stages, got ${mutationCandidates.size}: ${[...mutationCandidates.keys()].join(",")}`);
+    if (rc4KeyCandidates.size === 0) throw new Error("No RC4 key getters discovered");
+    if (mutationCandidates.size === 0) throw new Error("No mutation stages discovered");
+    if (rc4KeyCandidates.size !== mutationCandidates.size) {
+        throw new Error(`Candidate count mismatch: ${rc4KeyCandidates.size} RC4 keys vs ${mutationCandidates.size} mutation stages`);
+    }
     console.log(`RC4 key getters: ${[...rc4KeyCandidates.keys()].join(", ")}`);
     console.log(`Mutation stages: ${[...mutationCandidates.keys()].join(", ")}`);
 
@@ -577,8 +878,12 @@ async function main(): Promise<void> {
 
     const orderedRc4 = [...new Set(rc4CallLog)];
     const orderedMut = [...new Set(mutCallLog)];
-    if (orderedRc4.length !== 5) throw new Error(`RC4 order incomplete: ${orderedRc4.join(",")}`);
-    if (orderedMut.length !== 5) throw new Error(`Mutation order incomplete: ${orderedMut.join(",")}`);
+    if (orderedRc4.length === 0) throw new Error("No RC4 calls observed during decrypt trace");
+    if (orderedMut.length === 0) throw new Error("No mutation calls observed during decrypt trace");
+    if (orderedRc4.length !== orderedMut.length) {
+        throw new Error(`Call-order mismatch: ${orderedRc4.length} RC4 calls vs ${orderedMut.length} mutation calls`);
+    }
+    console.log(`Rounds: ${orderedRc4.length}`);
     console.log(`RC4 call order: ${orderedRc4.join(", ")}`);
     console.log(`Mutation call order: ${orderedMut.join(", ")}`);
 

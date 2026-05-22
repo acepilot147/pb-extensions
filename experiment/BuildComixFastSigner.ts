@@ -18,17 +18,33 @@ import { pathToFileURL } from "node:url";
 
 const ROOT = process.cwd();
 const RUNTIME = JSON.parse(readFileSync(resolve(ROOT, "experiment/extracted/comix-runtime-latest/runtime.json"), "utf8"));
-const SECURE_TEXT = readFileSync(resolve(ROOT, "experiment/extracted/comix-runtime-latest/secure.js"), "utf8");
+const SECURE_PATCHED_TEXT = readFileSync(resolve(ROOT, "experiment/extracted/comix-runtime-latest/secure-patched.js"), "utf8");
 const OUT_FILE = resolve(ROOT, "src/ComixTo/ComixFastSigner.ts");
 
-const TEST_PATH = "/chapters/9000025";
+const TEST_PATH: string = RUNTIME.signChecks?.[0]?.signPath ?? "/chapters/9000025";
 
 type PipelineOrder = "rc4-then-insert" | "insert-then-rc4";
-
 interface InsertTable {
     prefix: number;
     prefixBytes: number[];
     ops: number[];
+}
+
+interface SboxCbcStage {
+    table: number[];
+    key: number[];
+    iv: number;
+}
+
+interface SboxRoundTrace {
+    tableB64: string;
+    keyB64: string;
+    decodeFn: Function;
+    stageFn: (data: number[]) => number[];
+    stageThis: any;
+    stageIndex: number;
+    sampleIn: number[];
+    sampleOut: number[];
 }
 
 const OP_XOR = 0;
@@ -55,34 +71,6 @@ const realTimers = {
     setInterval: globalThis.setInterval.bind(globalThis),
     clearInterval: globalThis.clearInterval.bind(globalThis),
 };
-
-/**
- * Patch secure.js to expose __vmBytecode/__vmEnv/__vmThisArg on every VM
- * closure created by the bundle. Uses structural regex so the patcher survives
- * the bundle renaming its own minified identifiers.
- */
-function patchSecure(text: string): { patched: string; count: number } {
-    let count = 0;
-
-    // Pattern 1: the "gm" closure factory.
-    // return X=(...Y)=>(void 0!==Z&&(NS._$A=!0,NS._$B=Z),P(Q,Y,R,X,void 0,S)),X}
-    const pattern1 = /return ([A-Za-z_$]\w*)=\(\.\.\.([A-Za-z_$]\w*)\)=>\(void 0!==([A-Za-z_$]\w*)&&\(([A-Za-z_$]\w*)\._\$\w+=!0,\4\._\$\w+=\3\),([A-Za-z_$]\w*)\(([A-Za-z_$]\w*),\2,([A-Za-z_$]\w*),\1,void 0,([A-Za-z_$]\w*)\)\),\1\}/g;
-    let patched = text.replace(pattern1, (match, closure, _args, _qf, _ns, _invoker, bytecode, env, thisArg) => {
-        count++;
-        const oldSuffix = `),${closure}}`;
-        const newSuffix = `),${closure}.__vmBytecode=${bytecode},${closure}.__vmEnv=${env},${closure}.__vmThisArg=${thisArg},${closure}}`;
-        return match.slice(0, -oldSuffix.length) + newSuffix;
-    });
-
-    // Pattern 2: direct closure registered via d.call(O,Qd,{b:Qi,e:Qx}).
-    const pattern2 = /return ([A-Za-z_$]\w*)\.call\(([A-Za-z_$]\w*),([A-Za-z_$]\w*),\{b:([A-Za-z_$]\w*),e:([A-Za-z_$]\w*)\}\),\3\}/g;
-    patched = patched.replace(pattern2, (_match, d, O, qd, qi, qx) => {
-        count++;
-        return `return ${qd}.__vmBytecode=${qi},${qd}.__vmEnv=${qx},${qd}.__vmThisArg=this,${d}.call(${O},${qd},{b:${qi},e:${qx}}),${qd}}`;
-    });
-
-    return { patched, count };
-}
 
 function installDomStub(cfg: string): void {
     const G = globalThis as any;
@@ -230,6 +218,12 @@ function binaryStringToBytes(s: string): number[] {
     return out;
 }
 
+function bytesFromString(s: string): number[] {
+    const out: number[] = new Array(s.length);
+    for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i) & 0xff;
+    return out;
+}
+
 function encodedIndexForInput(inputIndex: number, prefixLimit: number): number {
     return inputIndex < prefixLimit ? inputIndex * 2 + 1 : inputIndex + prefixLimit;
 }
@@ -356,6 +350,10 @@ function b64Decode(s: string): number[] {
     return out;
 }
 
+function b64Encode(bytes: number[]): string {
+    return Buffer.from(bytes).toString("base64");
+}
+
 function b64UrlEncode(bytes: number[]): string {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let out = "", i = 0;
@@ -381,7 +379,7 @@ function computeHash(path: string, rc4KeysB64: string[], insertStages: InsertTab
     data = [];
     for (let i = 0; i < enc.length; i++) data.push(enc.charCodeAt(i) & 0xff);
 
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < rc4KeysB64.length; i++) {
         if (order === "rc4-then-insert") {
             data = rc4(b64Decode(rc4KeysB64[i]!), data);
             data = applyInsertStage(data, insertStages[i]!);
@@ -391,6 +389,181 @@ function computeHash(path: string, rc4KeysB64: string[], insertStages: InsertTab
         }
     }
     return b64UrlEncode(data);
+}
+
+function applySboxCbcStage(data: number[], stage: SboxCbcStage): number[] {
+    const out: number[] = new Array(data.length);
+    let prev = stage.iv & 0xff;
+    for (let i = 0; i < data.length; i++) {
+        const idx = ((data[i]! & 0xff) ^ stage.key[i % stage.key.length]! ^ prev) & 0xff;
+        const next = stage.table[idx]! & 0xff;
+        out[i] = next;
+        prev = next;
+    }
+    return out;
+}
+
+function computeSboxCbcHash(path: string, stages: SboxCbcStage[]): string {
+    let data = bytesFromString(path);
+    for (const stage of stages) data = applySboxCbcStage(data, stage);
+    return b64UrlEncode(data);
+}
+
+function findSboxCbcMethod(root: any, testPath: string, liveToken: string): Function | null {
+    const seen = new Set<any>();
+
+    for (const objKey of Object.getOwnPropertyNames(root)) {
+        let obj: any;
+        try { obj = root[objKey]; } catch { continue; }
+        if (!obj || typeof obj !== "object") continue;
+        for (const fnKey of Object.getOwnPropertyNames(obj)) {
+            let fn: any;
+            try { fn = obj[fnKey]; } catch { continue; }
+            if (typeof fn !== "function" || !Array.isArray(fn.__vmEnv?._$lW6rn8)) continue;
+            try {
+                if (fn(testPath) === liveToken) return fn;
+            } catch {}
+        }
+    }
+
+    function walk(obj: any, depth: number): Function | null {
+        if (!obj || seen.has(obj) || depth > 5) return null;
+        if (typeof obj !== "object" && typeof obj !== "function") return null;
+        seen.add(obj);
+
+        for (const key of Object.getOwnPropertyNames(obj)) {
+            if (key === "constructor" || key === "prototype" || key === "caller" || key === "arguments") continue;
+            let value: any;
+            try { value = obj[key]; } catch { continue; }
+            if (typeof value === "function") {
+                const envArray = value.__vmEnv?._$lW6rn8;
+                if (Array.isArray(envArray)) {
+                    try {
+                        if (value(testPath) === liveToken) return value;
+                    } catch {}
+                }
+            }
+            const nested = walk(value, depth + 1);
+            if (nested) return nested;
+        }
+        return null;
+    }
+
+    return walk(root, 0);
+}
+
+function captureSboxCbcRounds(method: Function, testPath: string, thisArg?: any): SboxRoundTrace[] {
+    const envArray = method.__vmEnv?._$lW6rn8;
+    if (!Array.isArray(envArray)) throw new Error("S-box signer method has no VM env function array");
+
+    const originals = envArray.slice();
+    const rounds: SboxRoundTrace[] = [];
+    const knownStageIndexes = [16, 6, 11, 3, 5];
+    const pendingStrings: string[] = [];
+    let pendingTable: { b64: string; decodeFn: Function } | null = null;
+    let pendingKey: { b64: string; decodeFn: Function } | null = null;
+
+    for (let i = 0; i < envArray.length; i++) {
+        const original = originals[i];
+        if (typeof original !== "function") continue;
+        envArray[i] = function (...args: any[]) {
+            const ret = original.apply(this, args);
+            if (i === 12 && typeof args[0] === "string") pendingStrings.push(args[0]);
+            if (knownStageIndexes.includes(i) && pendingStrings.length >= 2 && Array.isArray(args[0]) && Array.isArray(ret)) {
+                rounds.push({
+                    tableB64: pendingStrings[pendingStrings.length - 2]!,
+                    keyB64: pendingStrings[pendingStrings.length - 1]!,
+                    decodeFn: originals[12] as Function,
+                    stageFn: original as (data: number[]) => number[],
+                    stageThis: this,
+                    stageIndex: i,
+                    sampleIn: args[0].slice(),
+                    sampleOut: ret.slice(),
+                });
+                return ret;
+            }
+            if (typeof args[0] === "string") {
+                const decodedLen = b64Decode(args[0]).length;
+                if (decodedLen === 256) {
+                    pendingTable = { b64: args[0], decodeFn: original };
+                    pendingKey = null;
+                } else if (pendingTable && decodedLen > 0 && decodedLen <= 64) {
+                    pendingKey = { b64: args[0], decodeFn: original };
+                }
+            } else if (
+                pendingTable &&
+                pendingKey &&
+                Array.isArray(args[0]) &&
+                Array.isArray(ret) &&
+                ret.length === args[0].length &&
+                args[0].length === bytesFromString(testPath).length
+            ) {
+                rounds.push({
+                    tableB64: pendingTable.b64,
+                    keyB64: pendingKey.b64,
+                    decodeFn: pendingKey.decodeFn,
+                    stageFn: original as (data: number[]) => number[],
+                    stageThis: this,
+                    stageIndex: i,
+                    sampleIn: args[0].slice(),
+                    sampleOut: ret.slice(),
+                });
+                pendingTable = null;
+                pendingKey = null;
+            }
+            return ret;
+        };
+    }
+
+    try {
+        method.call(thisArg, testPath);
+    } finally {
+        for (let i = 0; i < originals.length; i++) envArray[i] = originals[i];
+    }
+
+    return rounds;
+}
+
+function buildSboxCbcStages(rounds: SboxRoundTrace[]): SboxCbcStage[] {
+    return rounds.map((round) => {
+        const table = b64Decode(round.tableB64);
+        const key = b64Decode(round.keyB64);
+        if (table.length !== 256) throw new Error(`S-box table for stage ${round.stageIndex} decoded to ${table.length} bytes`);
+        if (key.length === 0) throw new Error(`S-box key for stage ${round.stageIndex} is empty`);
+
+        const inverse = new Array(256).fill(-1);
+        for (let i = 0; i < table.length; i++) inverse[table[i]!] = i;
+        if (inverse.some(v => v < 0)) throw new Error(`S-box table for stage ${round.stageIndex} is not a permutation`);
+
+        round.decodeFn(round.tableB64);
+        round.decodeFn(round.keyB64);
+        const first = round.stageFn.call(round.stageThis, [0])[0]! & 0xff;
+        const iv = (inverse[first]! ^ key[0]!) & 0xff;
+
+        for (const sample of [
+            round.sampleIn,
+            new Array(32).fill(0),
+            new Array(32).fill(0x42),
+            Array.from({ length: 32 }, (_, i) => (i * 17 + 3) & 0xff),
+        ]) {
+            round.decodeFn(round.tableB64);
+            round.decodeFn(round.keyB64);
+            const live = round.stageFn.call(round.stageThis, sample.slice()).map(b => b & 0xff);
+            const staticOut = applySboxCbcStage(sample.slice(), { table, key, iv });
+            if (JSON.stringify(live) !== JSON.stringify(staticOut)) {
+                throw new Error(`S-box/CBC formula mismatch for stage ${round.stageIndex}`);
+            }
+        }
+        const tracedStatic = applySboxCbcStage(round.sampleIn.slice(), { table, key, iv });
+        if (JSON.stringify(tracedStatic) !== JSON.stringify(round.sampleOut.map(b => b & 0xff))) {
+            console.error(`trace in  ${round.sampleIn.slice(0, 12).map(b => b.toString(16).padStart(2, "0")).join(" ")}`);
+            console.error(`trace out ${round.sampleOut.slice(0, 12).map(b => (b & 0xff).toString(16).padStart(2, "0")).join(" ")}`);
+            console.error(`static    ${tracedStatic.slice(0, 12).map(b => b.toString(16).padStart(2, "0")).join(" ")}`);
+            throw new Error(`S-box/CBC traced round mismatch for stage ${round.stageIndex}`);
+        }
+
+        return { table, key, iv };
+    });
 }
 
 function buildSource(keys: string[], inserts: InsertTable[], order: PipelineOrder): string {
@@ -522,9 +695,98 @@ function normalizeSignPath(rawPath: string): string {
 export function fastGenerateHash(rawPath: string): string {
     const path = normalizeSignPath(rawPath);
     let data = bytesFromString(encodeURIComponent(path));
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < RC4_KEYS.length; i++) {
 ${loopBody}
     }
+    return b64UrlEncode(data);
+}
+`;
+}
+
+function buildSboxCbcSource(stages: SboxCbcStage[]): string {
+    const compactStages = stages.map(stage => ({
+        tableB64: b64Encode(stage.table),
+        keyB64: b64Encode(stage.key),
+        iv: stage.iv,
+    }));
+
+    return `/* Generated by experiment/BuildComixFastSigner.ts.
+ * Bundle ID: ${RUNTIME.bundleId}
+ * Algorithm: sbox-cbc
+ * Pipeline order: sbox-cbc
+ * This is the de-VM'd Comix request signer.
+ */
+
+const B64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+const SBOX_CBC_STAGES = ${JSON.stringify(compactStages, null, 4)};
+
+function b64Decode(s: string): number[] {
+    const lookup: number[] = new Array(128).fill(-1);
+    for (let i = 0; i < 64; i++) lookup[B64_CHARS.charCodeAt(i)] = i;
+    const out: number[] = [];
+    let buf = 0, bits = 0;
+    for (let i = 0; i < s.length; i++) {
+        const c = s.charCodeAt(i);
+        if (c === 61) break;
+        const v = lookup[c] ?? -1;
+        if (v < 0) continue;
+        buf = (buf << 6) | v;
+        bits += 6;
+        if (bits >= 8) {
+            bits -= 8;
+            out.push((buf >> bits) & 0xff);
+        }
+    }
+    return out;
+}
+
+function b64UrlEncode(bytes: number[]): string {
+    let out = "", i = 0;
+    for (; i + 2 < bytes.length; i += 3) {
+        const n = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
+        out += B64_CHARS[(n >> 18) & 63] + B64_CHARS[(n >> 12) & 63] + B64_CHARS[(n >> 6) & 63] + B64_CHARS[n & 63];
+    }
+    if (i + 1 === bytes.length) {
+        const n = bytes[i] << 16;
+        out += B64_CHARS[(n >> 18) & 63] + B64_CHARS[(n >> 12) & 63];
+    } else if (i + 2 === bytes.length) {
+        const n = (bytes[i] << 16) | (bytes[i + 1] << 8);
+        out += B64_CHARS[(n >> 18) & 63] + B64_CHARS[(n >> 12) & 63] + B64_CHARS[(n >> 6) & 63];
+    }
+    return out.replace(/\\+/g, "-").replace(/\\//g, "_");
+}
+
+function bytesFromString(s: string): number[] {
+    const out: number[] = new Array(s.length);
+    for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i) & 0xff;
+    return out;
+}
+
+function normalizeSignPath(rawPath: string): string {
+    return rawPath
+        .replace(/^https?:\\/\\/[^/]+/, "")
+        .replace(/^\\/api\\/v1/, "")
+        .split("?")[0]!;
+}
+
+function applySboxCbcStage(data: number[], stage: { tableB64: string; keyB64: string; iv: number }): number[] {
+    const table = b64Decode(stage.tableB64);
+    const key = b64Decode(stage.keyB64);
+    const out: number[] = new Array(data.length);
+    let prev = stage.iv & 0xff;
+    for (let i = 0; i < data.length; i++) {
+        const idx = ((data[i] & 0xff) ^ key[i % key.length] ^ prev) & 0xff;
+        const next = table[idx] & 0xff;
+        out[i] = next;
+        prev = next;
+    }
+    return out;
+}
+
+export function fastGenerateHash(rawPath: string): string {
+    const path = normalizeSignPath(rawPath);
+    let data = bytesFromString(path);
+    for (const stage of SBOX_CBC_STAGES) data = applySboxCbcStage(data, stage);
     return b64UrlEncode(data);
 }
 `;
@@ -533,18 +795,47 @@ ${loopBody}
 async function main(): Promise<void> {
     installDomStub(RUNTIME.cfg);
 
-    const { patched, count } = patchSecure(SECURE_TEXT);
-    if (count === 0) throw new Error("patchSecure made no patches - bundle closure patterns may have changed");
-    console.log(`patchSecure applied ${count} patches`);
-
     const file = join(tmpdir(), `secure-fast-signer-${RUNTIME.bundleId}.mjs`);
-    writeFileSync(file, patched);
+    writeFileSync(file, SECURE_PATCHED_TEXT);
     const dynamicImport = new Function("specifier", "return import(specifier)") as (specifier: string) => Promise<unknown>;
     await dynamicImport(pathToFileURL(file).href);
     restoreNodeTimers();
 
     const { name: nsName, ns } = findVmNamespace();
     console.log(`VM namespace: ${nsName}`);
+
+    const liveToken = ns[SIGNER_PROP](TEST_PATH) as string;
+    let sboxMethod: Function | null = null;
+    let sboxThisArg: any = undefined;
+    try {
+        if (typeof ns.Ai?.T === "function") {
+            sboxMethod = ns.Ai.T;
+            sboxThisArg = ns.Ai;
+        }
+    } catch {}
+    if (!sboxMethod) sboxMethod = findSboxCbcMethod(ns, TEST_PATH, liveToken);
+    if (sboxMethod) {
+        const rounds = captureSboxCbcRounds(sboxMethod, TEST_PATH, sboxThisArg);
+        if (rounds.length >= 1) {
+            console.log(`Detected signer algorithm: sbox-cbc (${rounds.length} rounds)`);
+            const stages = buildSboxCbcStages(rounds);
+
+            const checks = (RUNTIME.signChecks ?? [{ signPath: TEST_PATH, liveToken }]).map((check: any) => {
+                const staticToken = computeSboxCbcHash(check.signPath, stages);
+                return { path: check.signPath, liveToken: check.liveToken, staticToken, ok: staticToken === check.liveToken };
+            });
+            for (const check of checks) {
+                console.log(`  ${check.ok ? "OK " : "BAD"} ${check.path}: ${check.staticToken}`);
+            }
+            if (!checks.every((check: any) => check.ok)) {
+                throw new Error("S-box/CBC signer failed live-token validation");
+            }
+
+            writeFileSync(OUT_FILE, buildSboxCbcSource(stages));
+            console.log(`wrote ${OUT_FILE}`);
+            return;
+        }
+    }
 
     const locals = findSignerLocals(ns);
     console.log(`Signer locals: ${Object.getOwnPropertyNames(locals).length} keys`);
@@ -577,8 +868,12 @@ async function main(): Promise<void> {
 
     const orderedStageKeys = [...new Set(stageCallLog)];
     const orderedRc4Keys = [...new Set(rc4CallLog)];
-    if (orderedStageKeys.length !== 5) throw new Error(`Expected 5 insert stages in call trace, got ${orderedStageKeys.length}: ${orderedStageKeys.join(",")}`);
-    if (orderedRc4Keys.length !== 5) throw new Error(`Expected 5 RC4 keys in call trace, got ${orderedRc4Keys.length}: ${orderedRc4Keys.join(",")}`);
+    if (orderedStageKeys.length === 0) throw new Error("No insert stages observed in call trace");
+    if (orderedRc4Keys.length === 0) throw new Error("No RC4 keys observed in call trace");
+    if (orderedStageKeys.length !== orderedRc4Keys.length) {
+        throw new Error(`Stage/key count mismatch: ${orderedStageKeys.length} insert stages vs ${orderedRc4Keys.length} RC4 keys`);
+    }
+    console.log(`Rounds: ${orderedRc4Keys.length}`);
 
     const insertStages = orderedStageKeys.map(key => {
         const { fn, prefix } = insertStageCandidates.get(key)!;
@@ -590,7 +885,6 @@ async function main(): Promise<void> {
     });
 
     // Self-validate: try both pipeline orders against the live VM
-    const liveToken = ns[SIGNER_PROP](TEST_PATH) as string;
     const orders: PipelineOrder[] = ["rc4-then-insert", "insert-then-rc4"];
     let workingOrder: PipelineOrder | null = null;
     for (const order of orders) {

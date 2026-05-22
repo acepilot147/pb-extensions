@@ -6,7 +6,7 @@ const REMOTE_CONSTANTS_STATE_KEY = "comix.remoteConstants.v2";
 const B64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 const PERIOD = 160;
 
-type PipelineOrder = "rc4-then-insert" | "insert-then-rc4" | "mutation-then-rc4" | "rc4-then-mutation";
+type PipelineOrder = "rc4-then-insert" | "insert-then-rc4" | "mutation-then-rc4" | "rc4-then-mutation" | "sbox-cbc" | "sbox-cbc-inverse";
 
 interface InsertStage {
     prefix: number;
@@ -19,6 +19,12 @@ interface MutationStage {
     opsB64: string;
 }
 
+interface SboxCbcStage {
+    tableB64: string;
+    keyB64: string;
+    iv: number;
+}
+
 export interface RemoteConstants {
     schemaVersion: number;
     encoding: string;
@@ -26,13 +32,15 @@ export interface RemoteConstants {
     bundleId: string;
     signer: {
         pipelineOrder: PipelineOrder;
-        rc4Keys: string[];
-        insertStages: InsertStage[];
+        rc4Keys?: string[];
+        insertStages?: InsertStage[];
+        sboxCbcStages?: SboxCbcStage[];
     };
     decrypt: {
         pipelineOrder: PipelineOrder;
         rc4Keys: string[];
         mutationStages: MutationStage[];
+        sboxInverseStages?: SboxCbcStage[];
     };
 }
 
@@ -199,6 +207,36 @@ function applyMutationStage(data: number[], stage: MutationStage): number[] {
     return out;
 }
 
+function applySboxCbcStage(data: number[], stage: SboxCbcStage): number[] {
+    const table = b64Decode(stage.tableB64);
+    const key = b64Decode(stage.keyB64);
+    const out: number[] = new Array(data.length);
+    let prev = stage.iv & 0xff;
+    for (let i = 0; i < data.length; i++) {
+        const idx = ((data[i]! & 0xff) ^ key[i % key.length]! ^ prev) & 0xff;
+        const next = table[idx]! & 0xff;
+        out[i] = next;
+        prev = next;
+    }
+    return out;
+}
+
+function applySboxCbcInverseStage(data: number[], stage: SboxCbcStage): number[] {
+    const table = b64Decode(stage.tableB64);
+    const key = b64Decode(stage.keyB64);
+    const inverseTable: number[] = new Array(256).fill(0);
+    for (let i = 0; i < 256; i++) inverseTable[table[i]!] = i;
+    const out: number[] = new Array(data.length);
+    let prev = stage.iv & 0xff;
+    for (let i = 0; i < data.length; i++) {
+        const cipherByte = data[i]! & 0xff;
+        const idx = inverseTable[cipherByte]! & 0xff;
+        out[i] = (idx ^ key[i % key.length]! ^ prev) & 0xff;
+        prev = cipherByte;
+    }
+    return out;
+}
+
 function normalizeSignPath(rawPath: string): string {
     return rawPath
         .replace(/^https?:\/\/[^/]+/, "")
@@ -210,10 +248,20 @@ function validateConstants(constants: RemoteConstants): void {
     if (constants.schemaVersion !== 2 || constants.encoding !== "compact-b64-ops" || constants.period !== PERIOD) {
         throw new Error("Unsupported Comix remote constants schema");
     }
-    if (constants.signer.rc4Keys.length !== constants.signer.insertStages.length) {
-        throw new Error("Comix remote signer constants mismatch");
+    if (constants.signer.pipelineOrder === "sbox-cbc") {
+        if (!Array.isArray(constants.signer.sboxCbcStages) || constants.signer.sboxCbcStages.length === 0) {
+            throw new Error("Comix remote signer constants mismatch");
+        }
+    } else {
+        if (!Array.isArray(constants.signer.rc4Keys) || !Array.isArray(constants.signer.insertStages) || constants.signer.rc4Keys.length !== constants.signer.insertStages.length) {
+            throw new Error("Comix remote signer constants mismatch");
+        }
     }
-    if (constants.decrypt.rc4Keys.length !== constants.decrypt.mutationStages.length) {
+    if (constants.decrypt.pipelineOrder === "sbox-cbc-inverse") {
+        if (!Array.isArray(constants.decrypt.sboxInverseStages) || constants.decrypt.sboxInverseStages.length === 0) {
+            throw new Error("Comix remote decrypt constants mismatch");
+        }
+    } else if (constants.decrypt.rc4Keys.length !== constants.decrypt.mutationStages.length) {
         throw new Error("Comix remote decrypt constants mismatch");
     }
 }
@@ -238,9 +286,9 @@ function emitRemoteConstantsTelemetry(
         bundleId: constants?.bundleId,
         constantsSchema: constants?.schemaVersion,
         signerOrder: constants?.signer.pipelineOrder,
-        signerRounds: constants?.signer.rc4Keys.length,
+        signerRounds: constants?.signer.pipelineOrder === "sbox-cbc" ? constants?.signer.sboxCbcStages?.length : constants?.signer.rc4Keys?.length,
         decryptOrder: constants?.decrypt.pipelineOrder,
-        decryptRounds: constants?.decrypt.rc4Keys.length,
+        decryptRounds: constants?.decrypt.pipelineOrder === "sbox-cbc-inverse" ? constants?.decrypt.sboxInverseStages?.length : constants?.decrypt.rc4Keys?.length,
         constantsSource: source,
         cacheHit: source === "memory" || source === "state",
         forceRefresh: force,
@@ -356,14 +404,22 @@ export async function fetchRemoteComixConstants(
 
 export function remoteGenerateHash(rawPath: string, constants: RemoteConstants): string {
     const path = normalizeSignPath(rawPath);
+    if (constants.signer.pipelineOrder === "sbox-cbc") {
+        let data = bytesFromString(path);
+        for (const stage of constants.signer.sboxCbcStages ?? []) data = applySboxCbcStage(data, stage);
+        return b64UrlEncode(data);
+    }
+
     let data = bytesFromString(encodeURIComponent(path));
-    for (let i = 0; i < constants.signer.rc4Keys.length; i++) {
+    const rc4Keys = constants.signer.rc4Keys ?? [];
+    const insertStages = constants.signer.insertStages ?? [];
+    for (let i = 0; i < rc4Keys.length; i++) {
         if (constants.signer.pipelineOrder === "rc4-then-insert") {
-            data = rc4(b64Decode(constants.signer.rc4Keys[i]!), data);
-            data = applyInsertStage(data, constants.signer.insertStages[i]!);
+            data = rc4(b64Decode(rc4Keys[i]!), data);
+            data = applyInsertStage(data, insertStages[i]!);
         } else {
-            data = applyInsertStage(data, constants.signer.insertStages[i]!);
-            data = rc4(b64Decode(constants.signer.rc4Keys[i]!), data);
+            data = applyInsertStage(data, insertStages[i]!);
+            data = rc4(b64Decode(rc4Keys[i]!), data);
         }
     }
     return b64UrlEncode(data);
@@ -376,13 +432,17 @@ export function remoteDecryptComixPayload(payload: any, headers: Record<string, 
     if (normalizedHeaders["x-enc"] && normalizedHeaders["x-enc"] !== "1") return payload;
 
     let data = b64Decode(String(payload.e ?? ""));
-    for (let i = 0; i < constants.decrypt.rc4Keys.length; i++) {
-        if (constants.decrypt.pipelineOrder === "mutation-then-rc4") {
-            data = applyMutationStage(data, constants.decrypt.mutationStages[i]!);
-            data = rc4(b64Decode(constants.decrypt.rc4Keys[i]!), data);
-        } else {
-            data = rc4(b64Decode(constants.decrypt.rc4Keys[i]!), data);
-            data = applyMutationStage(data, constants.decrypt.mutationStages[i]!);
+    if (constants.decrypt.pipelineOrder === "sbox-cbc-inverse") {
+        for (const stage of constants.decrypt.sboxInverseStages ?? []) data = applySboxCbcInverseStage(data, stage);
+    } else {
+        for (let i = 0; i < constants.decrypt.rc4Keys.length; i++) {
+            if (constants.decrypt.pipelineOrder === "mutation-then-rc4") {
+                data = applyMutationStage(data, constants.decrypt.mutationStages[i]!);
+                data = rc4(b64Decode(constants.decrypt.rc4Keys[i]!), data);
+            } else {
+                data = rc4(b64Decode(constants.decrypt.rc4Keys[i]!), data);
+                data = applyMutationStage(data, constants.decrypt.mutationStages[i]!);
+            }
         }
     }
 
