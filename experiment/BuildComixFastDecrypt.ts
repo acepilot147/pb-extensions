@@ -379,24 +379,38 @@ function isMutationStage(fn: any): boolean {
     return detectMutationPrefix(fn) !== null;
 }
 
+function parseRef(ref: string): { ns: string; prop: string } {
+    const m = ref.match(/^([A-Za-z_$][\w$]*)\.([A-Za-z_$][\w$]*)$/);
+    if (!m) throw new Error(`Cannot parse ref "${ref}"`);
+    return { ns: m[1]!, prop: m[2]! };
+}
+
+const INSTALLER_REF = parseRef(RUNTIME.installerRef);
+const INSTALLER_PROP = INSTALLER_REF.prop;
+
 function findVmNamespace(): { name: string; ns: any } {
+    const expected = INSTALLER_REF.ns;
+    const direct = (globalThis as any)[expected];
+    if (direct && (typeof direct === "object" || typeof direct === "function") && typeof direct[INSTALLER_PROP] === "function") {
+        return { name: expected, ns: direct };
+    }
     for (const name of Object.getOwnPropertyNames(globalThis)) {
-        if (!/^vm[a-z]_[a-f0-9]+$/.test(name)) continue;
+        if (!/^vm[a-zA-Z]_[a-f0-9]+$/.test(name)) continue;
         const ns = (globalThis as any)[name];
-        if (ns && (typeof ns === "object" || typeof ns === "function") && typeof ns.v === "function") {
+        if (ns && (typeof ns === "object" || typeof ns === "function") && typeof ns[INSTALLER_PROP] === "function") {
             return { name, ns };
         }
     }
-    throw new Error("Could not find VM namespace (expected /^vm[a-z]_[a-f0-9]+$/ with .v)");
+    throw new Error(`Could not find VM namespace (expected ${expected} with .${INSTALLER_PROP})`);
 }
 
 function captureResponseHandler(ns: any): any {
     let responseHandler: any = null;
-    ns.v({
+    ns[INSTALLER_PROP]({
         interceptors: { request: { use() {} }, response: { use: (h: any) => { responseHandler = h; } } },
         defaults: { headers: { common: {}, get: {}, post: {}, put: {}, delete: {}, patch: {}, head: {} }, transformRequest: [], transformResponse: [] },
     });
-    if (!responseHandler) throw new Error("No response handler captured from ns.v");
+    if (!responseHandler) throw new Error(`No response handler captured from ns.${INSTALLER_PROP}`);
     return responseHandler;
 }
 

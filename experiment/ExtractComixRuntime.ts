@@ -435,7 +435,7 @@ async function main(): Promise<void> {
     if (!cfgM || !mainM) throw new Error("could not parse cfg or main bundle URL");
 
     const cfg = cfgM[1]!;
-    const mainUrl = mainM[1]!;
+    const mainUrl = new URL(mainM[1]!, HOMEPAGE).href;
     console.log("[extract] main", mainUrl);
     const mainText = await fetchText(mainUrl);
     const secureM = mainText.match(/from\s*["']([^"']*secure-[a-zA-Z0-9_-]+\.js)["']/);

@@ -118,19 +118,39 @@ function restoreNodeTimers(): void {
 }
 
 /**
- * Find the VM namespace on globalThis. Bundles use names matching
- * /^vm[a-z]_[a-f0-9]+$/; the structurally invariant check is `.qi` (signer) and `.v`
- * (installer) both being functions.
+ * Find the VM namespace on globalThis. The signer/installer property names
+ * rotate (e.g. qi/v -> Hi/Li); we read them from runtime.json's signerRef
+ * and installerRef ("vmy_7ad57b.Hi" / "vmy_7ad57b.Li"). The namespace name
+ * matches /^vm[a-zA-Z]_[a-f0-9]+$/ now that upper-case suffixes appear.
  */
+function parseRef(ref: string): { ns: string; prop: string } {
+    const m = ref.match(/^([A-Za-z_$][\w$]*)\.([A-Za-z_$][\w$]*)$/);
+    if (!m) throw new Error(`Cannot parse ref "${ref}"`);
+    return { ns: m[1]!, prop: m[2]! };
+}
+
+const SIGNER_REF = parseRef(RUNTIME.signerRef);
+const INSTALLER_REF = parseRef(RUNTIME.installerRef);
+if (SIGNER_REF.ns !== INSTALLER_REF.ns) {
+    throw new Error(`Signer/installer in different namespaces: ${RUNTIME.signerRef} vs ${RUNTIME.installerRef}`);
+}
+const SIGNER_PROP = SIGNER_REF.prop;
+const INSTALLER_PROP = INSTALLER_REF.prop;
+
 function findVmNamespace(): { name: string; ns: any } {
+    const expected = SIGNER_REF.ns;
+    const direct = (globalThis as any)[expected];
+    if (direct && (typeof direct === "object" || typeof direct === "function") && typeof direct[SIGNER_PROP] === "function" && typeof direct[INSTALLER_PROP] === "function") {
+        return { name: expected, ns: direct };
+    }
     for (const name of Object.getOwnPropertyNames(globalThis)) {
-        if (!/^vm[a-z]_[a-f0-9]+$/.test(name)) continue;
+        if (!/^vm[a-zA-Z]_[a-f0-9]+$/.test(name)) continue;
         const ns = (globalThis as any)[name];
-        if (ns && (typeof ns === "object" || typeof ns === "function") && typeof ns.qi === "function" && typeof ns.v === "function") {
+        if (ns && (typeof ns === "object" || typeof ns === "function") && typeof ns[SIGNER_PROP] === "function" && typeof ns[INSTALLER_PROP] === "function") {
             return { name, ns };
         }
     }
-    throw new Error("Could not find VM namespace (expected /^vm[a-z]_[a-f0-9]+$/ with .qi and .v)");
+    throw new Error(`Could not find VM namespace (expected ${expected} with .${SIGNER_PROP} and .${INSTALLER_PROP})`);
 }
 
 function detectInsertPrefix(fn: any): number | null {
@@ -552,7 +572,7 @@ async function main(): Promise<void> {
         originals.set(key, fn);
         locals[key] = function () { rc4CallLog.push(key); return fn(); };
     }
-    ns.qi(TEST_PATH);
+    ns[SIGNER_PROP](TEST_PATH);
     for (const [k, fn] of originals) locals[k] = fn;
 
     const orderedStageKeys = [...new Set(stageCallLog)];
@@ -570,7 +590,7 @@ async function main(): Promise<void> {
     });
 
     // Self-validate: try both pipeline orders against the live VM
-    const liveToken = ns.qi(TEST_PATH) as string;
+    const liveToken = ns[SIGNER_PROP](TEST_PATH) as string;
     const orders: PipelineOrder[] = ["rc4-then-insert", "insert-then-rc4"];
     let workingOrder: PipelineOrder | null = null;
     for (const order of orders) {
