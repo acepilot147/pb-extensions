@@ -115,10 +115,10 @@ export class Parser {
     mangaId: string,
     chapterId: string,
   ): ChapterDetails {
-    const baseUrl = data.pages.baseUrl ?? "";
+    const baseUrl = (data.pages.baseUrl ?? "").replace(/\/sii?\//, "/i/");
     const pages: string[] = data.pages.items.map((p) => {
       const url = /^https?:\/\//.test(p.url) ? p.url : `${baseUrl}${p.url}`;
-      return url.replace(/\/si\/(?=[bh])/, "/i/");
+      return url.replace(/\/sii?\//, "/i/");
     });
     return App.createChapterDetails({
       id: chapterId,
