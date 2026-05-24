@@ -864,9 +864,10 @@ var _Sources = (() => {
     }
     parseChapterDetails(data, mangaId, chapterId) {
       const baseUrl = data.pages.baseUrl ?? "";
-      const pages = data.pages.items.map(
-        (p) => /^https?:\/\//.test(p.url) ? p.url : `${baseUrl}${p.url}`
-      );
+      const pages = data.pages.items.map((p) => {
+        const url = /^https?:\/\//.test(p.url) ? p.url : `${baseUrl}${p.url}`;
+        return url.replace(/\/si\/(?=[bh])/, "/i/");
+      });
       return App.createChapterDetails({
         id: chapterId,
         mangaId,
@@ -2135,7 +2136,7 @@ var _Sources = (() => {
 
   // src/ComixTo/ComixTo.ts
   var ComixToInfo = {
-    version: "1.8.4",
+    version: "1.8.5",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
