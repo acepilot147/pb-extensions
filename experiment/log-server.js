@@ -13,8 +13,10 @@ const server = http.createServer((req, res) => {
         req.on('data', chunk => body += chunk);
         req.on('end', () => {
             const ts = new Date().toISOString().slice(11, 23);
-            console.log(`[${ts}] ${body}`);
-            res.writeHead(200);
+            let pretty = body;
+            try { pretty = JSON.stringify(JSON.parse(body), null, 2); } catch {}
+            console.log(`[${ts}]\n${pretty}\n`);
+            res.writeHead(200, { 'Access-Control-Allow-Origin': '*' });
             res.end('ok');
         });
     } else {
