@@ -60,7 +60,7 @@ import {
 import { readScrambleHeaders, computeDescrambleLookup } from './ComixDescramble';
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.8.8",
+  version: "1.9.1",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -225,7 +225,6 @@ requestManager = App.createRequestManager({
     const fetchPage = (page: number) => fetchSigned<APIChapterResult>(
       this.requestManager,
       `${API_BASE}/manga/${mangaId}/chapters?page=${page}&limit=100&order[number]=desc`,
-      this.stateManager,
     );
 
     const firstResult = await fetchPage(1);
@@ -257,7 +256,6 @@ requestManager = App.createRequestManager({
     const result = await fetchSigned<APIPagesResult>(
       this.requestManager,
       `${API_BASE}/chapters/${chapterId}`,
-      this.stateManager,
     );
     return this.parser.parseChapterDetails(result, mangaId, chapterId);
   }
