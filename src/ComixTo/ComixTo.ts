@@ -57,8 +57,10 @@ import {
     getCachedTags,
 } from "./Settings";
 
+import { readScrambleHeaders, computeDescrambleLookup } from './ComixDescramble';
+
 export const ComixToInfo: SourceInfo = {
-  version: "1.8.6",
+  version: "1.8.8",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -89,23 +91,57 @@ export class ComixTo
 {
   parser = new Parser();
   stateManager = App.createSourceStateManager();
-  requestManager = App.createRequestManager({
-    requestsPerSecond: 4,
-    requestTimeout: 15000,
-    interceptor: {
-      interceptRequest: async (request: Request): Promise<Request> => {
-        request.headers = {
-          ...(request.headers ?? {}),
-          "Referer": `${DOMAIN}/`,
-          "User-Agent": await this.requestManager.getDefaultUserAgent()
-        };
-        return request;
-      },
-      interceptResponse: async (response: Response): Promise<Response> => {
-        return response;
-      },
+requestManager = App.createRequestManager({
+  requestsPerSecond: 4,
+  requestTimeout: 15000,
+  interceptor: {
+    interceptRequest: async (request: Request): Promise<Request> => {
+      request.headers = {
+        ...(request.headers ?? {}),
+        "Referer": `${DOMAIN}/`,
+        "User-Agent": await this.requestManager.getDefaultUserAgent()
+      };
+      return request;
     },
-  });
+    interceptResponse: async (response: Response): Promise<Response> => {
+      const reqUrl = response.request?.url ?? "";
+      if (!/\/si\//.test(reqUrl) || !response.rawData) return response;
+
+      const params = readScrambleHeaders(response.headers);
+      if (!params) return response;
+
+      try {
+        const srcImage = App.createPBImage({ data: response.rawData });
+        const { width, height } = srcImage;
+        const { cols, rows, seed } = params;
+        const tw = (width / cols) | 0;
+        const th = (height / rows) | 0;
+
+        const lookup = computeDescrambleLookup(seed, cols * rows);
+        const canvas = App.createPBCanvas();
+        canvas.setSize(width, height);
+
+        for (let i = 0; i < lookup.length; i++) {
+          const cleanRow = (i / cols) | 0;
+          const cleanCol = i % cols;
+          const srcIdx = lookup[i]!;
+          const srcRow = (srcIdx / cols) | 0;
+          const srcCol = srcIdx % cols;
+          canvas.drawImage(srcImage, srcCol * tw, srcRow * th, tw, th, cleanCol * tw, cleanRow * th);
+        }
+
+        const encoded = canvas.encode("image/png");
+        if (encoded) {
+          (response as any).rawData = encoded;
+        }
+      } catch (error: any) {
+        console.log(`[ComixTo] descramble error: ${error?.message ?? String(error)}`);
+      }
+
+      return response;
+    },
+  },
+});
 
   // -- Capabilities --
 
