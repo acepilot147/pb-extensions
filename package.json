@@ -10,6 +10,7 @@
     "serve": "paperback serve",
     "refresh:comix": "node -r ts-node/register/transpile-only experiment/RefreshComixBundle.ts",
     "validate:comix": "node -r ts-node/register/transpile-only experiment/ValidateComixBundle.ts",
+    "crypto:pipeline": "node experiment/crypto-pipeline/run.mjs",
     "test": "paperback test"
   },
   "devDependencies": {
