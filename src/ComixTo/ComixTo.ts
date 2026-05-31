@@ -24,6 +24,7 @@ import {
 import { Parser } from "./Parser";
 import { fetchSigned, signUrl } from "./ComixHash";
 import { emit } from "./Telemetry";
+import { debugLog, DEBUG } from "./DebugLog";
 import {
   API_BASE,
   DOMAIN,
@@ -60,7 +61,7 @@ import {
 import { readScrambleHeaders, computeDescrambleLookup } from './ComixDescramble';
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.9.2",
+  version: "1.9.3",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -246,7 +247,8 @@ requestManager = App.createRequestManager({
       getUploaders(this.stateManager)
     ]);
 
-    return this.parser.parseChapters(chapters, isFiltering, isWhitelist, isStrict, savedGroups);
+    const parsed = this.parser.parseChapters(chapters, isFiltering, isWhitelist, isStrict, savedGroups);
+    return parsed;
   }
 
   async getChapterDetails(

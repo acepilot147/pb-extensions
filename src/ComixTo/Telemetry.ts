@@ -1,4 +1,5 @@
 import { RequestManager } from "@paperback/types";
+import { debugLog, DEBUG } from "./DebugLog";
 
 // Set to your telemetry collector URL. Empty string disables telemetry.
 export const TELEMETRY_URL = "https://telemetry.comix-ext.workers.dev/log";
@@ -40,6 +41,11 @@ function hashPath(path: string): string {
 }
 
 export function emit(event: Omit<TelemetryEvent, "seq" | "ts">): void {
+    // Local dev mirror — full readable per-request breakdown (label, real path,
+    // signMs/fetchMs/parseMs/decryptMs/totalMs) to experiment/log-server.js.
+    // No-op in released builds (LOCAL_LOG_URL is empty). This is what isolates
+    // bundle CPU cost (signMs/decryptMs) from network wait (fetchMs).
+    if (DEBUG) debugLog("req", event as unknown as Record<string, unknown>);
     if (!TELEMETRY_URL) return;
     try {
         const full: TelemetryEvent = { seq: ++_seq, ts: Date.now(), ...event, path: hashPath(event.path) };

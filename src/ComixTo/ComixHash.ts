@@ -1,14 +1,18 @@
 /**
- * Comix API signing and encrypted-response decoding.
+ * Comix API signing and encrypted-response decoding — the central interface for
+ * ComixTo. Signing and decryption are delegated to the native, generated modules
+ * (ComixFastSigner / ComixFastDecrypt); the live-VM bundle is no longer used.
  *
- * Refresh the embedded bundle when comix.to rotates secure-*.js:
- *   npm run refresh:comix
- *   (requires CF_CLEARANCE / SESSION / USER_AGENT env vars; see
- *    experiment/RefreshComixBundle.ts)
+ * Regenerate those modules when comix.to rotates secure-*.js:
+ *   npm run crypto:pipeline        (offline, from the embedded bundle)
+ *   npm run crypto:pipeline -- --refresh   (fetch live secure.js first;
+ *     requires CF_CLEARANCE / SESSION / USER_AGENT — see
+ *     experiment/crypto-pipeline/README.md)
  */
 
 import { RequestManager, Response } from "@paperback/types";
-import { decryptPayload, signPath } from "./ComixBundleRuntime";
+import { fastGenerateHash } from "./ComixFastSigner";
+import { fastDecryptComixPayload } from "./ComixFastDecrypt";
 import { emit } from "./Telemetry";
 
 // Paths the live bundle actually signs. Anything outside this set is sent
@@ -29,7 +33,7 @@ function isSignedPath(path: string): boolean {
  * clear error instead of sending unsigned requests.
  */
 export function generateHash(rawPath: string): string {
-    return signPath(rawPath);
+    return fastGenerateHash(rawPath);
 }
 
 /**
@@ -110,7 +114,7 @@ export async function fetchSigned<T>(
 
     if (json && typeof json === "object" && "e" in json) {
         const decryptStart = Date.now();
-        const decrypted = decryptPayload(json, headers) as any;
+        const decrypted = fastDecryptComixPayload(apiPath, json, headers) as any;
         const decryptMs = Date.now() - decryptStart;
         emit({ label, path: telPath, status, bytes, signMs, fetchMs, parseMs, decryptMs, totalMs: Date.now() - totalStart });
         // The interceptor unwraps `{ status: "ok", result: ... }` for us and
