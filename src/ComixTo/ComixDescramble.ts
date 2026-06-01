@@ -1,11 +1,13 @@
 // Comix.to image-tile descrambler.
 //
-// Two CDN path variants (both on *.wowpicN.store):
+// CDN path variants seen on *.wowpicN.store (comix.to rotates these):
 //   /si/<token>/<page>.webp  — clean image, no scramble headers.
-//   /sii/<token>/<page>.webp — scrambled image, carries scramble headers.
+//   /sii/<token>/<page>.webp — scrambled, carries X-Scramble-Seed + X-Scramble-Grid.
+//   /i2/<token>/<page>.webp  — scrambled, same headers. (seen 2026-06-01)
 //
-// The interceptor regex must match BOTH (/sii?/). A shuffled /sii/ response
-// carries:
+// The response interceptor does NOT filter by URL path — it checks mime type
+// (image/*) and scramble headers. New path names work automatically.
+// A shuffled response carries:
 //
 //   X-Scramble-Seed:  <uint32, decimal>   e.g. "3121655837"
 //   X-Scramble-Grid:  <cols>x<rows>       e.g. "5x5"

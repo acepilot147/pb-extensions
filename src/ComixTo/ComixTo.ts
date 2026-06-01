@@ -61,7 +61,7 @@ import {
 import { readScrambleHeaders, computeDescrambleLookup } from './ComixDescramble';
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.9.4",
+  version: "1.9.5",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -105,8 +105,10 @@ requestManager = App.createRequestManager({
       return request;
     },
     interceptResponse: async (response: Response): Promise<Response> => {
-      const reqUrl = response.request?.url ?? "";
-      if (!/\/sii?\//.test(reqUrl) || !response.rawData) return response;
+      if (!response.rawData) return response;
+
+      const mimeType = (response as any).mimeType ?? response.headers?.["content-type"] ?? response.headers?.["Content-Type"] ?? "";
+      if (!mimeType.startsWith("image/")) return response;
 
       const params = readScrambleHeaders(response.headers);
       if (!params) return response;
@@ -131,9 +133,22 @@ requestManager = App.createRequestManager({
           canvas.drawImage(srcImage, srcCol * tw, srcRow * th, tw, th, cleanCol * tw, cleanRow * th);
         }
 
-        const encoded = canvas.encode("image/png");
+        // Prefer WebP output so Kingfisher's WebPProcessor (keyed on .webp URL)
+        // still receives a format it can handle. Fall back to PNG if the canvas
+        // implementation doesn't support WebP encoding.
+        let encoded = canvas.encode("image/webp");
+        let outMime = "image/webp";
+        if (!encoded) {
+          encoded = canvas.encode("image/png");
+          outMime = "image/png";
+        }
         if (encoded) {
           (response as any).rawData = encoded;
+          (response as any).mimeType = outMime;
+          if (response.headers) {
+            (response.headers as any)["content-type"] = outMime;
+            (response.headers as any)["Content-Type"] = outMime;
+          }
         }
       } catch (error: any) {
         console.log(`[ComixTo] descramble error: ${error?.message ?? String(error)}`);
