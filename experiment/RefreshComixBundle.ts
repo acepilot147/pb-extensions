@@ -2,7 +2,7 @@ export {};
 
 /**
  * Fetch the live comix.to secure-*.js bundle and regenerate
- * src/ComixTo/ComixBundle.ts.
+ * experiment/ComixBundle.ts (the source-of-truth the crypto pipeline reads).
  *
  * Run:
  * npm run refresh:comix
@@ -21,7 +21,7 @@ try {
 
 const HOMEPAGE = process.env.COMIX_REFRESH_HOMEPAGE ?? "https://comix.to/title/xlyyj-eleceed";
 const UA = process.env.USER_AGENT ?? "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36";
-const OUT_FILE = resolve(process.cwd(), "src/ComixTo/ComixBundle.ts");
+const OUT_FILE = resolve(process.cwd(), "experiment/ComixBundle.ts");
 
 function cookieHeader(): string {
     return [

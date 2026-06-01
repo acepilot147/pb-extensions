@@ -9,7 +9,7 @@
     "bundle": "paperback bundle --folder 0.8",
     "serve": "paperback serve",
     "refresh:comix": "node -r ts-node/register/transpile-only experiment/RefreshComixBundle.ts",
-    "validate:comix": "node -r ts-node/register/transpile-only experiment/ValidateComixBundle.ts",
+    "validate:comix": "node experiment/crypto-pipeline/validate.mjs",
     "crypto:pipeline": "node experiment/crypto-pipeline/run.mjs",
     "test": "paperback test"
   },
