@@ -1717,7 +1717,7 @@ var _Sources = (() => {
 
   // src/ComixTo/ComixTo.ts
   var ComixToInfo = {
-    version: "1.9.4",
+    version: "1.9.5",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
@@ -1751,8 +1751,9 @@ var _Sources = (() => {
             return request;
           },
           interceptResponse: async (response) => {
-            const reqUrl = response.request?.url ?? "";
-            if (!/\/sii?\//.test(reqUrl) || !response.rawData) return response;
+            if (!response.rawData) return response;
+            const mimeType = response.mimeType ?? response.headers?.["content-type"] ?? response.headers?.["Content-Type"] ?? "";
+            if (!mimeType.startsWith("image/")) return response;
             const params = readScrambleHeaders(response.headers);
             if (!params) return response;
             try {
@@ -1772,9 +1773,19 @@ var _Sources = (() => {
                 const srcCol = srcIdx % cols;
                 canvas.drawImage(srcImage, srcCol * tw, srcRow * th, tw, th, cleanCol * tw, cleanRow * th);
               }
-              const encoded = canvas.encode("image/png");
+              let encoded = canvas.encode("image/webp");
+              let outMime = "image/webp";
+              if (!encoded) {
+                encoded = canvas.encode("image/png");
+                outMime = "image/png";
+              }
               if (encoded) {
                 response.rawData = encoded;
+                response.mimeType = outMime;
+                if (response.headers) {
+                  response.headers["content-type"] = outMime;
+                  response.headers["Content-Type"] = outMime;
+                }
               }
             } catch (error) {
               console.log(`[ComixTo] descramble error: ${error?.message ?? String(error)}`);
