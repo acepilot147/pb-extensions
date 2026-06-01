@@ -1,9 +1,11 @@
 // Comix.to image-tile descrambler.
 //
-// Newer uploads (e.g. on *.wowpic4.store) no longer cache a clean copy at
-// `/i/<id>/<page>.webp`; the only available URL is `/si/<id>/<page>.webp`,
-// which is served either as-is (clean) or with the tiles shuffled. A shuffled
-// response carries:
+// Two CDN path variants (both on *.wowpicN.store):
+//   /si/<token>/<page>.webp  — clean image, no scramble headers.
+//   /sii/<token>/<page>.webp — scrambled image, carries scramble headers.
+//
+// The interceptor regex must match BOTH (/sii?/). A shuffled /sii/ response
+// carries:
 //
 //   X-Scramble-Seed:  <uint32, decimal>   e.g. "3121655837"
 //   X-Scramble-Grid:  <cols>x<rows>       e.g. "5x5"

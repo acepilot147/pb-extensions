@@ -61,7 +61,7 @@ import {
 import { readScrambleHeaders, computeDescrambleLookup } from './ComixDescramble';
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.9.3",
+  version: "1.9.4",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -106,7 +106,7 @@ requestManager = App.createRequestManager({
     },
     interceptResponse: async (response: Response): Promise<Response> => {
       const reqUrl = response.request?.url ?? "";
-      if (!/\/si\//.test(reqUrl) || !response.rawData) return response;
+      if (!/\/sii?\//.test(reqUrl) || !response.rawData) return response;
 
       const params = readScrambleHeaders(response.headers);
       if (!params) return response;
