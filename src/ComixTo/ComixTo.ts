@@ -58,10 +58,17 @@ import {
     getCachedTags,
 } from "./Settings";
 
-import { readScrambleHeaders, computeDescrambleLookup } from './ComixDescramble';
+import { readEncHeaders, decryptComixImage } from './ComixDescramble';
+
+// Heuristic: is this URL a chapter-page image request (vs. an /api/v1 call)?
+// Used only to scope debug logging to image traffic.
+function isImageRequestUrl(url: string): boolean {
+  if (!url) return false;
+  return /\.(webp|png|jpe?g|avif)(\?|#|$)/i.test(url) || /wowpic\d*\.|\/s?i+\d*\//i.test(url);
+}
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.9.5",
+  version: "1.9.6",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -102,56 +109,34 @@ requestManager = App.createRequestManager({
         "Referer": `${DOMAIN}/`,
         "User-Agent": await this.requestManager.getDefaultUserAgent()
       };
+      if (DEBUG && isImageRequestUrl(request.url)) {
+        debugLog("img_req", { url: request.url, headerKeys: Object.keys(request.headers ?? {}), origin: (request.headers as any)?.["Origin"] ?? (request.headers as any)?.["origin"] ?? null });
+      }
       return request;
     },
     interceptResponse: async (response: Response): Promise<Response> => {
       if (!response.rawData) return response;
 
-      const mimeType = (response as any).mimeType ?? response.headers?.["content-type"] ?? response.headers?.["Content-Type"] ?? "";
-      if (!mimeType.startsWith("image/")) return response;
-
-      const params = readScrambleHeaders(response.headers);
-      if (!params) return response;
+      // Select page images are byte-encrypted by the CDN (X-Enc-Seed/X-Enc-Len).
+      // Decrypt the first N bytes in place with the seed's LCG keystream — the
+      // result is the original valid WebP, so the platform decodes it normally.
+      const enc = readEncHeaders(response.headers);
+      if (!enc) return response; // clean image (no seed / seed 0) → pass through
 
       try {
-        const srcImage = App.createPBImage({ data: response.rawData });
-        const { width, height } = srcImage;
-        const { cols, rows, seed } = params;
-        const tw = (width / cols) | 0;
-        const th = (height / rows) | 0;
-
-        const lookup = computeDescrambleLookup(seed, cols * rows);
-        const canvas = App.createPBCanvas();
-        canvas.setSize(width, height);
-
-        for (let i = 0; i < lookup.length; i++) {
-          const cleanRow = (i / cols) | 0;
-          const cleanCol = i % cols;
-          const srcIdx = lookup[i]!;
-          const srcRow = (srcIdx / cols) | 0;
-          const srcCol = srcIdx % cols;
-          canvas.drawImage(srcImage, srcCol * tw, srcRow * th, tw, th, cleanCol * tw, cleanRow * th);
-        }
-
-        // Prefer WebP output so Kingfisher's WebPProcessor (keyed on .webp URL)
-        // still receives a format it can handle. Fall back to PNG if the canvas
-        // implementation doesn't support WebP encoding.
-        let encoded = canvas.encode("image/webp");
-        let outMime = "image/webp";
-        if (!encoded) {
-          encoded = canvas.encode("image/png");
-          outMime = "image/png";
-        }
-        if (encoded) {
-          (response as any).rawData = encoded;
-          (response as any).mimeType = outMime;
-          if (response.headers) {
-            (response.headers as any)["content-type"] = outMime;
-            (response.headers as any)["Content-Type"] = outMime;
-          }
+        // App.createByteArray returns a Uint8Array view backed by the native rawData
+        // buffer, so decrypting in place mutates response.rawData directly — no
+        // App.createRawData write-back (it returns null on 0.8 and fires a spurious
+        // "error processing the byteArray" notification for each call).
+        const bytes = App.createByteArray(response.rawData);
+        decryptComixImage(bytes, enc.seed, enc.len);
+        if (DEBUG) {
+          const riff = bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46;
+          debugLog("img_decrypt", { seed: enc.seed, len: enc.len, total: bytes.length, riff });
         }
       } catch (error: any) {
-        console.log(`[ComixTo] descramble error: ${error?.message ?? String(error)}`);
+        if (DEBUG) debugLog("img_decrypt_error", { error: error?.message ?? String(error) });
+        console.log(`[ComixTo] image decrypt error: ${error?.message ?? String(error)}`);
       }
 
       return response;

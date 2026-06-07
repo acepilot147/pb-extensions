@@ -10,7 +10,7 @@ import { RequestManager } from "@paperback/types";
  * To use: start `node experiment/log-server.js`, copy the "LAN URL" it prints,
  * and paste it below. The phone POSTs here over your local network.
  */
-export const LOCAL_LOG_URL: string = "http://192.168.0.215:9090/log";
+export const LOCAL_LOG_URL: string = "";
 
 // Single gate for all debug instrumentation. Set LOCAL_LOG_URL to "" for
 // release: DEBUG folds to a constant false and the bundler dead-code-eliminates
