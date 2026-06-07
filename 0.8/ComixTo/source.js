@@ -1108,7 +1108,7 @@ var _Sources = (() => {
   }
 
   // src/ComixTo/DebugLog.ts
-  var LOCAL_LOG_URL = "http://192.168.0.215:9090/log";
+  var LOCAL_LOG_URL = "";
   var DEBUG = LOCAL_LOG_URL !== "";
   var _rm = null;
   function getRM() {
@@ -1669,55 +1669,42 @@ var _Sources = (() => {
   };
 
   // src/ComixTo/ComixDescramble.ts
-  function computeScramblePerm(seed, tileCount) {
-    let state = seed >>> 0;
-    const arr = new Array(tileCount);
-    for (let i = 0; i < tileCount; i++) arr[i] = i;
-    for (let i = tileCount - 1; i > 0; i--) {
-      state = Math.imul(state, 1664525) + 1013904223 >>> 0;
-      const j = state % (i + 1);
-      const tmp = arr[i];
-      arr[i] = arr[j];
-      arr[j] = tmp;
-    }
-    return arr;
-  }
-  function computeDescrambleLookup(seed, tileCount) {
-    const P = computeScramblePerm(seed, tileCount);
-    const inv = new Array(tileCount);
-    for (let i = 0; i < tileCount; i++) inv[P[i]] = i;
-    return inv;
-  }
-  function parseScrambleGrid(grid) {
-    const m = /^\s*(\d+)\s*x\s*(\d+)\s*$/i.exec(grid);
-    if (!m) return null;
-    const cols = parseInt(m[1], 10);
-    const rows = parseInt(m[2], 10);
-    if (!Number.isFinite(cols) || !Number.isFinite(rows) || cols <= 0 || rows <= 0) return null;
-    return { cols, rows };
-  }
-  function readScrambleHeaders(headers) {
+  var LCG_MUL = 1000005;
+  var LCG_INC = 1234567891;
+  function readEncHeaders(headers) {
     if (!headers) return null;
     let seedStr;
-    let gridStr;
+    let lenStr;
     for (const key of Object.keys(headers)) {
       const v = headers[key];
       if (typeof v !== "string") continue;
       const lk = key.toLowerCase();
-      if (lk === "x-scramble-seed") seedStr = v;
-      else if (lk === "x-scramble-grid") gridStr = v;
+      if (lk === "x-enc-seed") seedStr = v;
+      else if (lk === "x-enc-len") lenStr = v;
     }
-    if (!seedStr || !gridStr) return null;
+    if (!seedStr || !lenStr) return null;
     const seed = parseInt(seedStr, 10);
-    if (!Number.isFinite(seed) || seed < 0) return null;
-    const grid = parseScrambleGrid(gridStr);
-    if (!grid) return null;
-    return { seed, cols: grid.cols, rows: grid.rows };
+    const len = parseInt(lenStr, 10);
+    if (!Number.isFinite(seed) || seed <= 0) return null;
+    if (!Number.isFinite(len) || len <= 0) return null;
+    return { seed: seed >>> 0, len };
+  }
+  function decryptComixImage(bytes, seed, len) {
+    let x = seed >>> 0;
+    const n = Math.min(len, bytes.length);
+    for (let i = 0; i < n; i++) {
+      x = Math.imul(x, LCG_MUL) + LCG_INC >>> 0;
+      bytes[i] = (bytes[i] ^ x >>> 24 & 255) & 255;
+    }
   }
 
   // src/ComixTo/ComixTo.ts
+  function isImageRequestUrl(url) {
+    if (!url) return false;
+    return /\.(webp|png|jpe?g|avif)(\?|#|$)/i.test(url) || /wowpic\d*\.|\/s?i+\d*\//i.test(url);
+  }
   var ComixToInfo = {
-    version: "1.9.5",
+    version: "1.9.6",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
@@ -1748,47 +1735,25 @@ var _Sources = (() => {
               "Referer": `${DOMAIN}/`,
               "User-Agent": await this.requestManager.getDefaultUserAgent()
             };
+            if (DEBUG && isImageRequestUrl(request.url)) {
+              debugLog("img_req", { url: request.url, headerKeys: Object.keys(request.headers ?? {}), origin: request.headers?.["Origin"] ?? request.headers?.["origin"] ?? null });
+            }
             return request;
           },
           interceptResponse: async (response) => {
             if (!response.rawData) return response;
-            const mimeType = response.mimeType ?? response.headers?.["content-type"] ?? response.headers?.["Content-Type"] ?? "";
-            if (!mimeType.startsWith("image/")) return response;
-            const params = readScrambleHeaders(response.headers);
-            if (!params) return response;
+            const enc = readEncHeaders(response.headers);
+            if (!enc) return response;
             try {
-              const srcImage = App.createPBImage({ data: response.rawData });
-              const { width, height } = srcImage;
-              const { cols, rows, seed } = params;
-              const tw = width / cols | 0;
-              const th = height / rows | 0;
-              const lookup = computeDescrambleLookup(seed, cols * rows);
-              const canvas = App.createPBCanvas();
-              canvas.setSize(width, height);
-              for (let i = 0; i < lookup.length; i++) {
-                const cleanRow = i / cols | 0;
-                const cleanCol = i % cols;
-                const srcIdx = lookup[i];
-                const srcRow = srcIdx / cols | 0;
-                const srcCol = srcIdx % cols;
-                canvas.drawImage(srcImage, srcCol * tw, srcRow * th, tw, th, cleanCol * tw, cleanRow * th);
-              }
-              let encoded = canvas.encode("image/webp");
-              let outMime = "image/webp";
-              if (!encoded) {
-                encoded = canvas.encode("image/png");
-                outMime = "image/png";
-              }
-              if (encoded) {
-                response.rawData = encoded;
-                response.mimeType = outMime;
-                if (response.headers) {
-                  response.headers["content-type"] = outMime;
-                  response.headers["Content-Type"] = outMime;
-                }
+              const bytes = App.createByteArray(response.rawData);
+              decryptComixImage(bytes, enc.seed, enc.len);
+              if (DEBUG) {
+                const riff = bytes[0] === 82 && bytes[1] === 73 && bytes[2] === 70 && bytes[3] === 70;
+                debugLog("img_decrypt", { seed: enc.seed, len: enc.len, total: bytes.length, riff });
               }
             } catch (error) {
-              console.log(`[ComixTo] descramble error: ${error?.message ?? String(error)}`);
+              if (DEBUG) debugLog("img_decrypt_error", { error: error?.message ?? String(error) });
+              console.log(`[ComixTo] image decrypt error: ${error?.message ?? String(error)}`);
             }
             return response;
           }
