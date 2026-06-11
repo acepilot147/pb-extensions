@@ -48,6 +48,11 @@ function transformExports(text: string): { transformed: string; exportNames: str
     if (!m) throw new Error("could not locate `export {...}` in secure.js");
     const pairs = m[1]!.split(",").map(p => {
         const parts = p.trim().split(/\s+as\s+/);
+        // `export {x as y}` aliases; a bare `export {r}` exports under its own name.
+        if (parts.length === 1) {
+            const name = parts[0]!.trim();
+            return { local: name, exported: name };
+        }
         if (parts.length !== 2) throw new Error(`unexpected export pair: ${p}`);
         return { local: parts[0]!.trim(), exported: parts[1]!.trim() };
     });
