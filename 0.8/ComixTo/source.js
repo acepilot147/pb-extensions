@@ -1704,7 +1704,7 @@ var _Sources = (() => {
     return /\.(webp|png|jpe?g|avif)(\?|#|$)/i.test(url) || /wowpic\d*\.|\/s?i+\d*\//i.test(url);
   }
   var ComixToInfo = {
-    version: "1.9.6",
+    version: "1.9.7",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
