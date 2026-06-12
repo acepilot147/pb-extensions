@@ -983,22 +983,88 @@ var _Sources = (() => {
     }
     return out.replace(/\+/g, "-").replace(/\//g, "_");
   }
-  function normalizeSignPath(rawPath) {
-    return rawPath.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "").split("?")[0];
-  }
-  function bytesFromString(s) {
-    const out = new Array(s.length);
-    for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i) & 255;
+  function utf8Encode(s) {
+    const out = [];
+    for (let i = 0; i < s.length; i++) {
+      let cp = s.charCodeAt(i);
+      if (cp >= 55296 && cp <= 56319 && i + 1 < s.length) {
+        const lo = s.charCodeAt(i + 1);
+        if (lo >= 56320 && lo <= 57343) {
+          cp = 65536 + (cp - 55296 << 10) + (lo - 56320);
+          i++;
+        }
+      }
+      if (cp < 128) {
+        out.push(cp);
+      } else if (cp < 2048) {
+        out.push(192 | cp >> 6, 128 | cp & 63);
+      } else if (cp < 65536) {
+        out.push(224 | cp >> 12, 128 | cp >> 6 & 63, 128 | cp & 63);
+      } else {
+        out.push(240 | cp >> 18, 128 | cp >> 12 & 63, 128 | cp >> 6 & 63, 128 | cp & 63);
+      }
+    }
     return out;
   }
-  function fastGenerateHash(rawPath) {
-    const path = normalizeSignPath(rawPath);
-    let data = bytesFromString(path);
+  function decodeComponent(s) {
+    try {
+      return decodeURIComponent(s.replace(/\+/g, " "));
+    } catch (e) {
+      return s;
+    }
+  }
+  function canonicalizeQuery(rawQuery) {
+    if (!rawQuery) {
+      return "";
+    }
+    const groups = {};
+    const arrayCounts = {};
+    const parts = rawQuery.split("&");
+    for (let p = 0; p < parts.length; p++) {
+      const part = parts[p];
+      if (!part) {
+        continue;
+      }
+      const eq = part.indexOf("=");
+      const key = decodeComponent(eq >= 0 ? part.slice(0, eq) : part);
+      const value = decodeComponent(eq >= 0 ? part.slice(eq + 1) : "");
+      let base;
+      let rendered;
+      if (key.slice(-2) === "[]") {
+        base = key.slice(0, -2);
+        const i = arrayCounts[base] ?? 0;
+        arrayCounts[base] = i + 1;
+        rendered = base + "[" + i + "]=" + value;
+      } else {
+        const bracket = key.indexOf("[");
+        base = bracket >= 0 ? key.slice(0, bracket) : key;
+        rendered = key + "=" + value;
+      }
+      if (groups[base]) {
+        groups[base].push(rendered);
+      } else {
+        groups[base] = [rendered];
+      }
+    }
+    return Object.keys(groups).sort().map((b) => groups[b].join("&")).join("&");
+  }
+  function signString(s) {
+    let data = utf8Encode(s);
     for (let r = SIGN_STAGES.length - 1; r >= 0; r--) {
-      const s = SIGN_STAGES[r];
-      data = signRound(data, s.sboxB64, s.keyB64, s.iv);
+      const st = SIGN_STAGES[r];
+      data = signRound(data, st.sboxB64, st.keyB64, st.iv);
     }
     return b64UrlEncode(data);
+  }
+  function fastGenerateHash(rawPath) {
+    const stripped = rawPath.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "");
+    const qIdx = stripped.indexOf("?");
+    if (qIdx < 0) {
+      return signString(stripped);
+    }
+    const path = stripped.slice(0, qIdx);
+    const canonical = canonicalizeQuery(stripped.slice(qIdx + 1));
+    return signString(canonical ? path + "?" + canonical : path);
   }
 
   // src/ComixTo/ComixFastDecrypt.ts
@@ -1171,9 +1237,8 @@ var _Sources = (() => {
 
   // src/ComixTo/ComixHash.ts
   var SIGNED_PATTERNS = [
-    /^\/manga\/[^/]+\/chapters\b/,
-    /^\/manga\/[^/]+\/chapter-indexes\b/,
-    /^\/chapters\/[^/]+(?:\?|$)/
+    /^\/manga(?:\/|$)/,
+    /^\/chapters\/[^/]+/
   ];
   function isSignedPath(path) {
     return SIGNED_PATTERNS.some((re) => re.test(path));
@@ -1184,7 +1249,7 @@ var _Sources = (() => {
   function signUrl(url) {
     const path = url.replace("https://comix.to/api/v1", "").split("?")[0];
     if (!isSignedPath(path)) return url;
-    const token = generateHash(path);
+    const token = generateHash(url);
     if (!token) return url;
     const sep = url.includes("?") ? "&" : "?";
     return `${url}${sep}_=${token}`;
@@ -1704,7 +1769,7 @@ var _Sources = (() => {
     return /\.(webp|png|jpe?g|avif)(\?|#|$)/i.test(url) || /wowpic\d*\.|\/s?i+\d*\//i.test(url);
   }
   var ComixToInfo = {
-    version: "1.9.8",
+    version: "1.9.9",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
