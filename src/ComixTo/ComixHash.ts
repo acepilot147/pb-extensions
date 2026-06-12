@@ -15,12 +15,17 @@ import { fastGenerateHash } from "./ComixFastSigner";
 import { fastDecryptComixPayload } from "./ComixFastDecrypt";
 import { emit } from "./Telemetry";
 
-// Paths the live bundle actually signs. Anything outside this set is sent
-// unsigned; the server rejects unexpected `_=` params on other endpoints.
+// Paths the live bundle's request interceptor signs — verified by probing the
+// booted bundle (experiment/crypto-pipeline). As of bundle 6ffb/625d… (2026-06)
+// comix widened token enforcement to EVERY /manga endpoint (details, browse
+// lists, /top, /{slug}/chapters, /{slug}/chapter-indexes) plus individual
+// /chapters/{id}. Unsigned /manga* now returns 403 "Missing token.". Only
+// /tags/search (and non-/manga, non-/chapters paths) stay unsigned — the bundle
+// does not sign those. Patterns are segment-exact (so /mangas is NOT matched),
+// and tokens are pathname-only (the query string is not part of the signature).
 const SIGNED_PATTERNS: RegExp[] = [
-    /^\/manga\/[^/]+\/chapters\b/,
-    /^\/manga\/[^/]+\/chapter-indexes\b/,
-    /^\/chapters\/[^/]+(?:\?|$)/,
+    /^\/manga(?:\/|$)/,
+    /^\/chapters\/[^/]+/,
 ];
 
 function isSignedPath(path: string): boolean {
@@ -28,9 +33,9 @@ function isSignedPath(path: string): boolean {
 }
 
 /**
- * Generate the comix.to /api/v1 `_=` token for a path. Throws if the bundle
- * runtime failed to initialize; callers should propagate that to surface a
- * clear error instead of sending unsigned requests.
+ * Generate the comix.to /api/v1 `_=` token for a request. Since bundle 625d…
+ * the signature covers the path AND its query params; `fastGenerateHash`
+ * canonicalizes the query internally, so pass the full URL (or path+query).
  */
 export function generateHash(rawPath: string): string {
     return fastGenerateHash(rawPath);
@@ -38,12 +43,14 @@ export function generateHash(rawPath: string): string {
 
 /**
  * Append `_=<token>` to a comix.to /api/v1 URL when the path is on the
- * signed list. Pass-through for everything else.
+ * signed list. Pass-through for everything else. The token signs the path +
+ * canonicalized query (handled in fastGenerateHash); the wire URL is unchanged
+ * because the server re-canonicalizes whatever we send.
  */
 export function signUrl(url: string): string {
     const path = url.replace("https://comix.to/api/v1", "").split("?")[0]!;
     if (!isSignedPath(path)) return url;
-    const token = generateHash(path);
+    const token = generateHash(url);
     if (!token) return url;
     const sep = url.includes("?") ? "&" : "?";
     return `${url}${sep}_=${token}`;

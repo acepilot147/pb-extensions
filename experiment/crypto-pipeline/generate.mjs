@@ -179,28 +179,88 @@ function b64UrlEncode(bytes: number[]): string {
     return out.replace(/\\+/g, "-").replace(/\\//g, "_");
 }
 
-function normalizeSignPath(rawPath: string): string {
-    return rawPath
-        .replace(/^https?:\\/\\/[^/]+/, "")
-        .replace(/^\\/api\\/v1/, "")
-        .split("?")[0]!;
-}
-
-function bytesFromString(s: string): number[] {
-    const out: number[] = new Array(s.length);
-    for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i) & 0xff;
+// Manual UTF-8 encode (JavaScriptCore-safe; the bundle signs UTF-8 bytes, so
+// non-ASCII query values — e.g. a unicode search keyword — must be encoded as
+// UTF-8, not truncated per UTF-16 code unit).
+function utf8Encode(s: string): number[] {
+    const out: number[] = [];
+    for (let i = 0; i < s.length; i++) {
+        let cp = s.charCodeAt(i);
+        if (cp >= 0xd800 && cp <= 0xdbff && i + 1 < s.length) {
+            const lo = s.charCodeAt(i + 1);
+            if (lo >= 0xdc00 && lo <= 0xdfff) { cp = 0x10000 + ((cp - 0xd800) << 10) + (lo - 0xdc00); i++; }
+        }
+        if (cp < 0x80) { out.push(cp); }
+        else if (cp < 0x800) { out.push(0xc0 | (cp >> 6), 0x80 | (cp & 0x3f)); }
+        else if (cp < 0x10000) { out.push(0xe0 | (cp >> 12), 0x80 | ((cp >> 6) & 0x3f), 0x80 | (cp & 0x3f)); }
+        else { out.push(0xf0 | (cp >> 18), 0x80 | ((cp >> 12) & 0x3f), 0x80 | ((cp >> 6) & 0x3f), 0x80 | (cp & 0x3f)); }
+    }
     return out;
 }
 
-/** Produce the comix.to \`_\` signing token for an API path. */
-export function fastGenerateHash(rawPath: string): string {
-    const path = normalizeSignPath(rawPath);
-    let data = bytesFromString(path);
+function decodeComponent(s: string): string {
+    try { return decodeURIComponent(s.replace(/\\+/g, " ")); } catch (e) { void e; return s; }
+}
+
+// Reproduce the canonical query string the comix bundle signs (= what the server
+// re-derives from the incoming request): qs.stringify with encode:false,
+// arrayFormat:"indices", skipNulls:true, keys sorted by raw code unit. Reverse-
+// engineered by decrypting live tokens (bundle 625d…) and fuzz-verified byte-exact
+// vs the bundle across 3000 randomized param objects. Keys sort by base name (the
+// part before the first "["), so a key and its array/nested children stay together;
+// "name[]" arrays become "name[0]=…&name[1]=…" in document order; nested keys
+// ("order[number]") are kept verbatim; values are RAW (URL-decoded), never re-encoded.
+function canonicalizeQuery(rawQuery: string): string {
+    if (!rawQuery) { return ""; }
+    const groups: Record<string, string[]> = {};
+    const arrayCounts: Record<string, number> = {};
+    const parts = rawQuery.split("&");
+    for (let p = 0; p < parts.length; p++) {
+        const part = parts[p]!;
+        if (!part) { continue; }
+        const eq = part.indexOf("=");
+        const key = decodeComponent(eq >= 0 ? part.slice(0, eq) : part);
+        const value = decodeComponent(eq >= 0 ? part.slice(eq + 1) : "");
+        let base: string;
+        let rendered: string;
+        if (key.slice(-2) === "[]") {
+            base = key.slice(0, -2);
+            const i = arrayCounts[base] ?? 0;
+            arrayCounts[base] = i + 1;
+            rendered = base + "[" + i + "]=" + value;
+        } else {
+            const bracket = key.indexOf("[");
+            base = bracket >= 0 ? key.slice(0, bracket) : key;
+            rendered = key + "=" + value;
+        }
+        if (groups[base]) { groups[base]!.push(rendered); }
+        else { groups[base] = [rendered]; }
+    }
+    return Object.keys(groups).sort().map((b) => groups[b]!.join("&")).join("&");
+}
+
+function signString(s: string): string {
+    let data = utf8Encode(s);
     for (let r = SIGN_STAGES.length - 1; r >= 0; r--) {
-        const s = SIGN_STAGES[r]!;
-        data = signRound(data, s.sboxB64, s.keyB64, s.iv);
+        const st = SIGN_STAGES[r]!;
+        data = signRound(data, st.sboxB64, st.keyB64, st.iv);
     }
     return b64UrlEncode(data);
+}
+
+/**
+ * Produce the comix.to \`_\` signing token for an API request. Since bundle
+ * 625d… the signature covers the path AND the canonicalized query params —
+ * pathname-only tokens now get 403 "Invalid token.". Accepts a full URL or a
+ * bare path, with or without a query string.
+ */
+export function fastGenerateHash(rawPath: string): string {
+    const stripped = rawPath.replace(/^https?:\\/\\/[^/]+/, "").replace(/^\\/api\\/v1/, "");
+    const qIdx = stripped.indexOf("?");
+    if (qIdx < 0) { return signString(stripped); }
+    const path = stripped.slice(0, qIdx);
+    const canonical = canonicalizeQuery(stripped.slice(qIdx + 1));
+    return signString(canonical ? path + "?" + canonical : path);
 }
 `;
 }

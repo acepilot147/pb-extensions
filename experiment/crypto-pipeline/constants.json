@@ -1,9 +1,9 @@
 {
-  "bundleId": "6ffb1349405a",
+  "bundleId": "625d78987456",
   "algorithm": "sbox-cbc",
   "rounds": 3,
   "cfg": "ZZYdbXagjEpeaRwTE56mTpBkKVnnIBmAB3gdwWXXjEM7ZqAcLgonw0ylNjY621zM0zefn1Qg_jIQEn0oAIFnaXeGk3K4XZgY6S1Ldadwahluwgs-siIh0m-Lbw",
-  "generatedAt": "2026-06-12T01:46:29.883Z",
+  "generatedAt": "2026-06-12T02:24:45.628Z",
   "note": "Decrypt applies inverse stages in order 1..N; sign applies forward stages in order N..1. Same (sbox,key,iv) triples both directions.",
   "stages": [
     {
