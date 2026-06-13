@@ -21,12 +21,17 @@
 // is VM bytecode whose per-byte keystream is this LCG. Verified against the live
 // bundle across many seeds (4096 bytes each) and real chapter pages.
 
+import { decryptComixImageAlgo2 } from "./ComixAlgo2";
+
 const LCG_MUL = 1000005; // 0x000F4245
 const LCG_INC = 0x499602d3;
 
 export interface EncParams {
   seed: number;
   len: number;
+  // Which keystream the CDN used. 1 (or absent header) = the LCG below; 2 = the
+  // degree-32 GF(2) word-LFSR in ComixAlgo2.ts. comix mixes both across a chapter.
+  algo: number;
 }
 
 // Pull the encryption params from a response's headers (case-insensitive).
@@ -38,19 +43,37 @@ export function readEncHeaders(
   if (!headers) return null;
   let seedStr: string | undefined;
   let lenStr: string | undefined;
+  let algoStr: string | undefined;
   for (const key of Object.keys(headers)) {
     const v = headers[key];
     if (typeof v !== "string") continue;
     const lk = key.toLowerCase();
     if (lk === "x-enc-seed") seedStr = v;
     else if (lk === "x-enc-len") lenStr = v;
+    else if (lk === "x-enc-algo") algoStr = v;
   }
   if (!seedStr || !lenStr) return null;
   const seed = parseInt(seedStr, 10);
   const len = parseInt(lenStr, 10);
   if (!Number.isFinite(seed) || seed <= 0) return null; // 0/invalid → clean
   if (!Number.isFinite(len) || len <= 0) return null;
-  return { seed: seed >>> 0, len };
+  const algo = algoStr ? parseInt(algoStr, 10) : 1; // absent header = original algo 1
+  return { seed: seed >>> 0, len, algo: Number.isFinite(algo) ? algo : 1 };
+}
+
+// Decrypt the encrypted prefix in place, dispatching on the CDN's algorithm.
+// Returns false when the algo is unknown (caller should pass the image through
+// untouched rather than corrupt it).
+export function decryptComixImageByParams(bytes: Uint8Array, params: EncParams): boolean {
+  if (params.algo === 2) {
+    decryptComixImageAlgo2(bytes, params.seed, params.len);
+    return true;
+  }
+  if (params.algo === 1) {
+    decryptComixImage(bytes, params.seed, params.len);
+    return true;
+  }
+  return false; // unknown algo → don't touch the bytes
 }
 
 // XOR-decrypt the first `len` bytes of `bytes` in place using the seed's LCG

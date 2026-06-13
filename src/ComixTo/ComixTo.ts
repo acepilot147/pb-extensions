@@ -58,7 +58,7 @@ import {
     getCachedTags,
 } from "./Settings";
 
-import { readEncHeaders, decryptComixImage } from './ComixDescramble';
+import { readEncHeaders, decryptComixImageByParams } from './ComixDescramble';
 
 // Heuristic: is this URL a chapter-page image request (vs. an /api/v1 call)?
 // Used only to scope debug logging to image traffic.
@@ -68,7 +68,7 @@ function isImageRequestUrl(url: string): boolean {
 }
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.9.10",
+  version: "1.9.11",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -117,9 +117,11 @@ requestManager = App.createRequestManager({
     interceptResponse: async (response: Response): Promise<Response> => {
       if (!response.rawData) return response;
 
-      // Select page images are byte-encrypted by the CDN (X-Enc-Seed/X-Enc-Len).
-      // Decrypt the first N bytes in place with the seed's LCG keystream — the
-      // result is the original valid WebP, so the platform decodes it normally.
+      // Select page images are byte-encrypted by the CDN (X-Enc-Seed/X-Enc-Len,
+      // optional X-Enc-Algo). comix mixes two keystreams across a chapter: algo 1
+      // (the LCG) and algo 2 (a degree-32 GF(2) word-LFSR). Decrypt the first N
+      // bytes in place — the result is the original valid WebP. (Tile-scramble
+      // pages carry X-Scramble-* instead and currently pass through untouched.)
       const enc = readEncHeaders(response.headers);
       if (!enc) return response; // clean image (no seed / seed 0) → pass through
 
@@ -129,10 +131,10 @@ requestManager = App.createRequestManager({
         // App.createRawData write-back (it returns null on 0.8 and fires a spurious
         // "error processing the byteArray" notification for each call).
         const bytes = App.createByteArray(response.rawData);
-        decryptComixImage(bytes, enc.seed, enc.len);
+        const handled = decryptComixImageByParams(bytes, enc);
         if (DEBUG) {
           const riff = bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46;
-          debugLog("img_decrypt", { seed: enc.seed, len: enc.len, total: bytes.length, riff });
+          debugLog("img_decrypt", { seed: enc.seed, len: enc.len, algo: enc.algo, handled, total: bytes.length, riff });
         }
       } catch (error: any) {
         if (DEBUG) debugLog("img_decrypt_error", { error: error?.message ?? String(error) });
