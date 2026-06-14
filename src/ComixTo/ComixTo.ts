@@ -58,7 +58,8 @@ import {
     getCachedTags,
 } from "./Settings";
 
-import { readEncHeaders, decryptComixImageByParams } from './ComixDescramble';
+import { readEncHeaders, decryptComixImageByParams, readScrambleHeaders, computeDescrambleLookup } from './ComixDescramble';
+import { computeDescrambleLookupB } from './ComixTileB';
 
 // Heuristic: is this URL a chapter-page image request (vs. an /api/v1 call)?
 // Used only to scope debug logging to image traffic.
@@ -68,7 +69,7 @@ function isImageRequestUrl(url: string): boolean {
 }
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.9.11",
+  version: "1.9.13",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -117,11 +118,59 @@ requestManager = App.createRequestManager({
     interceptResponse: async (response: Response): Promise<Response> => {
       if (!response.rawData) return response;
 
-      // Select page images are byte-encrypted by the CDN (X-Enc-Seed/X-Enc-Len,
-      // optional X-Enc-Algo). comix mixes two keystreams across a chapter: algo 1
-      // (the LCG) and algo 2 (a degree-32 GF(2) word-LFSR). Decrypt the first N
-      // bytes in place — the result is the original valid WebP. (Tile-scramble
-      // pages carry X-Scramble-* instead and currently pass through untouched.)
+      // Tile-scramble pages (X-Scramble-Seed/X-Scramble-Grid) are a cols×rows tile
+      // shuffle. Rebuild the clean image on a canvas by placing each scrambled tile
+      // at its clean position. X-Scramble-Algo:3 (current, 5x5) uses the GF(2)-affine
+      // Fisher-Yates (ComixTileB); algo 2/absent uses the legacy xorshift32 inverse.
+      const scr = readScrambleHeaders(response.headers);
+      if (scr) {
+        try {
+          const srcImage = App.createPBImage({ data: response.rawData });
+          const { width, height } = srcImage;
+          const { cols, rows, seed, algo } = scr;
+          const tw = (width / cols) | 0;
+          const th = (height / rows) | 0;
+          // algo 3 (current scheme) is the GF(2)-affine Fisher-Yates, cracked for
+          // the 5x5 grid (ComixTileB). algo 2 / absent is the legacy xorshift32.
+          const lookup =
+            algo === 3 && cols === 5 && rows === 5
+              ? computeDescrambleLookupB(seed)
+              : computeDescrambleLookup(seed, cols * rows);
+          const canvas = App.createPBCanvas();
+          canvas.setSize(width, height);
+          for (let i = 0; i < lookup.length; i++) {
+            const cleanRow = (i / cols) | 0;
+            const cleanCol = i % cols;
+            const srcIdx = lookup[i]!;
+            const srcRow = (srcIdx / cols) | 0;
+            const srcCol = srcIdx % cols;
+            canvas.drawImage(srcImage, srcCol * tw, srcRow * th, tw, th, cleanCol * tw, cleanRow * th);
+          }
+          // Prefer WebP so Kingfisher's WebPProcessor (keyed on the .webp URL) can
+          // still decode it; fall back to PNG if WebP encoding isn't supported.
+          let encoded = canvas.encode("image/webp");
+          let outMime = "image/webp";
+          if (!encoded) { encoded = canvas.encode("image/png"); outMime = "image/png"; }
+          if (encoded) {
+            (response as any).rawData = encoded;
+            (response as any).mimeType = outMime;
+            if (response.headers) {
+              (response.headers as any)["content-type"] = outMime;
+              (response.headers as any)["Content-Type"] = outMime;
+            }
+          }
+          if (DEBUG) debugLog("img_descramble", { seed, cols, rows, algo, width, height, encoded: !!encoded });
+        } catch (error: any) {
+          if (DEBUG) debugLog("img_descramble_error", { error: error?.message ?? String(error) });
+          console.log(`[ComixTo] descramble error: ${error?.message ?? String(error)}`);
+        }
+        return response;
+      }
+
+      // Otherwise: byte-encrypted page (X-Enc-Seed/X-Enc-Len, optional X-Enc-Algo).
+      // comix mixes two keystreams across a chapter: algo 1 (the LCG) and algo 2
+      // (a degree-32 GF(2) word-LFSR). Decrypt the first N bytes in place — the
+      // result is the original valid WebP.
       const enc = readEncHeaders(response.headers);
       if (!enc) return response; // clean image (no seed / seed 0) → pass through
 
