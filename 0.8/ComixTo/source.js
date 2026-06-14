@@ -1857,6 +1857,58 @@ var _Sources = (() => {
     }
     return false;
   }
+  function computeScramblePerm(seed, tileCount) {
+    let x = seed >>> 0;
+    const arr = new Array(tileCount);
+    for (let i = 0; i < tileCount; i++) arr[i] = i;
+    for (let i = tileCount - 1; i > 0; i--) {
+      x ^= x << 13;
+      x >>>= 0;
+      x ^= x >>> 17;
+      x ^= x << 5;
+      x >>>= 0;
+      const j = x % (i + 1);
+      const tmp = arr[i];
+      arr[i] = arr[j];
+      arr[j] = tmp;
+    }
+    return arr;
+  }
+  function computeDescrambleLookup(seed, tileCount) {
+    const P = computeScramblePerm(seed, tileCount);
+    const inv = new Array(tileCount);
+    for (let i = 0; i < tileCount; i++) inv[P[i]] = i;
+    return inv;
+  }
+  function parseScrambleGrid(grid) {
+    const m = /^\s*(\d+)\s*x\s*(\d+)\s*$/i.exec(grid);
+    if (!m) return null;
+    const cols = parseInt(m[1], 10);
+    const rows = parseInt(m[2], 10);
+    if (!Number.isFinite(cols) || !Number.isFinite(rows) || cols <= 0 || rows <= 0) return null;
+    return { cols, rows };
+  }
+  function readScrambleHeaders(headers) {
+    if (!headers) return null;
+    let seedStr;
+    let gridStr;
+    let algoStr;
+    for (const key of Object.keys(headers)) {
+      const v = headers[key];
+      if (typeof v !== "string") continue;
+      const lk = key.toLowerCase();
+      if (lk === "x-scramble-seed") seedStr = v;
+      else if (lk === "x-scramble-grid") gridStr = v;
+      else if (lk === "x-scramble-algo") algoStr = v;
+    }
+    if (!seedStr || !gridStr) return null;
+    const seed = parseInt(seedStr, 10);
+    if (!Number.isFinite(seed) || seed < 0) return null;
+    const grid = parseScrambleGrid(gridStr);
+    if (!grid) return null;
+    const algo = algoStr ? parseInt(algoStr, 10) : 2;
+    return { seed: seed >>> 0, cols: grid.cols, rows: grid.rows, algo: Number.isFinite(algo) ? algo : 2 };
+  }
   function decryptComixImage(bytes, seed, len) {
     let x = seed >>> 0;
     const n = Math.min(len, bytes.length);
@@ -1866,13 +1918,65 @@ var _Sources = (() => {
     }
   }
 
+  // src/ComixTo/ComixTileB.ts
+  var PACKED2 = "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";
+  var TILES = 25;
+  var DRAWS = 24;
+  var BASE = null;
+  var COLS = null;
+  function ensureTables() {
+    if (BASE) return;
+    const bin = typeof atob === "function" ? atob(PACKED2) : Buffer.from(PACKED2, "base64").toString("binary");
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i) & 255;
+    const dv = new DataView(bytes.buffer);
+    const base = new Uint32Array(DRAWS);
+    for (let k = 0; k < DRAWS; k++) base[k] = dv.getUint32(k * 4, true);
+    const cols = [];
+    let off = DRAWS * 4;
+    for (let k = 0; k < DRAWS; k++) {
+      const c = new Uint32Array(31);
+      for (let i = 0; i < 31; i++) {
+        c[i] = dv.getUint32(off, true);
+        off += 4;
+      }
+      cols.push(c);
+    }
+    BASE = base;
+    COLS = cols;
+  }
+  function draw(eff, k) {
+    let v = BASE[k];
+    const c = COLS[k];
+    for (let i = 0; i < 31; i++) {
+      if (eff >>> i & 1) v ^= c[i];
+    }
+    return v >>> 0;
+  }
+  function computeDescrambleLookupB(seed) {
+    ensureTables();
+    const eff = seed >>> 1 >>> 0;
+    const a = new Array(TILES);
+    for (let i = 0; i < TILES; i++) a[i] = i;
+    for (let k = 0; k < DRAWS; k++) {
+      const c = 24 - k;
+      const j = draw(eff, k) % (c + 1);
+      const t = a[c];
+      a[c] = a[j];
+      a[j] = t;
+    }
+    const inv = new Array(TILES);
+    for (let i = 0; i < TILES; i++) inv[a[i]] = i;
+    return inv;
+  }
+
   // src/ComixTo/ComixTo.ts
   function isImageRequestUrl(url) {
     if (!url) return false;
     return /\.(webp|png|jpe?g|avif)(\?|#|$)/i.test(url) || /wowpic\d*\.|\/s?i+\d*\//i.test(url);
   }
   var ComixToInfo = {
-    version: "1.9.11",
+    version: "1.9.13",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
@@ -1910,6 +2014,46 @@ var _Sources = (() => {
           },
           interceptResponse: async (response) => {
             if (!response.rawData) return response;
+            const scr = readScrambleHeaders(response.headers);
+            if (scr) {
+              try {
+                const srcImage = App.createPBImage({ data: response.rawData });
+                const { width, height } = srcImage;
+                const { cols, rows, seed, algo } = scr;
+                const tw = width / cols | 0;
+                const th = height / rows | 0;
+                const lookup = algo === 3 && cols === 5 && rows === 5 ? computeDescrambleLookupB(seed) : computeDescrambleLookup(seed, cols * rows);
+                const canvas = App.createPBCanvas();
+                canvas.setSize(width, height);
+                for (let i = 0; i < lookup.length; i++) {
+                  const cleanRow = i / cols | 0;
+                  const cleanCol = i % cols;
+                  const srcIdx = lookup[i];
+                  const srcRow = srcIdx / cols | 0;
+                  const srcCol = srcIdx % cols;
+                  canvas.drawImage(srcImage, srcCol * tw, srcRow * th, tw, th, cleanCol * tw, cleanRow * th);
+                }
+                let encoded = canvas.encode("image/webp");
+                let outMime = "image/webp";
+                if (!encoded) {
+                  encoded = canvas.encode("image/png");
+                  outMime = "image/png";
+                }
+                if (encoded) {
+                  response.rawData = encoded;
+                  response.mimeType = outMime;
+                  if (response.headers) {
+                    response.headers["content-type"] = outMime;
+                    response.headers["Content-Type"] = outMime;
+                  }
+                }
+                if (DEBUG) debugLog("img_descramble", { seed, cols, rows, algo, width, height, encoded: !!encoded });
+              } catch (error) {
+                if (DEBUG) debugLog("img_descramble_error", { error: error?.message ?? String(error) });
+                console.log(`[ComixTo] descramble error: ${error?.message ?? String(error)}`);
+              }
+              return response;
+            }
             const enc = readEncHeaders(response.headers);
             if (!enc) return response;
             try {
