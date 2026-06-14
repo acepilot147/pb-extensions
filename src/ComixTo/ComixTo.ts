@@ -69,7 +69,7 @@ function isImageRequestUrl(url: string): boolean {
 }
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.9.13",
+  version: "1.9.14",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",

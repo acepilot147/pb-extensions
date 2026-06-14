@@ -29,42 +29,43 @@ const PACKED =
 
 const TILES = 25;
 const DRAWS = 24; // C = 24..1
+const NBITS = 31; // eff = seed>>>1 is 31 bits
 
-// Unpacked lazily: BASE[24], COLS[24][31].
-let BASE: Uint32Array | null = null;
-let COLS: Uint32Array[] | null = null;
+// JavaScriptCore-safe base64 decode (no atob / Buffer on device — mirrors
+// ComixAlgo2 / ComixFastDecrypt). Runs at module load, so it must not throw.
+const B64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-function ensureTables(): void {
-  if (BASE) return;
-  const bin =
-    typeof atob === "function"
-      ? atob(PACKED)
-      : Buffer.from(PACKED, "base64").toString("binary");
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i) & 0xff;
-  const dv = new DataView(bytes.buffer);
-  const base = new Uint32Array(DRAWS);
-  for (let k = 0; k < DRAWS; k++) base[k] = dv.getUint32(k * 4, true);
-  const cols: Uint32Array[] = [];
-  let off = DRAWS * 4;
-  for (let k = 0; k < DRAWS; k++) {
-    const c = new Uint32Array(31);
-    for (let i = 0; i < 31; i++) {
-      c[i] = dv.getUint32(off, true);
-      off += 4;
-    }
-    cols.push(c);
+function unpackWords(s: string): Uint32Array {
+  const lookup = new Int16Array(128).fill(-1);
+  for (let i = 0; i < 64; i++) lookup[B64_CHARS.charCodeAt(i)] = i;
+  const bytes: number[] = [];
+  let buf = 0, bits = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if (c === 61) break; // '='
+    const v = c < 128 ? lookup[c]! : -1;
+    if (v < 0) continue;
+    buf = (buf << 6) | v;
+    bits += 6;
+    if (bits >= 8) { bits -= 8; bytes.push((buf >> bits) & 0xff); }
   }
-  BASE = base;
-  COLS = cols;
+  const out = new Uint32Array(bytes.length >> 2);
+  for (let i = 0; i < out.length; i++) {
+    out[i] = (bytes[i * 4] | (bytes[i * 4 + 1] << 8) | (bytes[i * 4 + 2] << 16) | (bytes[i * 4 + 3] << 24)) >>> 0;
+  }
+  return out;
 }
+
+// TABLE layout: BASE[24] then COLS[24*31] (COLS at index DRAWS + k*NBITS + i),
+// little-endian uint32. Length 24 + 24*31 = 768.
+const TABLE = unpackWords(PACKED);
 
 // The k-th Fisher-Yates draw for effective seed `eff` (= seed >>> 1).
 function draw(eff: number, k: number): number {
-  let v = BASE![k]!;
-  const c = COLS![k]!;
-  for (let i = 0; i < 31; i++) {
-    if ((eff >>> i) & 1) v ^= c[i]!;
+  let v = TABLE[k]!;
+  const base = DRAWS + k * NBITS;
+  for (let i = 0; i < NBITS; i++) {
+    if ((eff >>> i) & 1) v ^= TABLE[base + i]!;
   }
   return v >>> 0;
 }
@@ -72,7 +73,6 @@ function draw(eff: number, k: number): number {
 // For each clean tile position, the scrambled tile index to copy from:
 // clean[i] = scrambled[descrambleLookup[i]]. Only valid for the 5x5 grid.
 export function computeDescrambleLookupB(seed: number): number[] {
-  ensureTables();
   const eff = (seed >>> 1) >>> 0;
   const a = new Array<number>(TILES);
   for (let i = 0; i < TILES; i++) a[i] = i;
