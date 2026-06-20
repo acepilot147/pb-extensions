@@ -1837,6 +1837,14 @@ var _Sources = (() => {
     }
     return false;
   }
+  function decodeScrambleHash(hash) {
+    switch (hash?.trim()) {
+      case "03632":
+        return 58414;
+      default:
+        return 0;
+    }
+  }
   function computeScramblePerm(seed, tileCount) {
     let x = seed >>> 0;
     const arr = new Array(tileCount);
@@ -1873,6 +1881,7 @@ var _Sources = (() => {
     let seedStr;
     let gridStr;
     let algoStr;
+    let hashStr;
     for (const key of Object.keys(headers)) {
       const v = headers[key];
       if (typeof v !== "string") continue;
@@ -1880,6 +1889,7 @@ var _Sources = (() => {
       if (lk === "x-scramble-seed") seedStr = v;
       else if (lk === "x-scramble-grid") gridStr = v;
       else if (lk === "x-scramble-algo") algoStr = v;
+      else if (lk === "x-scramble-hash") hashStr = v;
     }
     if (!seedStr || !gridStr) return null;
     const seed = parseInt(seedStr, 10);
@@ -1887,7 +1897,13 @@ var _Sources = (() => {
     const grid = parseScrambleGrid(gridStr);
     if (!grid) return null;
     const algo = algoStr ? parseInt(algoStr, 10) : 2;
-    return { seed: seed >>> 0, cols: grid.cols, rows: grid.rows, algo: Number.isFinite(algo) ? algo : 2 };
+    return {
+      seed: seed >>> 0,
+      cols: grid.cols,
+      rows: grid.rows,
+      algo: Number.isFinite(algo) ? algo : 2,
+      seedHashXor: decodeScrambleHash(hashStr)
+    };
   }
   function decryptComixImage(bytes, seed, len) {
     let x = seed >>> 0;
@@ -1926,7 +1942,7 @@ var _Sources = (() => {
     return /\.(webp|png|jpe?g|avif)(\?|#|$)/i.test(url) || /wowpic\d*\.|\/s?i+\d*\//i.test(url);
   }
   var ComixToInfo = {
-    version: "1.9.16",
+    version: "1.9.17",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
@@ -1969,10 +1985,11 @@ var _Sources = (() => {
               try {
                 const srcImage = App.createPBImage({ data: response.rawData });
                 const { width, height } = srcImage;
-                const { cols, rows, seed, algo } = scr;
+                const { cols, rows, seed, algo, seedHashXor } = scr;
                 const tw = width / cols | 0;
                 const th = height / rows | 0;
-                const lookup = algo === 3 && cols === 5 && rows === 5 ? computeDescrambleLookupB(seed) : computeDescrambleLookup(seed, cols * rows);
+                const effSeed = (seed ^ seedHashXor) >>> 0;
+                const lookup = algo === 3 && cols === 5 && rows === 5 ? computeDescrambleLookupB(effSeed) : computeDescrambleLookup(effSeed, cols * rows);
                 const canvas = App.createPBCanvas();
                 canvas.setSize(width, height);
                 for (let i = 0; i < lookup.length; i++) {
@@ -1997,7 +2014,7 @@ var _Sources = (() => {
                     response.headers["Content-Type"] = outMime;
                   }
                 }
-                if (DEBUG) debugLog("img_descramble", { seed, cols, rows, algo, width, height, encoded: !!encoded });
+                if (DEBUG) debugLog("img_descramble", { seed, effSeed, seedHashXor, cols, rows, algo, width, height, encoded: !!encoded });
               } catch (error) {
                 if (DEBUG) debugLog("img_descramble_error", { error: error?.message ?? String(error) });
                 console.log(`[ComixTo] descramble error: ${error?.message ?? String(error)}`);

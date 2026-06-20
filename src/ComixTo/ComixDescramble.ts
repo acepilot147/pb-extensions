@@ -108,6 +108,27 @@ export interface ScrambleParams {
   // X-Scramble-Algo: 3 = the GF(2)-affine Fisher-Yates in ComixTileB.ts (current
   // scheme); 2/absent = the legacy xorshift32 Fisher-Yates below.
   algo: number;
+  // XOR applied to `seed` before the Fisher-Yates: the effective shuffle seed is
+  // `seed ^ seedHashXor`. Decoded from the X-Scramble-Hash header (see below).
+  seedHashXor: number;
+}
+
+// Comix keys the tile-scramble seed with an X-Scramble-Hash header: the effective
+// Fisher-Yates seed is `X-Scramble-Seed XOR decodeScrambleHash(X-Scramble-Hash)`.
+// The short hash token maps to a per-bundle XOR constant and comix can rotate or
+// extend this table. As of bundle 58c4b11b0f71 (2026-06) the only live token is
+// "03632" -> 58414 — confirmed byte-identical to the Keiyoushi extension and via
+// seam-coherence on live pages (experiment/_scratch/verify-tile-sharp.mjs).
+// Unknown tokens fall back to 0 (raw seed), i.e. the pre-hash behavior — no worse
+// than passthrough. To add an entry on rotation: capture a scrambled page with the
+// new token, find the X where seam-energy collapses (verify-tile-sharp.mjs).
+export function decodeScrambleHash(hash: string | undefined): number {
+  switch (hash?.trim()) {
+    case "03632":
+      return 58414;
+    default:
+      return 0;
+  }
 }
 
 // Forward scramble permutation: scrambled[i] = clean[P[i]].
@@ -155,6 +176,7 @@ export function readScrambleHeaders(
   let seedStr: string | undefined;
   let gridStr: string | undefined;
   let algoStr: string | undefined;
+  let hashStr: string | undefined;
   for (const key of Object.keys(headers)) {
     const v = headers[key];
     if (typeof v !== "string") continue;
@@ -162,6 +184,7 @@ export function readScrambleHeaders(
     if (lk === "x-scramble-seed") seedStr = v;
     else if (lk === "x-scramble-grid") gridStr = v;
     else if (lk === "x-scramble-algo") algoStr = v;
+    else if (lk === "x-scramble-hash") hashStr = v;
   }
   if (!seedStr || !gridStr) return null;
   const seed = parseInt(seedStr, 10);
@@ -169,7 +192,13 @@ export function readScrambleHeaders(
   const grid = parseScrambleGrid(gridStr);
   if (!grid) return null;
   const algo = algoStr ? parseInt(algoStr, 10) : 2; // absent = legacy xorshift
-  return { seed: seed >>> 0, cols: grid.cols, rows: grid.rows, algo: Number.isFinite(algo) ? algo : 2 };
+  return {
+    seed: seed >>> 0,
+    cols: grid.cols,
+    rows: grid.rows,
+    algo: Number.isFinite(algo) ? algo : 2,
+    seedHashXor: decodeScrambleHash(hashStr),
+  };
 }
 
 // XOR-decrypt the first `len` bytes of `bytes` in place using the seed's LCG

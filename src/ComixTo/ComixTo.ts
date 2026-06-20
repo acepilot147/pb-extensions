@@ -69,7 +69,7 @@ function isImageRequestUrl(url: string): boolean {
 }
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.9.16",
+  version: "1.9.17",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -127,15 +127,19 @@ requestManager = App.createRequestManager({
         try {
           const srcImage = App.createPBImage({ data: response.rawData });
           const { width, height } = srcImage;
-          const { cols, rows, seed, algo } = scr;
+          const { cols, rows, seed, algo, seedHashXor } = scr;
           const tw = (width / cols) | 0;
           const th = (height / rows) | 0;
+          // The effective Fisher-Yates seed is the X-Scramble-Seed XORed with the
+          // X-Scramble-Hash constant (comix added this header in bundle 58c4b11b…;
+          // seedHashXor is 0 when the header is absent/unknown — pre-hash behavior).
+          const effSeed = (seed ^ seedHashXor) >>> 0;
           // algo 3 (current scheme) is the GF(2)-affine Fisher-Yates, cracked for
           // the 5x5 grid (ComixTileB). algo 2 / absent is the legacy xorshift32.
           const lookup =
             algo === 3 && cols === 5 && rows === 5
-              ? computeDescrambleLookupB(seed)
-              : computeDescrambleLookup(seed, cols * rows);
+              ? computeDescrambleLookupB(effSeed)
+              : computeDescrambleLookup(effSeed, cols * rows);
           const canvas = App.createPBCanvas();
           canvas.setSize(width, height);
           for (let i = 0; i < lookup.length; i++) {
@@ -159,7 +163,7 @@ requestManager = App.createRequestManager({
               (response.headers as any)["Content-Type"] = outMime;
             }
           }
-          if (DEBUG) debugLog("img_descramble", { seed, cols, rows, algo, width, height, encoded: !!encoded });
+          if (DEBUG) debugLog("img_descramble", { seed, effSeed, seedHashXor, cols, rows, algo, width, height, encoded: !!encoded });
         } catch (error: any) {
           if (DEBUG) debugLog("img_descramble_error", { error: error?.message ?? String(error) });
           console.log(`[ComixTo] descramble error: ${error?.message ?? String(error)}`);
