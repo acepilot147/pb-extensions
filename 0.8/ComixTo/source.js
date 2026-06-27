@@ -1841,6 +1841,8 @@ var _Sources = (() => {
     switch (hash?.trim()) {
       case "03632":
         return 58414;
+      case "02900":
+        return 117532;
       default:
         return 0;
     }
@@ -1942,7 +1944,7 @@ var _Sources = (() => {
     return /\.(webp|png|jpe?g|avif)(\?|#|$)/i.test(url) || /wowpic\d*\.|\/s?i+\d*\//i.test(url);
   }
   var ComixToInfo = {
-    version: "1.9.17",
+    version: "1.9.18",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",

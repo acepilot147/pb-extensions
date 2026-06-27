@@ -116,9 +116,11 @@ export interface ScrambleParams {
 // Comix keys the tile-scramble seed with an X-Scramble-Hash header: the effective
 // Fisher-Yates seed is `X-Scramble-Seed XOR decodeScrambleHash(X-Scramble-Hash)`.
 // The short hash token maps to a per-bundle XOR constant and comix can rotate or
-// extend this table. As of bundle 58c4b11b0f71 (2026-06) the only live token is
-// "03632" -> 58414 — confirmed byte-identical to the Keiyoushi extension and via
-// seam-coherence on live pages (experiment/_scratch/verify-tile-sharp.mjs).
+// extend this table. Known live tokens:
+//   "03632" -> 58414  (bundle 58c4b11b0f71, 2026-06)
+//   "02900" -> 117532 (added later — comix extended the table; mirrored from the
+//                      Keiyoushi extension, same source that surfaced "03632")
+// Both confirmed byte-identical to the Keiyoushi comix extension's decodeScrambleHash.
 // Unknown tokens fall back to 0 (raw seed), i.e. the pre-hash behavior — no worse
 // than passthrough. To add an entry on rotation: capture a scrambled page with the
 // new token, find the X where seam-energy collapses (verify-tile-sharp.mjs).
@@ -126,6 +128,8 @@ export function decodeScrambleHash(hash: string | undefined): number {
   switch (hash?.trim()) {
     case "03632":
       return 58414;
+    case "02900":
+      return 117532;
     default:
       return 0;
   }
