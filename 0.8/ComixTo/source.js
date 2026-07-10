@@ -1034,7 +1034,7 @@ var _Sources = (() => {
         base = key.slice(0, -2);
         const i = arrayCounts[base] ?? 0;
         arrayCounts[base] = i + 1;
-        rendered = key + "[" + i + "]=" + value;
+        rendered = base + "[" + i + "]=" + value;
       } else {
         const bracket = key.indexOf("[");
         base = bracket >= 0 ? key.slice(0, bracket) : key;
@@ -1944,7 +1944,7 @@ var _Sources = (() => {
     return /\.(webp|png|jpe?g|avif)(\?|#|$)/i.test(url) || /wowpic\d*\.|\/s?i+\d*\//i.test(url);
   }
   var ComixToInfo = {
-    version: "1.9.19",
+    version: "1.9.20",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
