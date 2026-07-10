@@ -940,19 +940,19 @@ var _Sources = (() => {
   }
   var SIGN_STAGES = [
     {
-      "sboxB64": "hhNit22WWR9Nu5X7+UnED8bRkN15Akxr6qbiahmrx6eKUI1AlHRXBUf0YTApaf/XSE64vSK8NuTbU7qfpc4QyP7JKBQnrDfBDCRu2FxgiN6eaIkds8BbfSPW7zuYfv367cJwC8y+P7ld36PKgAOp4FXLCe6PokHmdrbsw82uSwFa1XH1rWwWByuHghoc4SHl8TqBZTx/hIva9jKh52MbhT1Pew1DGF9UqhXrk0rcRAh3ejWMIDMXtPec8rKdRenS/AAefLCZr3J1MSoGLyYEz7GgLTRvxfPQWPCal1JzOPibLA7UVuN4v+iDXlESOSVnCi612RFmZEZCqJGSPqSO0w==",
-      "keyB64": "AoxInIinOt6G8seYoJix/iN/",
-      "iv": 232
+      "sboxB64": "+mhJSFwzaV+PQPDyKp2scO/S9SdFsy/7e56UWT8XHbK3E2+19nEPwfwOgE9uVCaDtOAWTobCZX+cBCXlIbBqyDyQB1beKLspW6kGPhBCV9x0jf0KUeFhHjmlMf7qMFIB41PfDFprZ3bJiK4YxrZDv+K6dcwJmggVO8f5ktrXTM0cZL4fer0SpnkbvNajPbHxfuTz5lVEBarOI4rdc+2V6zTsjpfQYjgN1MMr6EvA6eehN6dQ1bgUogt9rZOBbQBeNnLYY00uZqSoJBnFi5gthCJsWF33ykosn9v/9KB8udMCz0YRYImrA4VHr5mMgpH4xDXLeEHRd5vZOiAalofuMg==",
+      "keyB64": "yNHlokVEnuecesDrB/lDhVuUNiheWc3a47VtkwZ2ENg=",
+      "iv": 32
     },
     {
-      "sboxB64": "8ID4yalwCgxqUunAT/owdkkERUJv/zi1678e2tMmqIhO1WGL7uYOV/RUrEZxFgEzWRM/NQVdlorG0i+ZWuGn/bvg2Y0nIery4w2J6CIdXCw6dWzkmPP1z7S+ehWdtv6DbV/YNIxHG8wkGpOiYEpu8bML+bID1t14j+32K9yGTGaww+xkdN7HB7H3lUMxlOIYI71yyhHEIHwq561rRKAJ25sGvOWahBc+SFEPW8L8f35oczdNU9EpoRSX+wimNoGQaS4cPZE7zYc8gp7Oqu/Qq99eEFW6hRmSd0F9pLnIOSiOrpy4e2dYAMGlYp9lo0ASt9QlUC0fY68yVgLF10vLeQ==",
-      "keyB64": "3EZs0aj6HfXoPsLi8vJW1JqqxR6gywB4WfNwYg==",
-      "iv": 89
+      "sboxB64": "2lQehmgyYFAoWUi0haazZqHy5zZ34NN+VzlfsoB2Y1yY0IuMLjgVcV2xt8t4moH+AP0NMJ5qekW7DFIHEWKkOgIBIMhDdA8lbM6iHKjDlq6IChpb3CnA9NmsvQW/afdt1SfJjTdwcvpKqunCJLxBFmXX9hecm6tGb+HRxD7BC3njoxPxgnX5pdKP1IMSkd4/O3NRfZSE6DVLG2s9uexaipA05cpJzE8Qkv/z5jzHAwlEWOLd3yxA+0cvVbpOoJPFGc8f1lb4vu2HUxjuuEwEQk0GsPCVnyKvfOoh9TG2YYmZLV4I67UU2NsrrakqZ47k/O+ne25/DjPGZCMdnZcmzQ==",
+      "keyB64": "2USAq+VTo5ht4bQn+K9DUcpUQRTtrB56",
+      "iv": 133
     },
     {
-      "sboxB64": "7Zz7Fb6E1Tts/kAtobexmz9jiHyWYM0rA7noGa/zeHrBFpVpDNPXVlXELPn9QeESDXa6i07lRV6jIOMBWRQIBySnN60zrAWMNYWgBBiDAvbDND3s0Vg+90M6R/Gl75gqmmR/Ntpzu45QrsjnTfwPd2ardHEv8ikctNyZ1miBJ7a/aiWKYUkTsiIApt0L+PCp5HuQOMAhncwdXQpKpFt9qjll9QZuRM4avVJU7sL6s48mdWIea8eRT0iiV7C8h8kxZ40fedjeI89tcDLSiUbGTC7UMFHmbxGUS5OoKMtTtQmX6lyeuFpfftCA6f/g9Ns82ZKfcheGDuKCG8rfQhDrxQ==",
-      "keyB64": "lngA+TKmLX5HeI08Xvhin05wqg==",
-      "iv": 38
+      "sboxB64": "gbicCvAMzfcXEtGAyjvvhmb2yCWzWhjqcxXZ7ZhpzANOzoQLo3nuPZ2vK9dkb9hJExC0Vni/hdQBceI+mw611gkhQFjBuf4bJg1TxYqM+SL4YDqtwjxiGSdeH7so7Fn1HiRo37Z+RNvl44twXWVhomtMjw+8bemfmv9XEXr7mS82MxaCOJZRR0oHd9PLI5O+gyBGT6hcLoduNa7yCObVVCk3bFWsoD+xcqTrBcP6dNJN/NB1Br2QGhSN2snHAqeRNKVFQiyeAFLPSKGwY8aq9EPgsi17qd4ywPMxiH8w6N1qX1tLKtzhOeemHWeJQfFQ5H23q7qSlJUcjgTEl3x2/Q==",
+      "keyB64": "rafYl4oSAKQX+GYoic9oW4iGwiYpZzs0",
+      "iv": 189
     }
   ];
   function signRound(data, sboxB64, keyB64, iv) {
@@ -1034,7 +1034,7 @@ var _Sources = (() => {
         base = key.slice(0, -2);
         const i = arrayCounts[base] ?? 0;
         arrayCounts[base] = i + 1;
-        rendered = base + "[" + i + "]=" + value;
+        rendered = key + "[" + i + "]=" + value;
       } else {
         const bracket = key.indexOf("[");
         base = bracket >= 0 ? key.slice(0, bracket) : key;
@@ -1109,19 +1109,19 @@ var _Sources = (() => {
   }
   var DECRYPT_STAGES = [
     {
-      "sboxB64": "hhNit22WWR9Nu5X7+UnED8bRkN15Akxr6qbiahmrx6eKUI1AlHRXBUf0YTApaf/XSE64vSK8NuTbU7qfpc4QyP7JKBQnrDfBDCRu2FxgiN6eaIkds8BbfSPW7zuYfv367cJwC8y+P7ld36PKgAOp4FXLCe6PokHmdrbsw82uSwFa1XH1rWwWByuHghoc4SHl8TqBZTx/hIva9jKh52MbhT1Pew1DGF9UqhXrk0rcRAh3ejWMIDMXtPec8rKdRenS/AAefLCZr3J1MSoGLyYEz7GgLTRvxfPQWPCal1JzOPibLA7UVuN4v+iDXlESOSVnCi612RFmZEZCqJGSPqSO0w==",
-      "keyB64": "AoxInIinOt6G8seYoJix/iN/",
-      "iv": 232
+      "sboxB64": "+mhJSFwzaV+PQPDyKp2scO/S9SdFsy/7e56UWT8XHbK3E2+19nEPwfwOgE9uVCaDtOAWTobCZX+cBCXlIbBqyDyQB1beKLspW6kGPhBCV9x0jf0KUeFhHjmlMf7qMFIB41PfDFprZ3bJiK4YxrZDv+K6dcwJmggVO8f5ktrXTM0cZL4fer0SpnkbvNajPbHxfuTz5lVEBarOI4rdc+2V6zTsjpfQYjgN1MMr6EvA6eehN6dQ1bgUogt9rZOBbQBeNnLYY00uZqSoJBnFi5gthCJsWF33ykosn9v/9KB8udMCz0YRYImrA4VHr5mMgpH4xDXLeEHRd5vZOiAalofuMg==",
+      "keyB64": "yNHlokVEnuecesDrB/lDhVuUNiheWc3a47VtkwZ2ENg=",
+      "iv": 32
     },
     {
-      "sboxB64": "8ID4yalwCgxqUunAT/owdkkERUJv/zi1678e2tMmqIhO1WGL7uYOV/RUrEZxFgEzWRM/NQVdlorG0i+ZWuGn/bvg2Y0nIery4w2J6CIdXCw6dWzkmPP1z7S+ehWdtv6DbV/YNIxHG8wkGpOiYEpu8bML+bID1t14j+32K9yGTGaww+xkdN7HB7H3lUMxlOIYI71yyhHEIHwq561rRKAJ25sGvOWahBc+SFEPW8L8f35oczdNU9EpoRSX+wimNoGQaS4cPZE7zYc8gp7Oqu/Qq99eEFW6hRmSd0F9pLnIOSiOrpy4e2dYAMGlYp9lo0ASt9QlUC0fY68yVgLF10vLeQ==",
-      "keyB64": "3EZs0aj6HfXoPsLi8vJW1JqqxR6gywB4WfNwYg==",
-      "iv": 89
+      "sboxB64": "2lQehmgyYFAoWUi0haazZqHy5zZ34NN+VzlfsoB2Y1yY0IuMLjgVcV2xt8t4moH+AP0NMJ5qekW7DFIHEWKkOgIBIMhDdA8lbM6iHKjDlq6IChpb3CnA9NmsvQW/afdt1SfJjTdwcvpKqunCJLxBFmXX9hecm6tGb+HRxD7BC3njoxPxgnX5pdKP1IMSkd4/O3NRfZSE6DVLG2s9uexaipA05cpJzE8Qkv/z5jzHAwlEWOLd3yxA+0cvVbpOoJPFGc8f1lb4vu2HUxjuuEwEQk0GsPCVnyKvfOoh9TG2YYmZLV4I67UU2NsrrakqZ47k/O+ne25/DjPGZCMdnZcmzQ==",
+      "keyB64": "2USAq+VTo5ht4bQn+K9DUcpUQRTtrB56",
+      "iv": 133
     },
     {
-      "sboxB64": "7Zz7Fb6E1Tts/kAtobexmz9jiHyWYM0rA7noGa/zeHrBFpVpDNPXVlXELPn9QeESDXa6i07lRV6jIOMBWRQIBySnN60zrAWMNYWgBBiDAvbDND3s0Vg+90M6R/Gl75gqmmR/Ntpzu45QrsjnTfwPd2ardHEv8ikctNyZ1miBJ7a/aiWKYUkTsiIApt0L+PCp5HuQOMAhncwdXQpKpFt9qjll9QZuRM4avVJU7sL6s48mdWIea8eRT0iiV7C8h8kxZ40fedjeI89tcDLSiUbGTC7UMFHmbxGUS5OoKMtTtQmX6lyeuFpfftCA6f/g9Ns82ZKfcheGDuKCG8rfQhDrxQ==",
-      "keyB64": "lngA+TKmLX5HeI08Xvhin05wqg==",
-      "iv": 38
+      "sboxB64": "gbicCvAMzfcXEtGAyjvvhmb2yCWzWhjqcxXZ7ZhpzANOzoQLo3nuPZ2vK9dkb9hJExC0Vni/hdQBceI+mw611gkhQFjBuf4bJg1TxYqM+SL4YDqtwjxiGSdeH7so7Fn1HiRo37Z+RNvl44twXWVhomtMjw+8bemfmv9XEXr7mS82MxaCOJZRR0oHd9PLI5O+gyBGT6hcLoduNa7yCObVVCk3bFWsoD+xcqTrBcP6dNJN/NB1Br2QGhSN2snHAqeRNKVFQiyeAFLPSKGwY8aq9EPgsi17qd4ywPMxiH8w6N1qX1tLKtzhOeemHWeJQfFQ5H23q7qSlJUcjgTEl3x2/Q==",
+      "keyB64": "rafYl4oSAKQX+GYoic9oW4iGwiYpZzs0",
+      "iv": 189
     }
   ];
   function decryptRound(data, sboxB64, keyB64, iv) {
@@ -1944,7 +1944,7 @@ var _Sources = (() => {
     return /\.(webp|png|jpe?g|avif)(\?|#|$)/i.test(url) || /wowpic\d*\.|\/s?i+\d*\//i.test(url);
   }
   var ComixToInfo = {
-    version: "1.9.18",
+    version: "1.9.19",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
