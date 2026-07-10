@@ -208,7 +208,8 @@ function decodeComponent(s: string): string {
 // engineered by decrypting live tokens (bundle 625d…) and fuzz-verified byte-exact
 // vs the bundle across 3000 randomized param objects. Keys sort by base name (the
 // part before the first "["), so a key and its array/nested children stay together;
-// "name[]" arrays become "name[0]=…&name[1]=…" in document order; nested keys
+// "name[]" arrays become "name[][0]=…&name[][1]=…" in document order (bundle
+// 9afd… keeps the "[]"; earlier bundles stripped it to "name[0]="); nested keys
 // ("order[number]") are kept verbatim; values are RAW (URL-decoded), never re-encoded.
 function canonicalizeQuery(rawQuery: string): string {
     if (!rawQuery) { return ""; }
@@ -227,7 +228,7 @@ function canonicalizeQuery(rawQuery: string): string {
             base = key.slice(0, -2);
             const i = arrayCounts[base] ?? 0;
             arrayCounts[base] = i + 1;
-            rendered = base + "[" + i + "]=" + value;
+            rendered = key + "[" + i + "]=" + value;
         } else {
             const bracket = key.indexOf("[");
             base = bracket >= 0 ? key.slice(0, bracket) : key;
