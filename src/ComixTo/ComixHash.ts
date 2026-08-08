@@ -85,6 +85,43 @@ function checkSignedResponseError(response: Response): void {
     }
 }
 
+/**
+ * Decode a comix /api/v1 response body into its `result`.
+ *
+ * comix enables `x-enc` encryption per-endpoint rather than site-wide, so an
+ * endpoint that returns plaintext `{status,result}` today can start returning
+ * `{e}` at any time (as /manga/{slug} did in 2026-08 — it surfaced as
+ * "API undefined: no message" because `{e}` has no `status`). Every endpoint
+ * therefore goes through here, which handles both shapes.
+ *
+ * `timing`, if supplied, receives the parse/decrypt split for telemetry.
+ */
+export function decodeComixResponse<T>(
+    apiPath: string,
+    response: Response,
+    timing?: { parseMs: number; decryptMs: number },
+): T {
+    const parseStart = Date.now();
+    const json = JSON.parse(response.data ?? "{}");
+    if (timing) timing.parseMs = Date.now() - parseStart;
+
+    if (json && typeof json === "object" && "e" in json) {
+        const decryptStart = Date.now();
+        const decrypted = fastDecryptComixPayload(apiPath, json, response.headers ?? {}) as any;
+        if (timing) timing.decryptMs = Date.now() - decryptStart;
+        // The interceptor unwraps `{ status: "ok", result: ... }` for us and
+        // returns `result` directly; some payloads may not be wrapped.
+        return (decrypted && typeof decrypted === "object" && "result" in decrypted && decrypted.status === "ok"
+            ? decrypted.result
+            : decrypted) as T;
+    }
+
+    if (json.status !== "ok") {
+        throw new Error(`Comix API ${json.status}: ${json.message ?? "no message"}`);
+    }
+    return json.result as T;
+}
+
 export async function fetchSigned<T>(
     requestManager: RequestManager,
     fullUrl: string,
@@ -114,26 +151,8 @@ export async function fetchSigned<T>(
         throw err;
     }
 
-    const parseStart = Date.now();
-    const json = JSON.parse(response.data ?? "{}");
-    const parseMs = Date.now() - parseStart;
-    const headers = response.headers ?? {};
-
-    if (json && typeof json === "object" && "e" in json) {
-        const decryptStart = Date.now();
-        const decrypted = fastDecryptComixPayload(apiPath, json, headers) as any;
-        const decryptMs = Date.now() - decryptStart;
-        emit({ label, path: telPath, status, bytes, signMs, fetchMs, parseMs, decryptMs, totalMs: Date.now() - totalStart });
-        // The interceptor unwraps `{ status: "ok", result: ... }` for us and
-        // returns `result` directly; some payloads may not be wrapped.
-        return (decrypted && typeof decrypted === "object" && "result" in decrypted && decrypted.status === "ok"
-            ? decrypted.result
-            : decrypted) as T;
-    }
-
-    if (json.status !== "ok") {
-        throw new Error(`Comix API ${json.status}: ${json.message ?? "no message"}`);
-    }
-    emit({ label, path: telPath, status, bytes, signMs, fetchMs, parseMs, decryptMs: 0, totalMs: Date.now() - totalStart });
-    return json.result as T;
+    const timing = { parseMs: 0, decryptMs: 0 };
+    const result = decodeComixResponse<T>(apiPath, response, timing);
+    emit({ label, path: telPath, status, bytes, signMs, fetchMs, parseMs: timing.parseMs, decryptMs: timing.decryptMs, totalMs: Date.now() - totalStart });
+    return result;
 }

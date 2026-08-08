@@ -22,13 +22,12 @@ import {
 } from "@paperback/types";
 
 import { Parser } from "./Parser";
-import { fetchSigned, signUrl } from "./ComixHash";
+import { fetchSigned, signUrl, decodeComixResponse } from "./ComixHash";
 import { emit } from "./Telemetry";
 import { debugLog, DEBUG } from "./DebugLog";
 import {
   API_BASE,
   DOMAIN,
-  APIResponse,
   APIMangaResult,
   APIChapterResult,
   APIPagesResult,
@@ -69,7 +68,7 @@ function isImageRequestUrl(url: string): boolean {
 }
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.9.20",
+  version: "1.9.21",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -256,25 +255,36 @@ requestManager = App.createRequestManager({
     return `${DOMAIN}/title/${mangaId}`;
   }
 
-  private async fetchTimed(label: string, url: string): Promise<import("@paperback/types").Response> {
-    const path = url.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "").split("?")[0]!;
+  /**
+   * Fetch a comix /api/v1 URL and return its `result`, signing the request and
+   * decoding the body via `decodeComixResponse` — which transparently handles
+   * both plaintext `{status,result}` and `x-enc` encrypted `{e}` payloads.
+   * comix flips encryption on per-endpoint, so no caller may assume plaintext.
+   */
+  private async fetchTimed<T>(label: string, url: string): Promise<T> {
     const t0 = Date.now();
-    const request = App.createRequest({ url, method: "GET" });
+    const signedUrl = signUrl(url);
+    const signMs = Date.now() - t0;
+    const apiPath = signedUrl.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "");
+    const path = apiPath.split("?")[0]!;
+    const request = App.createRequest({ url: signedUrl, method: "GET" });
     const fetchStart = Date.now();
     const response = await this.requestManager.schedule(request, 1);
     const fetchMs = Date.now() - fetchStart;
-    emit({ label, path, status: response.status, bytes: (response.data ?? "").length, signMs: 0, fetchMs, parseMs: 0, decryptMs: 0, totalMs: Date.now() - t0 });
-    return response;
+    this.checkResponseError(response);
+
+    const timing = { parseMs: 0, decryptMs: 0 };
+    const result = decodeComixResponse<T>(apiPath, response, timing);
+    emit({ label, path, status: response.status, bytes: (response.data ?? "").length, signMs, fetchMs, parseMs: timing.parseMs, decryptMs: timing.decryptMs, totalMs: Date.now() - t0 });
+    return result;
   }
 
   async getMangaDetails(mangaId: string): Promise<SourceManga> {
-    const response = await this.fetchTimed("manga_details", signUrl(`${API_BASE}/manga/${mangaId}?includes[]=author&includes[]=artist`));
-    this.checkResponseError(response);
-
-    const json = JSON.parse(response.data ?? "{}");
-    if (json.status !== "ok") throw new Error(`Failed to fetch manga details (API ${json.status}: ${json.message ?? "no message"})`);
-
-    return this.parser.parseMangaDetails(json.result, mangaId);
+    const result = await this.fetchTimed<any>(
+      "manga_details",
+      `${API_BASE}/manga/${mangaId}?includes[]=author&includes[]=artist`,
+    );
+    return this.parser.parseMangaDetails(result, mangaId);
   }
 
   async getChapters(mangaId: string): Promise<Chapter[]> {
@@ -419,13 +429,11 @@ requestManager = App.createRequestManager({
     section: HomeSection,
     callback: (section: HomeSection) => void,
   ) {
-    const response = await this.fetchTimed(label, signUrl(url));
-    this.checkResponseError(response);
-    const json = JSON.parse(response.data ?? "{}");
+    const result = await this.fetchTimed<any>(label, url);
     const maxRating = await getContentRatingMax(this.stateManager);
 
     // /manga/top returns result as a flat array; /manga returns { items, meta }.
-    const items = Array.isArray(json.result) ? json.result : json.result?.items;
+    const items = Array.isArray(result) ? result : result?.items;
     if (items) {
       section.items = this.parser.parseMangaList(items, maxRating);
     }
@@ -467,11 +475,9 @@ requestManager = App.createRequestManager({
         return App.createPagedResults({ results: [], metadata: undefined });
     }
 
-    const response = await this.fetchTimed(`view_more_${homepageSectionId}`, signUrl(url));
-    this.checkResponseError(response);
-    const json = JSON.parse(response.data ?? "{}");
+    const result = await this.fetchTimed<any>(`view_more_${homepageSectionId}`, url);
 
-    const rawItems = Array.isArray(json.result) ? json.result : json.result?.items ?? [];
+    const rawItems = Array.isArray(result) ? result : result?.items ?? [];
     const items = this.parser.parseMangaList(rawItems, maxRating);
 
     const nextPage = isTopEndpoint
@@ -498,10 +504,8 @@ requestManager = App.createRequestManager({
       const fetchTags = async (type: string) => {
         try {
           // /tags/search caps at limit=50 in v1; >50 returns 422.
-          const res = await this.fetchTimed("search_tags", signUrl(`${API_BASE}/tags/search?type=${type}&limit=50`));
-          if (res.status < 200 || res.status >= 300) return [];
-          const json = JSON.parse(res.data ?? "{}") as APIResponse<APIGenreResult>;
-          return Array.isArray(json.result) ? json.result : [];
+          const result = await this.fetchTimed<APIGenreResult>("search_tags", `${API_BASE}/tags/search?type=${type}&limit=50`);
+          return Array.isArray(result) ? result : [];
         } catch {
           return [];
         }
@@ -632,17 +636,13 @@ requestManager = App.createRequestManager({
     // Apply the user's saved global tag/type filter on top of the search-specific filter.
     url += await this.buildFilterParams();
 
-    const response = await this.fetchTimed("search", signUrl(url));
-    this.checkResponseError(response);
+    const result = await this.fetchTimed<APIMangaResult>("search", url);
 
-    const json = JSON.parse(
-      response.data ?? "{}",
-    ) as APIResponse<APIMangaResult>;
     const maxRating = await getContentRatingMax(this.stateManager);
-    const items = this.parser.parseMangaList(json.result.items, maxRating);
+    const items = this.parser.parseMangaList(result.items, maxRating);
 
     let nextPage = undefined;
-    if (json.result.meta?.lastPage && json.result.meta.lastPage > page) {
+    if (result.meta?.lastPage && result.meta.lastPage > page) {
       nextPage = { page: page + 1 };
     } else if (items.length >= 20) {
       nextPage = { page: page + 1 };
