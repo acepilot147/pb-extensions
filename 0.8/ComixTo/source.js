@@ -1280,6 +1280,21 @@ var _Sources = (() => {
       throw new Error(`Cloudflare challenge page returned [${ctx}]`);
     }
   }
+  function decodeComixResponse(apiPath, response, timing) {
+    const parseStart = Date.now();
+    const json = JSON.parse(response.data ?? "{}");
+    if (timing) timing.parseMs = Date.now() - parseStart;
+    if (json && typeof json === "object" && "e" in json) {
+      const decryptStart = Date.now();
+      const decrypted = fastDecryptComixPayload(apiPath, json, response.headers ?? {});
+      if (timing) timing.decryptMs = Date.now() - decryptStart;
+      return decrypted && typeof decrypted === "object" && "result" in decrypted && decrypted.status === "ok" ? decrypted.result : decrypted;
+    }
+    if (json.status !== "ok") {
+      throw new Error(`Comix API ${json.status}: ${json.message ?? "no message"}`);
+    }
+    return json.result;
+  }
   async function fetchSigned(requestManager, fullUrl) {
     const totalStart = Date.now();
     const apiPath = fullUrl.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "");
@@ -1299,22 +1314,10 @@ var _Sources = (() => {
       emit({ label, path: telPath, status, bytes, signMs, fetchMs, parseMs: 0, decryptMs: 0, totalMs: Date.now() - totalStart });
       throw err;
     }
-    const parseStart = Date.now();
-    const json = JSON.parse(response.data ?? "{}");
-    const parseMs = Date.now() - parseStart;
-    const headers = response.headers ?? {};
-    if (json && typeof json === "object" && "e" in json) {
-      const decryptStart = Date.now();
-      const decrypted = fastDecryptComixPayload(apiPath, json, headers);
-      const decryptMs = Date.now() - decryptStart;
-      emit({ label, path: telPath, status, bytes, signMs, fetchMs, parseMs, decryptMs, totalMs: Date.now() - totalStart });
-      return decrypted && typeof decrypted === "object" && "result" in decrypted && decrypted.status === "ok" ? decrypted.result : decrypted;
-    }
-    if (json.status !== "ok") {
-      throw new Error(`Comix API ${json.status}: ${json.message ?? "no message"}`);
-    }
-    emit({ label, path: telPath, status, bytes, signMs, fetchMs, parseMs, decryptMs: 0, totalMs: Date.now() - totalStart });
-    return json.result;
+    const timing = { parseMs: 0, decryptMs: 0 };
+    const result = decodeComixResponse(apiPath, response, timing);
+    emit({ label, path: telPath, status, bytes, signMs, fetchMs, parseMs: timing.parseMs, decryptMs: timing.decryptMs, totalMs: Date.now() - totalStart });
+    return result;
   }
 
   // src/ComixTo/Settings.ts
@@ -1944,7 +1947,7 @@ var _Sources = (() => {
     return /\.(webp|png|jpe?g|avif)(\?|#|$)/i.test(url) || /wowpic\d*\.|\/s?i+\d*\//i.test(url);
   }
   var ComixToInfo = {
-    version: "1.9.20",
+    version: "1.9.21",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
@@ -2089,22 +2092,34 @@ var _Sources = (() => {
     getMangaShareUrl(mangaId) {
       return `${DOMAIN}/title/${mangaId}`;
     }
+    /**
+     * Fetch a comix /api/v1 URL and return its `result`, signing the request and
+     * decoding the body via `decodeComixResponse` — which transparently handles
+     * both plaintext `{status,result}` and `x-enc` encrypted `{e}` payloads.
+     * comix flips encryption on per-endpoint, so no caller may assume plaintext.
+     */
     async fetchTimed(label, url) {
-      const path = url.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "").split("?")[0];
       const t0 = Date.now();
-      const request = App.createRequest({ url, method: "GET" });
+      const signedUrl = signUrl(url);
+      const signMs = Date.now() - t0;
+      const apiPath = signedUrl.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "");
+      const path = apiPath.split("?")[0];
+      const request = App.createRequest({ url: signedUrl, method: "GET" });
       const fetchStart = Date.now();
       const response = await this.requestManager.schedule(request, 1);
       const fetchMs = Date.now() - fetchStart;
-      emit({ label, path, status: response.status, bytes: (response.data ?? "").length, signMs: 0, fetchMs, parseMs: 0, decryptMs: 0, totalMs: Date.now() - t0 });
-      return response;
+      this.checkResponseError(response);
+      const timing = { parseMs: 0, decryptMs: 0 };
+      const result = decodeComixResponse(apiPath, response, timing);
+      emit({ label, path, status: response.status, bytes: (response.data ?? "").length, signMs, fetchMs, parseMs: timing.parseMs, decryptMs: timing.decryptMs, totalMs: Date.now() - t0 });
+      return result;
     }
     async getMangaDetails(mangaId) {
-      const response = await this.fetchTimed("manga_details", signUrl(`${API_BASE}/manga/${mangaId}?includes[]=author&includes[]=artist`));
-      this.checkResponseError(response);
-      const json = JSON.parse(response.data ?? "{}");
-      if (json.status !== "ok") throw new Error(`Failed to fetch manga details (API ${json.status}: ${json.message ?? "no message"})`);
-      return this.parser.parseMangaDetails(json.result, mangaId);
+      const result = await this.fetchTimed(
+        "manga_details",
+        `${API_BASE}/manga/${mangaId}?includes[]=author&includes[]=artist`
+      );
+      return this.parser.parseMangaDetails(result, mangaId);
     }
     async getChapters(mangaId) {
       const fetchPage = (page) => fetchSigned(
@@ -2215,11 +2230,9 @@ var _Sources = (() => {
       await Promise.all(promises);
     }
     async fetchHomeData(url, label, section, callback) {
-      const response = await this.fetchTimed(label, signUrl(url));
-      this.checkResponseError(response);
-      const json = JSON.parse(response.data ?? "{}");
+      const result = await this.fetchTimed(label, url);
       const maxRating = await getContentRatingMax(this.stateManager);
-      const items = Array.isArray(json.result) ? json.result : json.result?.items;
+      const items = Array.isArray(result) ? result : result?.items;
       if (items) {
         section.items = this.parser.parseMangaList(items, maxRating);
       }
@@ -2254,10 +2267,8 @@ var _Sources = (() => {
         default:
           return App.createPagedResults({ results: [], metadata: void 0 });
       }
-      const response = await this.fetchTimed(`view_more_${homepageSectionId}`, signUrl(url));
-      this.checkResponseError(response);
-      const json = JSON.parse(response.data ?? "{}");
-      const rawItems = Array.isArray(json.result) ? json.result : json.result?.items ?? [];
+      const result = await this.fetchTimed(`view_more_${homepageSectionId}`, url);
+      const rawItems = Array.isArray(result) ? result : result?.items ?? [];
       const items = this.parser.parseMangaList(rawItems, maxRating);
       const nextPage = isTopEndpoint ? void 0 : items.length > 0 ? { page: page + 1 } : void 0;
       return App.createPagedResults({
@@ -2274,10 +2285,8 @@ var _Sources = (() => {
       } else {
         const fetchTags = async (type) => {
           try {
-            const res = await this.fetchTimed("search_tags", signUrl(`${API_BASE}/tags/search?type=${type}&limit=50`));
-            if (res.status < 200 || res.status >= 300) return [];
-            const json = JSON.parse(res.data ?? "{}");
-            return Array.isArray(json.result) ? json.result : [];
+            const result = await this.fetchTimed("search_tags", `${API_BASE}/tags/search?type=${type}&limit=50`);
+            return Array.isArray(result) ? result : [];
           } catch {
             return [];
           }
@@ -2374,15 +2383,11 @@ var _Sources = (() => {
         url += `&genres_mode=${genresMode}`;
       }
       url += await this.buildFilterParams();
-      const response = await this.fetchTimed("search", signUrl(url));
-      this.checkResponseError(response);
-      const json = JSON.parse(
-        response.data ?? "{}"
-      );
+      const result = await this.fetchTimed("search", url);
       const maxRating = await getContentRatingMax(this.stateManager);
-      const items = this.parser.parseMangaList(json.result.items, maxRating);
+      const items = this.parser.parseMangaList(result.items, maxRating);
       let nextPage = void 0;
-      if (json.result.meta?.lastPage && json.result.meta.lastPage > page) {
+      if (result.meta?.lastPage && result.meta.lastPage > page) {
         nextPage = { page: page + 1 };
       } else if (items.length >= 20) {
         nextPage = { page: page + 1 };
