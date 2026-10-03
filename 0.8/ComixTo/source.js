@@ -1944,10 +1944,13 @@ var _Sources = (() => {
   // src/ComixTo/ComixTo.ts
   function isImageRequestUrl(url) {
     if (!url) return false;
-    return /\.(webp|png|jpe?g|avif)(\?|#|$)/i.test(url) || /wowpic\d*\.|\/s?i+\d*\//i.test(url);
+    return /\.(webp|png|jpe?g|avif)(\?|#|$)/i.test(url) || /wowpic\d*\.|\/h?s?i+\d*\//i.test(url);
+  }
+  function isComixUrl(url) {
+    return /^https?:\/\/([^/]+\.)?comix\.to(\/|$|\?|#)/i.test(url ?? "");
   }
   var ComixToInfo = {
-    version: "1.9.21",
+    version: "1.9.22",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
@@ -1973,11 +1976,14 @@ var _Sources = (() => {
         requestTimeout: 15e3,
         interceptor: {
           interceptRequest: async (request) => {
-            request.headers = {
+            const headers = {
               ...request.headers ?? {},
-              "Referer": `${DOMAIN}/`,
               "User-Agent": await this.requestManager.getDefaultUserAgent()
             };
+            delete headers["referer"];
+            if (isComixUrl(request.url)) headers["Referer"] = `${DOMAIN}/`;
+            else delete headers["Referer"];
+            request.headers = headers;
             if (DEBUG && isImageRequestUrl(request.url)) {
               debugLog("img_req", { url: request.url, headerKeys: Object.keys(request.headers ?? {}), origin: request.headers?.["Origin"] ?? request.headers?.["origin"] ?? null });
             }
