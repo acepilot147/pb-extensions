@@ -64,11 +64,17 @@ import { computeDescrambleLookupB } from './ComixTileB';
 // Used only to scope debug logging to image traffic.
 function isImageRequestUrl(url: string): boolean {
   if (!url) return false;
-  return /\.(webp|png|jpe?g|avif)(\?|#|$)/i.test(url) || /wowpic\d*\.|\/s?i+\d*\//i.test(url);
+  return /\.(webp|png|jpe?g|avif)(\?|#|$)/i.test(url) || /wowpic\d*\.|\/h?s?i+\d*\//i.test(url);
+}
+
+// Is this a request to comix.to itself (site pages, /api/v1), as opposed to a
+// third-party image host?
+function isComixUrl(url: string): boolean {
+  return /^https?:\/\/([^/]+\.)?comix\.to(\/|$|\?|#)/i.test(url ?? "");
 }
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.9.21",
+  version: "1.9.22",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -104,11 +110,18 @@ requestManager = App.createRequestManager({
   requestTimeout: 15000,
   interceptor: {
     interceptRequest: async (request: Request): Promise<Request> => {
-      request.headers = {
+      const headers: Record<string, string> = {
         ...(request.headers ?? {}),
-        "Referer": `${DOMAIN}/`,
         "User-Agent": await this.requestManager.getDefaultUserAgent()
       };
+      // Only comix.to itself gets the comix Referer. Page images are served from a
+      // rotating pool of third-party hosts (e.g. 447.nickslog.site/hi/<token>, seen
+      // 2026-10) that 403 any request whose Referer is comix.to — the site's reader
+      // loads them with referrerpolicy="no-referrer", so we send none either.
+      delete headers["referer"];
+      if (isComixUrl(request.url)) headers["Referer"] = `${DOMAIN}/`;
+      else delete headers["Referer"];
+      request.headers = headers;
       if (DEBUG && isImageRequestUrl(request.url)) {
         debugLog("img_req", { url: request.url, headerKeys: Object.keys(request.headers ?? {}), origin: (request.headers as any)?.["Origin"] ?? (request.headers as any)?.["origin"] ?? null });
       }
