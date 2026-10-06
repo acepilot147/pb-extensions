@@ -222,6 +222,23 @@ cfg — verified). Token moved to `params._` on the axios config. Whole payload 
 Trigger condition (response interceptor): `headers["x-enc"]==="1"` &&
 `typeof data === "object"` && `typeof data.e === "string"`.
 
+**v3 — hmac-sha256-midstate (sign) / xor-offset (decrypt, `x-enc: 2`).** From
+bundle `88ef335b54f8` (`secure-tmhc4l-*.js`, 2026-10-06). v2 tokens now get
+403 `"Invalid token."`, and the v3 bundle no longer decrypts `x-enc: 1`.
+- Sign: `"gfs." + b64url(HMAC-SHA256(key, path[?canonicalQuery])[0:12])` —
+  fixed 20-char tokens. Same canonical query as v2. The key is baked in only as
+  ipad/opad SHA-256 midstates. How it was found: no `atob` constants during
+  signing, full avalanche, not GF(2)-affine → a hash; the op trace showed all
+  64 SHA-256 round constants used exactly twice with no standard IV, and bit
+  lengths `(64+len)*8` / `(64+32)*8` → HMAC from midstates.
+- Decrypt: `[h0,h1]` header, then a pure XOR keystream with no chaining (flip
+  `ct[i+2]` → only `pt[i]` changes), period 1024. The header selects the start
+  offset `((h0<<8)|h1) % 1024` into one fixed table.
+- The built-in boundary (§2) is no longer enough for the signer — its
+  arithmetic is inside the VM. Use the op-trace instrumentation in
+  `crypto-pipeline/lib.mjs` (`bootBundle({ instrument: true })`); it is
+  name-agnostic and the anti-tamper does not detect it.
+
 ---
 
 ## 6. Checklist / gotchas

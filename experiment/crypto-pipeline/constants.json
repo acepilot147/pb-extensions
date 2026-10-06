@@ -1,27 +1,39 @@
 {
-  "bundleId": "9afd5021ff4d",
-  "algorithm": "sbox-cbc",
-  "rounds": 3,
+  "bundleId": "88ef335b54f8",
   "cfg": "ZZYdbXagjEpeaRwTE56mTpBkKVnnIBmAB3gdwWXXjEM7ZqAcLgonw0ylNjY621zM0zefn1Qg_jIQEn0oAIFnaXeGk3K4XZgY6S1Ldadwahluwgs-siIh0m-Lbw",
-  "generatedAt": "2026-07-10T21:17:08.516Z",
-  "note": "Decrypt applies inverse stages in order 1..N; sign applies forward stages in order N..1. Same (sbox,key,iv) triples both directions.",
-  "stages": [
-    {
-      "sboxB64": "+mhJSFwzaV+PQPDyKp2scO/S9SdFsy/7e56UWT8XHbK3E2+19nEPwfwOgE9uVCaDtOAWTobCZX+cBCXlIbBqyDyQB1beKLspW6kGPhBCV9x0jf0KUeFhHjmlMf7qMFIB41PfDFprZ3bJiK4YxrZDv+K6dcwJmggVO8f5ktrXTM0cZL4fer0SpnkbvNajPbHxfuTz5lVEBarOI4rdc+2V6zTsjpfQYjgN1MMr6EvA6eehN6dQ1bgUogt9rZOBbQBeNnLYY00uZqSoJBnFi5gthCJsWF33ykosn9v/9KB8udMCz0YRYImrA4VHr5mMgpH4xDXLeEHRd5vZOiAalofuMg==",
-      "keyB64": "yNHlokVEnuecesDrB/lDhVuUNiheWc3a47VtkwZ2ENg=",
-      "iv": 32
-    },
-    {
-      "sboxB64": "2lQehmgyYFAoWUi0haazZqHy5zZ34NN+VzlfsoB2Y1yY0IuMLjgVcV2xt8t4moH+AP0NMJ5qekW7DFIHEWKkOgIBIMhDdA8lbM6iHKjDlq6IChpb3CnA9NmsvQW/afdt1SfJjTdwcvpKqunCJLxBFmXX9hecm6tGb+HRxD7BC3njoxPxgnX5pdKP1IMSkd4/O3NRfZSE6DVLG2s9uexaipA05cpJzE8Qkv/z5jzHAwlEWOLd3yxA+0cvVbpOoJPFGc8f1lb4vu2HUxjuuEwEQk0GsPCVnyKvfOoh9TG2YYmZLV4I67UU2NsrrakqZ47k/O+ne25/DjPGZCMdnZcmzQ==",
-      "keyB64": "2USAq+VTo5ht4bQn+K9DUcpUQRTtrB56",
-      "iv": 133
-    },
-    {
-      "sboxB64": "gbicCvAMzfcXEtGAyjvvhmb2yCWzWhjqcxXZ7ZhpzANOzoQLo3nuPZ2vK9dkb9hJExC0Vni/hdQBceI+mw611gkhQFjBuf4bJg1TxYqM+SL4YDqtwjxiGSdeH7so7Fn1HiRo37Z+RNvl44twXWVhomtMjw+8bemfmv9XEXr7mS82MxaCOJZRR0oHd9PLI5O+gyBGT6hcLoduNa7yCObVVCk3bFWsoD+xcqTrBcP6dNJN/NB1Br2QGhSN2snHAqeRNKVFQiyeAFLPSKGwY8aq9EPgsi17qd4ywPMxiH8w6N1qX1tLKtzhOeemHWeJQfFQ5H23q7qSlJUcjgTEl3x2/Q==",
-      "keyB64": "rafYl4oSAKQX+GYoic9oW4iGwiYpZzs0",
-      "iv": 189
-    }
-  ],
+  "generatedAt": "2026-10-06T19:18:09.049Z",
+  "signer": {
+    "algorithm": "hmac-sha256-midstate",
+    "note": "token = prefix + b64url(HMAC-SHA256(key, path[?canonicalQuery])[0:macBytes]); istate/ostate = SHA-256 state after the ipad/opad block",
+    "prefix": "gfs.",
+    "macBytes": 12,
+    "istate": [
+      "0x8fd1e4da",
+      "0x03c99923",
+      "0x83a50c1d",
+      "0xa6d2ed73",
+      "0x5bf1737b",
+      "0x630916b3",
+      "0x4e805623",
+      "0xe087265a"
+    ],
+    "ostate": [
+      "0x7ab9675e",
+      "0x409c53e2",
+      "0x76d9cfd7",
+      "0xafe0bacb",
+      "0x36f14c87",
+      "0xa54e0a8a",
+      "0x99a4fa89",
+      "0x821a616e"
+    ]
+  },
+  "decrypt": {
+    "algorithm": "xor-offset",
+    "xEnc": "2",
+    "note": "ct = [h0,h1,body]; off = ((h0<<8)|h1) % K.length; pt[i] = body[i] ^ K[(off+i) % K.length]",
+    "keyB64": "AfjQxRq8yu+FdQ9eEyA+E0ZiRsK94Kz4/FvjkNgqq8JjqBLnZQmfO9igp627Q2PW9CunsAOP75D+r9HZI9lk42BvPpMHmgVb6YvpsL24QhPkU4Z2nd43g1XXtk/VnYO7o8R6DAUtLg8OreYLkFEvqPDxuk4Pp+pXk4CGf8Su7lkLlLO4isx3v9WtruKQbP92hdeiPvTGe4yCSKikzLMk7C9e6mfOByLp1ZofdIs6SACjbvUMscGer7Z+sGEeSZSCums4wTNWhUGN6saGhcEjGid6guz4mfLeBAXAOtwsVKZFAX/zswpGXS7xV3vl6aFft0jPlbKaiPZfF/5KAFT/ziNGK0x2DtiDfHwQOgqO2YLzhtr5luWhHZYtmUuOu1i5ewd96X9B0jo/LVCd3rdjk88SlFjLH5Z8ESRoJ2s7mbrCy+1HdtJeG68XWpoiPsVQtoJxVar7oQgUl+515J6NXXWysSOVQcbzF7caEqxkANhKl5j8CDEm/qV3/Ck2ZPHWFI6oQhNGbtwzb02oHKWUy1DRBsnacyf/xvG4QNBo90Af8FfY5/U4vjoCVEE5VJka2vAIycsz1j/qim/nUU2SwS2rKwk+mmG50eHsaFWsPaFLecPVzMfyGud6kAwHNx308eE2ga6AukNEZMJmJZf9vSDW4u+o4HRm2qedjhhES/URYXeHI7Sk/3LJT/wDb3rH8UBO4oiZQqY1e6UB6doEevFovARZUpNmJBWu8n0Sx06yxcjUYK0QkSChj8SWqD/wUArqGpfQAmmZJN87QWmr1cojbzcYDOjI8HBCgxFD1wp/EDbmM12YsqNLD5eaMnX0tSPFe3zukmuzpEE/BtxKWxO7+bkg0JBjPmNrSRhDLI6T3tXZxR71JtSG4yccku5d7esaWAS85emmG5H0VwgEmzJTnAcvW5uqSkiWk+0qvKTlnS1OYDYwlk8BqChyueSlovDlDc42xe7HeDawBJPGjz0jr8fwLLvshZRN50Bg7MRUucy6/F5vmckI842btgTLpgxe6w9ZbWqcNHGh40YLko5WPir1LXHuL6i38T9KIDo7OLdSaYCCHZEZDAH6glTkj5tyU1mEfRY5LM0c52ioDy0zVnK1pqVfevJoPN19TLIr7XV21csdXZixL+Y3yDqsqUmRjTnqUK90XtnyWxbKF7ncgLgF6FsJRLGXlYw8UCYLThk/xHnKu6AH1G2w2yebRdo16N24oiLzqg7zJt3jhtujqeg3+1wN8+J/SeAeJn4NlVHQL4LDQDWAbF+cyLcy9tafJjpnWLR78kGD2yxJuM2U0021HRstCOVfxelhDS2fdzPYiOJR6NFE+6TRq23KvHr/S1Ti/FpaHP/AMZQeJw=="
+  },
   "verified": {
     "signer": true,
     "decrypt": true

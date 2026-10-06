@@ -13,8 +13,8 @@ import { resolve, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createRequire } from "node:module";
 import {
-  ROOT, bootBundle, liveSign, liveDecrypt,
-  bytes, invert, encryptBytes, stableJson,
+  ROOT, bootBundle, liveSign, liveSignParams as liveSignParamsWith, liveDecrypt,
+  bytes, xorOffsetEncrypt, stableJson,
 } from "./lib.mjs";
 
 const require = createRequire(import.meta.url);
@@ -52,7 +52,7 @@ const SIGN_PARAM_CASES = [
 
 const PAYLOADS = [
   { status: "ok", result: { items: [{ id: "9000025", number: "1", title: "Chapter 1" }], meta: { lastPage: 3 } } },
-  { status: "ok", result: { pages: ["https://x.store/si/abc/001.webp", "https://x.store/si/abc/002.webp"] } },
+  { status: "ok", result: { pages: ["https://447.nickslog.site/hi/bEqPbYfoKT0Gm13k", "https://lov.blogofanna.site/hi/bEqPbYfoKT0Gmyn"] } },
   { status: "ok", result: { unicode: "日本語テスト ñ é → ✓ 😀", nested: { a: [1, 2, 3], b: null, c: true } } },
   { status: "error", message: "not found" },
   { status: "ok", result: { items: Array.from({ length: 500 }, (_, i) => ({ id: i, t: "title " + i })) } },
@@ -60,10 +60,7 @@ const PAYLOADS = [
 
 export async function validate() {
   const c = JSON.parse(readFileSync(CONSTANTS, "utf8"));
-  const stages = c.stages.map((s) => {
-    const sbox = bytes(s.sboxB64);
-    return { sbox, invSbox: invert(sbox), key: bytes(s.keyB64), iv: s.iv };
-  });
+  const K = bytes(c.decrypt.keyB64);
 
   const { reqI, resI } = bootBundle();
   const { fastGenerateHash } = await importTs(resolve(ROOT, "src/ComixTo/ComixFastSigner.ts"));
@@ -77,14 +74,11 @@ export async function validate() {
     else { signFail++; console.log(`  SIGN FAIL ${p}\n    live: ${live}\n    fast: ${mine}`); }
   }
 
-  // Query-param signing: since bundle 625d… the token covers the canonicalized
-  // query, not just the path. Drive the live interceptor with real param objects
-  // and confirm fastGenerateHash reproduces the token — so a future change to the
-  // bundle's param serializer is caught HERE instead of silently shipping 403s.
-  const liveSignParams = (path, params) => {
-    const c = { url: path, method: "get", baseURL: "https://comix.to/api/v1", headers: {}, params: JSON.parse(JSON.stringify(params)) };
-    return (reqI(c) || c)?.params?._ ?? "";
-  };
+  // Query-param signing: the token covers the canonicalized query, not just the
+  // path. Drive the live interceptor with real param objects and confirm
+  // fastGenerateHash reproduces the token — so a future change to the bundle's
+  // param serializer is caught HERE instead of silently shipping 403s.
+  const liveSignParams = (path, params) => liveSignParamsWith(reqI, path, params);
   const buildWire = (obj) => Object.entries(obj).map(([k, v]) =>
     Array.isArray(v) ? v.map((e) => `${k}[]=${encodeURIComponent(e)}`).join("&")
       : (v && typeof v === "object") ? Object.entries(v).map(([sk, sv]) => `${k}[${sk}]=${encodeURIComponent(sv)}`).join("&")
@@ -126,14 +120,28 @@ export async function validate() {
 
   let decPass = 0, decFail = 0;
   for (const payload of PAYLOADS) {
-    // Encrypt with the validated in-process forward cipher to fabricate `e`.
-    const e = Buffer.from(encryptBytes(new Uint8Array(Buffer.from(JSON.stringify(payload), "utf8")), stages)).toString("base64");
-    const live = liveDecrypt(resI, e);
-    const mine = fastDecryptComixPayload("/x", { e }, { "x-enc": "1" });
+    // Encrypt with the in-process reference cipher (random header → random
+    // table offset, including wrap-around) to fabricate `e`.
+    const header = [Math.random() * 256 | 0, Math.random() * 256 | 0];
+    const e = Buffer.from(xorOffsetEncrypt(new Uint8Array(Buffer.from(JSON.stringify(payload), "utf8")), K, header)).toString("base64");
+    const live = liveDecrypt(resI, e, c.decrypt.xEnc);
+    const mine = fastDecryptComixPayload("/x", { e }, { "X-Enc": c.decrypt.xEnc });
     const expected = payload.status === "ok" ? payload.result : payload;
     // Three-way: live bundle, fast file, and the original all agree.
     if (stableJson(live) === stableJson(mine) && stableJson(mine) === stableJson(expected)) decPass++;
     else { decFail++; console.log(`  DECRYPT FAIL ${payload.status}\n    live: ${stableJson(live).slice(0, 80)}\n    fast: ${stableJson(mine).slice(0, 80)}`); }
+  }
+
+  // Missing x-enc header (some clients drop it) still decrypts; an unknown
+  // version throws instead of returning the undecoded envelope.
+  {
+    const payload = PAYLOADS[0];
+    const e = Buffer.from(xorOffsetEncrypt(new Uint8Array(Buffer.from(JSON.stringify(payload), "utf8")), K, [3, 250])).toString("base64");
+    if (stableJson(fastDecryptComixPayload("/x", { e }, {})) === stableJson(payload.result)) decPass++;
+    else { decFail++; console.log("  DECRYPT FAIL no-header"); }
+    let threw = false;
+    try { fastDecryptComixPayload("/x", { e }, { "x-enc": "99" }); } catch { threw = true; }
+    if (threw) decPass++; else { decFail++; console.log("  DECRYPT FAIL unknown x-enc did not throw"); }
   }
 
   // Pass-through cases for the decrypt file.

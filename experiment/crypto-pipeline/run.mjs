@@ -23,7 +23,7 @@ async function run({ refresh }) {
 
   console.log("== extract ==");
   const c = extract();
-  console.log(`   bundle ${c.bundleId} — ${c.algorithm}, ${c.rounds} rounds; signer=${c.verified.signer} decrypt=${c.verified.decrypt}`);
+  console.log(`   bundle ${c.bundleId} — signer ${c.signer.algorithm}, decrypt ${c.decrypt.algorithm} (x-enc ${c.decrypt.xEnc}); signer=${c.verified.signer} decrypt=${c.verified.decrypt}`);
 
   console.log("== generate ==");
   const g = generate();
