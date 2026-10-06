@@ -910,62 +910,121 @@ var _Sources = (() => {
 
   // src/ComixTo/ComixFastSigner.ts
   var B64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  function b64Decode(s) {
-    const lookup = new Array(128).fill(-1);
-    for (let i = 0; i < 64; i++) lookup[B64_CHARS.charCodeAt(i)] = i;
-    const normalized = s.replace(/-/g, "+").replace(/_/g, "/");
-    const out = [];
-    let buf = 0, bits = 0;
-    for (let i = 0; i < normalized.length; i++) {
-      const c = normalized.charCodeAt(i);
-      if (c === 61) break;
-      const v = lookup[c] ?? -1;
-      if (v < 0) continue;
-      buf = buf << 6 | v;
-      bits += 6;
-      if (bits >= 8) {
-        bits -= 8;
-        out.push(buf >> bits & 255);
-      }
-    }
-    return out;
-  }
-  var KEY_CACHE = {};
-  function keyBytes(keyB64) {
-    const cached = KEY_CACHE[keyB64];
-    if (cached) return cached;
-    const k = b64Decode(keyB64);
-    KEY_CACHE[keyB64] = k;
-    return k;
-  }
-  var SIGN_STAGES = [
-    {
-      "sboxB64": "+mhJSFwzaV+PQPDyKp2scO/S9SdFsy/7e56UWT8XHbK3E2+19nEPwfwOgE9uVCaDtOAWTobCZX+cBCXlIbBqyDyQB1beKLspW6kGPhBCV9x0jf0KUeFhHjmlMf7qMFIB41PfDFprZ3bJiK4YxrZDv+K6dcwJmggVO8f5ktrXTM0cZL4fer0SpnkbvNajPbHxfuTz5lVEBarOI4rdc+2V6zTsjpfQYjgN1MMr6EvA6eehN6dQ1bgUogt9rZOBbQBeNnLYY00uZqSoJBnFi5gthCJsWF33ykosn9v/9KB8udMCz0YRYImrA4VHr5mMgpH4xDXLeEHRd5vZOiAalofuMg==",
-      "keyB64": "yNHlokVEnuecesDrB/lDhVuUNiheWc3a47VtkwZ2ENg=",
-      "iv": 32
-    },
-    {
-      "sboxB64": "2lQehmgyYFAoWUi0haazZqHy5zZ34NN+VzlfsoB2Y1yY0IuMLjgVcV2xt8t4moH+AP0NMJ5qekW7DFIHEWKkOgIBIMhDdA8lbM6iHKjDlq6IChpb3CnA9NmsvQW/afdt1SfJjTdwcvpKqunCJLxBFmXX9hecm6tGb+HRxD7BC3njoxPxgnX5pdKP1IMSkd4/O3NRfZSE6DVLG2s9uexaipA05cpJzE8Qkv/z5jzHAwlEWOLd3yxA+0cvVbpOoJPFGc8f1lb4vu2HUxjuuEwEQk0GsPCVnyKvfOoh9TG2YYmZLV4I67UU2NsrrakqZ47k/O+ne25/DjPGZCMdnZcmzQ==",
-      "keyB64": "2USAq+VTo5ht4bQn+K9DUcpUQRTtrB56",
-      "iv": 133
-    },
-    {
-      "sboxB64": "gbicCvAMzfcXEtGAyjvvhmb2yCWzWhjqcxXZ7ZhpzANOzoQLo3nuPZ2vK9dkb9hJExC0Vni/hdQBceI+mw611gkhQFjBuf4bJg1TxYqM+SL4YDqtwjxiGSdeH7so7Fn1HiRo37Z+RNvl44twXWVhomtMjw+8bemfmv9XEXr7mS82MxaCOJZRR0oHd9PLI5O+gyBGT6hcLoduNa7yCObVVCk3bFWsoD+xcqTrBcP6dNJN/NB1Br2QGhSN2snHAqeRNKVFQiyeAFLPSKGwY8aq9EPgsi17qd4ywPMxiH8w6N1qX1tLKtzhOeemHWeJQfFQ5H23q7qSlJUcjgTEl3x2/Q==",
-      "keyB64": "rafYl4oSAKQX+GYoic9oW4iGwiYpZzs0",
-      "iv": 189
-    }
+  var TOKEN_PREFIX = "gfs.";
+  var MAC_BYTES = 12;
+  var ISTATE = [2412897498, 63543587, 2208631837, 2798841203, 1542550395, 1661540019, 1317033507, 3766953562];
+  var OSTATE = [2058970974, 1083986914, 1993986007, 2950740683, 921783431, 2773355146, 2577726089, 2182766958];
+  var SHA256_K = [
+    1116352408,
+    1899447441,
+    3049323471,
+    3921009573,
+    961987163,
+    1508970993,
+    2453635748,
+    2870763221,
+    3624381080,
+    310598401,
+    607225278,
+    1426881987,
+    1925078388,
+    2162078206,
+    2614888103,
+    3248222580,
+    3835390401,
+    4022224774,
+    264347078,
+    604807628,
+    770255983,
+    1249150122,
+    1555081692,
+    1996064986,
+    2554220882,
+    2821834349,
+    2952996808,
+    3210313671,
+    3336571891,
+    3584528711,
+    113926993,
+    338241895,
+    666307205,
+    773529912,
+    1294757372,
+    1396182291,
+    1695183700,
+    1986661051,
+    2177026350,
+    2456956037,
+    2730485921,
+    2820302411,
+    3259730800,
+    3345764771,
+    3516065817,
+    3600352804,
+    4094571909,
+    275423344,
+    430227734,
+    506948616,
+    659060556,
+    883997877,
+    958139571,
+    1322822218,
+    1537002063,
+    1747873779,
+    1955562222,
+    2024104815,
+    2227730452,
+    2361852424,
+    2428436474,
+    2756734187,
+    3204031479,
+    3329325298
   ];
-  function signRound(data, sboxB64, keyB64, iv) {
-    const table = b64Decode(sboxB64);
-    const key = keyBytes(keyB64);
-    const out = new Array(data.length);
-    let prev = iv & 255;
-    for (let i = 0; i < data.length; i++) {
-      const idx = (data[i] & 255 ^ prev ^ key[i % key.length]) & 255;
-      const next = table[idx] & 255;
-      out[i] = next;
-      prev = next;
+  function sha256FromMidstate(state, msg) {
+    const h = state.map((x) => x | 0);
+    const padLen = msg.length + 9 + 63 & ~63;
+    const buf = new Array(padLen).fill(0);
+    for (let i = 0; i < msg.length; i++) buf[i] = msg[i];
+    buf[msg.length] = 128;
+    const bits = (64 + msg.length) * 8;
+    for (let i = 0; i < 4; i++) buf[padLen - 1 - i] = bits >>> 8 * i & 255;
+    const w = new Array(64);
+    for (let off = 0; off < padLen; off += 64) {
+      for (let i = 0; i < 16; i++) {
+        w[i] = buf[off + 4 * i] << 24 | buf[off + 4 * i + 1] << 16 | buf[off + 4 * i + 2] << 8 | buf[off + 4 * i + 3];
+      }
+      for (let i = 16; i < 64; i++) {
+        const x = w[i - 15], y = w[i - 2];
+        const s0 = (x >>> 7 | x << 25) ^ (x >>> 18 | x << 14) ^ x >>> 3;
+        const s1 = (y >>> 17 | y << 15) ^ (y >>> 19 | y << 13) ^ y >>> 10;
+        w[i] = w[i - 16] + s0 + w[i - 7] + s1 | 0;
+      }
+      let a = h[0], b = h[1], c = h[2], d = h[3], e = h[4], f = h[5], g = h[6], hh = h[7];
+      for (let i = 0; i < 64; i++) {
+        const S1 = (e >>> 6 | e << 26) ^ (e >>> 11 | e << 21) ^ (e >>> 25 | e << 7);
+        const t1 = hh + S1 + (e & f ^ ~e & g) + SHA256_K[i] + w[i] | 0;
+        const S0 = (a >>> 2 | a << 30) ^ (a >>> 13 | a << 19) ^ (a >>> 22 | a << 10);
+        const t2 = S0 + (a & b ^ a & c ^ b & c) | 0;
+        hh = g;
+        g = f;
+        f = e;
+        e = d + t1 | 0;
+        d = c;
+        c = b;
+        b = a;
+        a = t1 + t2 | 0;
+      }
+      h[0] = h[0] + a | 0;
+      h[1] = h[1] + b | 0;
+      h[2] = h[2] + c | 0;
+      h[3] = h[3] + d | 0;
+      h[4] = h[4] + e | 0;
+      h[5] = h[5] + f | 0;
+      h[6] = h[6] + g | 0;
+      h[7] = h[7] + hh | 0;
     }
+    const out = [];
+    for (let i = 0; i < 8; i++) out.push(h[i] >>> 24 & 255, h[i] >>> 16 & 255, h[i] >>> 8 & 255, h[i] & 255);
     return out;
   }
   function b64UrlEncode(bytes) {
@@ -1049,12 +1108,9 @@ var _Sources = (() => {
     return Object.keys(groups).sort().map((b) => groups[b].join("&")).join("&");
   }
   function signString(s) {
-    let data = utf8Encode(s);
-    for (let r = SIGN_STAGES.length - 1; r >= 0; r--) {
-      const st = SIGN_STAGES[r];
-      data = signRound(data, st.sboxB64, st.keyB64, st.iv);
-    }
-    return b64UrlEncode(data);
+    const inner = sha256FromMidstate(ISTATE, utf8Encode(s));
+    const outer = sha256FromMidstate(OSTATE, inner);
+    return TOKEN_PREFIX + b64UrlEncode(outer.slice(0, MAC_BYTES));
   }
   function fastGenerateHash(rawPath) {
     const stripped = rawPath.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "");
@@ -1069,7 +1125,7 @@ var _Sources = (() => {
 
   // src/ComixTo/ComixFastDecrypt.ts
   var B64_CHARS2 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  function b64Decode2(s) {
+  function b64Decode(s) {
     const lookup = new Array(128).fill(-1);
     for (let i = 0; i < 64; i++) lookup[B64_CHARS2.charCodeAt(i)] = i;
     const normalized = s.replace(/-/g, "+").replace(/_/g, "/");
@@ -1089,53 +1145,9 @@ var _Sources = (() => {
     }
     return out;
   }
-  var INV_CACHE = {};
-  function inverseSbox(tableB64) {
-    const cached = INV_CACHE[tableB64];
-    if (cached) return cached;
-    const table = b64Decode2(tableB64);
-    const inv = new Array(256).fill(0);
-    for (let i = 0; i < 256; i++) inv[table[i]] = i;
-    INV_CACHE[tableB64] = inv;
-    return inv;
-  }
-  var KEY_CACHE2 = {};
-  function keyBytes2(keyB64) {
-    const cached = KEY_CACHE2[keyB64];
-    if (cached) return cached;
-    const k = b64Decode2(keyB64);
-    KEY_CACHE2[keyB64] = k;
-    return k;
-  }
-  var DECRYPT_STAGES = [
-    {
-      "sboxB64": "+mhJSFwzaV+PQPDyKp2scO/S9SdFsy/7e56UWT8XHbK3E2+19nEPwfwOgE9uVCaDtOAWTobCZX+cBCXlIbBqyDyQB1beKLspW6kGPhBCV9x0jf0KUeFhHjmlMf7qMFIB41PfDFprZ3bJiK4YxrZDv+K6dcwJmggVO8f5ktrXTM0cZL4fer0SpnkbvNajPbHxfuTz5lVEBarOI4rdc+2V6zTsjpfQYjgN1MMr6EvA6eehN6dQ1bgUogt9rZOBbQBeNnLYY00uZqSoJBnFi5gthCJsWF33ykosn9v/9KB8udMCz0YRYImrA4VHr5mMgpH4xDXLeEHRd5vZOiAalofuMg==",
-      "keyB64": "yNHlokVEnuecesDrB/lDhVuUNiheWc3a47VtkwZ2ENg=",
-      "iv": 32
-    },
-    {
-      "sboxB64": "2lQehmgyYFAoWUi0haazZqHy5zZ34NN+VzlfsoB2Y1yY0IuMLjgVcV2xt8t4moH+AP0NMJ5qekW7DFIHEWKkOgIBIMhDdA8lbM6iHKjDlq6IChpb3CnA9NmsvQW/afdt1SfJjTdwcvpKqunCJLxBFmXX9hecm6tGb+HRxD7BC3njoxPxgnX5pdKP1IMSkd4/O3NRfZSE6DVLG2s9uexaipA05cpJzE8Qkv/z5jzHAwlEWOLd3yxA+0cvVbpOoJPFGc8f1lb4vu2HUxjuuEwEQk0GsPCVnyKvfOoh9TG2YYmZLV4I67UU2NsrrakqZ47k/O+ne25/DjPGZCMdnZcmzQ==",
-      "keyB64": "2USAq+VTo5ht4bQn+K9DUcpUQRTtrB56",
-      "iv": 133
-    },
-    {
-      "sboxB64": "gbicCvAMzfcXEtGAyjvvhmb2yCWzWhjqcxXZ7ZhpzANOzoQLo3nuPZ2vK9dkb9hJExC0Vni/hdQBceI+mw611gkhQFjBuf4bJg1TxYqM+SL4YDqtwjxiGSdeH7so7Fn1HiRo37Z+RNvl44twXWVhomtMjw+8bemfmv9XEXr7mS82MxaCOJZRR0oHd9PLI5O+gyBGT6hcLoduNa7yCObVVCk3bFWsoD+xcqTrBcP6dNJN/NB1Br2QGhSN2snHAqeRNKVFQiyeAFLPSKGwY8aq9EPgsi17qd4ywPMxiH8w6N1qX1tLKtzhOeemHWeJQfFQ5H23q7qSlJUcjgTEl3x2/Q==",
-      "keyB64": "rafYl4oSAKQX+GYoic9oW4iGwiYpZzs0",
-      "iv": 189
-    }
-  ];
-  function decryptRound(data, sboxB64, keyB64, iv) {
-    const inv = inverseSbox(sboxB64);
-    const key = keyBytes2(keyB64);
-    const out = new Array(data.length);
-    let prev = iv & 255;
-    for (let i = 0; i < data.length; i++) {
-      const c = data[i] & 255;
-      out[i] = (inv[c] ^ prev ^ key[i % key.length]) & 255;
-      prev = c;
-    }
-    return out;
-  }
+  var X_ENC = "2";
+  var KEY_B64 = "AfjQxRq8yu+FdQ9eEyA+E0ZiRsK94Kz4/FvjkNgqq8JjqBLnZQmfO9igp627Q2PW9CunsAOP75D+r9HZI9lk42BvPpMHmgVb6YvpsL24QhPkU4Z2nd43g1XXtk/VnYO7o8R6DAUtLg8OreYLkFEvqPDxuk4Pp+pXk4CGf8Su7lkLlLO4isx3v9WtruKQbP92hdeiPvTGe4yCSKikzLMk7C9e6mfOByLp1ZofdIs6SACjbvUMscGer7Z+sGEeSZSCums4wTNWhUGN6saGhcEjGid6guz4mfLeBAXAOtwsVKZFAX/zswpGXS7xV3vl6aFft0jPlbKaiPZfF/5KAFT/ziNGK0x2DtiDfHwQOgqO2YLzhtr5luWhHZYtmUuOu1i5ewd96X9B0jo/LVCd3rdjk88SlFjLH5Z8ESRoJ2s7mbrCy+1HdtJeG68XWpoiPsVQtoJxVar7oQgUl+515J6NXXWysSOVQcbzF7caEqxkANhKl5j8CDEm/qV3/Ck2ZPHWFI6oQhNGbtwzb02oHKWUy1DRBsnacyf/xvG4QNBo90Af8FfY5/U4vjoCVEE5VJka2vAIycsz1j/qim/nUU2SwS2rKwk+mmG50eHsaFWsPaFLecPVzMfyGud6kAwHNx308eE2ga6AukNEZMJmJZf9vSDW4u+o4HRm2qedjhhES/URYXeHI7Sk/3LJT/wDb3rH8UBO4oiZQqY1e6UB6doEevFovARZUpNmJBWu8n0Sx06yxcjUYK0QkSChj8SWqD/wUArqGpfQAmmZJN87QWmr1cojbzcYDOjI8HBCgxFD1wp/EDbmM12YsqNLD5eaMnX0tSPFe3zukmuzpEE/BtxKWxO7+bkg0JBjPmNrSRhDLI6T3tXZxR71JtSG4yccku5d7esaWAS85emmG5H0VwgEmzJTnAcvW5uqSkiWk+0qvKTlnS1OYDYwlk8BqChyueSlovDlDc42xe7HeDawBJPGjz0jr8fwLLvshZRN50Bg7MRUucy6/F5vmckI842btgTLpgxe6w9ZbWqcNHGh40YLko5WPir1LXHuL6i38T9KIDo7OLdSaYCCHZEZDAH6glTkj5tyU1mEfRY5LM0c52ioDy0zVnK1pqVfevJoPN19TLIr7XV21csdXZixL+Y3yDqsqUmRjTnqUK90XtnyWxbKF7ncgLgF6FsJRLGXlYw8UCYLThk/xHnKu6AH1G2w2yebRdo16N24oiLzqg7zJt3jhtujqeg3+1wN8+J/SeAeJn4NlVHQL4LDQDWAbF+cyLcy9tafJjpnWLR78kGD2yxJuM2U0021HRstCOVfxelhDS2fdzPYiOJR6NFE+6TRq23KvHr/S1Ti/FpaHP/AMZQeJw==";
+  var KEY = null;
   function utf8Decode(bytes) {
     let out = "";
     let i = 0;
@@ -1166,10 +1178,19 @@ var _Sources = (() => {
   function fastDecryptComixPayload(rawPath, payload, headers = {}) {
     if (!(payload && typeof payload === "object" && typeof payload.e === "string")) return payload;
     const h = normalizeHeaders(headers);
-    if (h["x-enc"] && h["x-enc"] !== "1") return payload;
-    let data = b64Decode2(payload.e);
-    for (const stage of DECRYPT_STAGES) data = decryptRound(data, stage.sboxB64, stage.keyB64, stage.iv);
-    const parsed = JSON.parse(utf8Decode(data));
+    if (h["x-enc"] && h["x-enc"] !== X_ENC) {
+      throw new Error("Comix x-enc " + h["x-enc"] + " is not supported (expected " + X_ENC + ") - the response cipher rotated; rerun the crypto pipeline");
+    }
+    const key = KEY ?? (KEY = b64Decode(KEY_B64));
+    const ct = b64Decode(payload.e);
+    const n = key.length;
+    let k = ct.length >= 2 ? (ct[0] << 8 | ct[1]) % n : 0;
+    const pt = new Array(Math.max(0, ct.length - 2));
+    for (let i = 0; i < pt.length; i++) {
+      pt[i] = ct[i + 2] ^ key[k];
+      if (++k === n) k = 0;
+    }
+    const parsed = JSON.parse(utf8Decode(pt));
     return parsed && typeof parsed === "object" && parsed.status === "ok" && "result" in parsed ? parsed.result : parsed;
   }
 
@@ -1950,7 +1971,7 @@ var _Sources = (() => {
     return /^https?:\/\/([^/]+\.)?comix\.to(\/|$|\?|#)/i.test(url ?? "");
   }
   var ComixToInfo = {
-    version: "1.9.22",
+    version: "1.9.23",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
