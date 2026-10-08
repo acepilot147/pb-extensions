@@ -225,7 +225,10 @@ Trigger condition (response interceptor): `headers["x-enc"]==="1"` &&
 **v3 — hmac-sha256-midstate (sign) / xor-offset (decrypt, `x-enc: 2`).** From
 bundle `88ef335b54f8` (`secure-tmhc4l-*.js`, 2026-10-06). v2 tokens now get
 403 `"Invalid token."`, and the v3 bundle no longer decrypts `x-enc: 1`.
-- Sign: `"gfs." + b64url(HMAC-SHA256(key, path[?canonicalQuery])[0:12])` —
+Keys rotate within v3: the 4-char token prefix is a key ID (`gfs.` →
+`hqm.` in bundle `b25adb6ca18c`, 2026-10-07), and a retired key's tokens get
+403 `"code":"key_retired"`. That is Section 3's case — just rerun the pipeline.
+- Sign: `"<keyId>." + b64url(HMAC-SHA256(key, path[?canonicalQuery])[0:12])` —
   fixed 20-char tokens. Same canonical query as v2. The key is baked in only as
   ipad/opad SHA-256 midstates. How it was found: no `atob` constants during
   signing, full avalanche, not GF(2)-affine → a hash; the op trace showed all
