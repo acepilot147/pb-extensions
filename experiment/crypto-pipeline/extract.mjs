@@ -21,7 +21,7 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   ROOT, bootBundle, liveSign, liveSignParams, liveDecrypt,
-  xorOffsetDecrypt, xorOffsetEncrypt, hmacMidstateSign, SHA256_K0, SHA256_K63, stableJson,
+  xorOffsetEncrypt, hmacMidstateSign, SHA256_K0, SHA256_K63, stableJson,
 } from "./lib.mjs";
 
 const OUT = resolve(ROOT, "experiment/crypto-pipeline/constants.json");
@@ -33,44 +33,50 @@ const TRACE_PATHS = ["/manga/aaaa1", "/manga/bbbb2"];
 const u32 = (v) => v >>> 0;
 const isWord = (v) => Number.isInteger(v) && Math.abs(v) < 2 ** 33 && Math.abs(v) > 0xffff;
 
-function extractDecryptTable(resI, traces, resetTraces) {
-  const decryptRaw = (ct) => {
-    resetTraces();
-    try { liveDecrypt(resI, Buffer.from(ct).toString("base64")); } catch { /* non-JSON plaintext: fine, we read the TextDecoder input */ }
-    const pt = traces.decoderInputs[traces.decoderInputs.length - 1];
-    if (!pt) throw new Error("no TextDecoder output captured — x-enc 2 decrypt path did not run");
-    return new Uint8Array(pt);
+// Read the XOR table through a JSON-digit oracle. Since bundle 7f5eff7ebada
+// (2026-10-10) the bundle decodes UTF-8 and parses JSON inside the VM — no
+// TextDecoder or JSON.parse — so raw plaintext is no longer observable. What is:
+// resI returns a number for a one-byte plaintext that is a JSON digit, and the
+// untouched {e} envelope otherwise. The 2-byte header puts any table index j at
+// plaintext position 0, so for each j: try body bytes c until one decodes to a
+// digit d → K[j] = c ^ ("0" + d). (~25 tries per index, ~0.4 ms each.)
+function extractDecryptTable(resI) {
+  const digitAt = (H) => {
+    for (let c = 0; c < 256; c++) {
+      let v;
+      try { v = liveDecrypt(resI, Buffer.from([H >> 8, H & 0xff, c]).toString("base64")); } catch { continue; }
+      if (typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 9) return c ^ (0x30 + v);
+    }
+    throw new Error(`no one-byte ciphertext decrypts to a digit at header ${H} — family changed (not a header-offset XOR table)`);
   };
 
-  // Keystream under header 0,0, long enough to see the period twice.
-  const N = 8192;
-  const ks = decryptRaw(new Uint8Array(N + 2));
-  if (ks.length !== N) throw new Error(`decrypt is not length-preserving after a 2-byte header (got ${ks.length} for ${N}) — family changed`);
+  // Period: the smallest P with K at header H equal to K at header H+P for a
+  // run of H (one byte matching by chance is 1/256, so require 8 in a row).
+  const head = Array.from({ length: 8 }, (_, h) => digitAt(h));
   let period = 0;
-  for (let p = 1; p <= N / 2 && !period; p++) {
-    let ok = true;
-    for (let i = 0; i + p < N; i++) if (ks[i] !== ks[i + p]) { ok = false; break; }
-    if (ok) period = p;
+  for (const P of [256, 512, 1024, 2048, 4096, 8192, 16384, 32768]) {
+    if (head.every((k, h) => digitAt(P + h) === k)) { period = P; break; }
   }
-  if (!period) throw new Error("keystream has no period ≤ 4096 — family changed (not a fixed XOR table)");
-  const K = ks.subarray(0, period);
+  if (!period) throw new Error("header offset has no power-of-two period ≤ 32768 — family changed");
 
-  // Verify the model (XOR, header-selected offset) on random ciphertexts.
-  for (let t = 0; t < 200; t++) {
-    const n = 2 + Math.floor(Math.random() * 3000);
-    const ct = new Uint8Array(n);
-    for (let i = 0; i < n; i++) ct[i] = Math.random() * 256 | 0;
-    const live = decryptRaw(ct), mine = xorOffsetDecrypt(ct, K);
-    if (Buffer.compare(Buffer.from(live), Buffer.from(mine)) !== 0) {
-      throw new Error(`xor-offset model mismatch (header ${ct[0]},${ct[1]}, len ${n}) — family changed`);
-    }
+  const K = new Uint8Array(period);
+  for (let j = 0; j < period; j++) K[j] = j < head.length ? head[j] : digitAt(j);
+
+  // Verify end-to-end through resI: real JSON envelopes (unicode, large, error
+  // bodies) under random headers, including offsets that wrap the table.
+  const samples = [
+    { status: "ok", result: { items: [{ id: 9000025, n: "1" }], unicode: "日本語 é → ✓ 😀", digits: "0123456789", n: [8, 88, 8.5] } },
+    { status: "ok", result: { items: Array.from({ length: 300 }, (_, i) => ({ id: i, t: "title " + i })) } },
+    { status: "error", message: "not found" },
+  ];
+  for (let t = 0; t < 30; t++) {
+    const sample = samples[t % samples.length];
+    const header = [Math.random() * 256 | 0, Math.random() * 256 | 0];
+    const e = Buffer.from(xorOffsetEncrypt(new Uint8Array(Buffer.from(JSON.stringify(sample), "utf8")), K, header)).toString("base64");
+    const live = liveDecrypt(resI, e);
+    const expected = sample.status === "ok" ? sample.result : sample;
+    if (stableJson(live) !== stableJson(expected)) throw new Error(`decrypt round-trip through live resI did not match (header ${header})`);
   }
-
-  // End-to-end through resI: real JSON envelope, unwrapped result.
-  const sample = { status: "ok", result: { items: [{ id: 9000025, n: "1" }], unicode: "日本語 é → ✓ 😀" } };
-  const e = Buffer.from(xorOffsetEncrypt(new Uint8Array(Buffer.from(JSON.stringify(sample), "utf8")), K, [0x12, 0x34])).toString("base64");
-  const live = liveDecrypt(resI, e);
-  if (stableJson(live) !== stableJson(sample.result)) throw new Error("decrypt round-trip through live resI did not match");
   return K;
 }
 
@@ -104,14 +110,26 @@ function extractSignerStates(bootInst) {
   liveSign(reqI, "/manga/warmup"); // first call lazily decodes VM bytecode; keep it out of the traces
   const traceA = feedForwardAdds(traceOps(() => liveSign(reqI, TRACE_PATHS[0])));
   const traceB = feedForwardAdds(traceOps(() => liveSign(reqI, TRACE_PATHS[1])));
-  const kset = new Set([SHA256_K63]);
+  // A state word is an addend in BOTH traces whose sums differ (the other addend
+  // is message-dependent). VM bookkeeping adds produce identical sums in both;
+  // data values never recur across the two messages. Matched by value, not by
+  // position — the VM may run a few extra adds for one message (bundle
+  // 7f5eff7ebada did), which broke index pairing.
   return [0, 1].map((c) => {
-    const A = traceA[c], B = traceB[c], state = [];
-    for (let i = 0; i < Math.min(A.length, B.length) && state.length < 8; i++) {
-      const [a1, b1, r1] = A[i], [a2, b2, r2] = B[i];
-      if (r1 === r2 || kset.has(a1) || kset.has(b1)) continue; // same result: VM bookkeeping, not data
-      if (a1 === a2) state.push(a1);
-      else if (b1 === b2) state.push(b1);
+    const sums = (adds) => {
+      const m = new Map();
+      for (const [a, b, r] of adds) for (const v of [a, b]) { if (!m.has(v)) m.set(v, new Set()); m.get(v).add(r); }
+      return m;
+    };
+    const A = traceA[c], sumsA = sums(A), sumsB = sums(traceB[c]);
+    const state = [];
+    for (const [a, b] of A) {
+      for (const v of [a, b]) {
+        if (v === SHA256_K63 || state.includes(v) || !sumsB.has(v)) continue;
+        const rb = sumsB.get(v);
+        if ([...sumsA.get(v)].every((r) => !rb.has(r))) state.push(v);
+      }
+      if (state.length === 8) break;
     }
     if (state.length !== 8) throw new Error(`compression ${c}: recovered ${state.length}/8 state words`);
     return state;
@@ -119,10 +137,10 @@ function extractSignerStates(bootInst) {
 }
 
 export function extract() {
-  const { bundleId, cfg, reqI, resI, traces, resetTraces } = bootBundle();
+  const { bundleId, cfg, reqI, resI } = bootBundle();
 
   // --- decrypt (x-enc 2) ---
-  const K = extractDecryptTable(resI, traces, resetTraces);
+  const K = extractDecryptTable(resI);
 
   // --- signer ---
   const probe = liveSign(reqI, "/manga/xlyyj");

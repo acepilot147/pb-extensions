@@ -228,6 +228,10 @@ bundle `88ef335b54f8` (`secure-tmhc4l-*.js`, 2026-10-06). v2 tokens now get
 Keys rotate within v3: the 4-char token prefix is a key ID (`gfs.` →
 `hqm.` in bundle `b25adb6ca18c`, 2026-10-07), and a retired key's tokens get
 403 `"code":"key_retired"`. That is Section 3's case — just rerun the pipeline.
+Bundle `7f5eff7ebada` (2026-10-10, key `6l1.`) also moved UTF-8 decoding and
+JSON parsing inside the VM (no `TextDecoder` / `JSON.parse` calls), so the
+§2 plaintext boundary is gone; extract.mjs now reads the table through a
+JSON-digit oracle on `resI` instead (see crypto-pipeline/README.md).
 - Sign: `"<keyId>." + b64url(HMAC-SHA256(key, path[?canonicalQuery])[0:12])` —
   fixed 20-char tokens. Same canonical query as v2. The key is baked in only as
   ipad/opad SHA-256 midstates. How it was found: no `atob` constants during

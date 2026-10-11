@@ -88,11 +88,11 @@ APIs — manual base64, UTF-8 and SHA-256), strict-mode clean, and embed the con
 | `validate.mjs` | transpile the **emitted** files and check them vs the live signer + `resI` |
 | `run.mjs` | orchestrate extract → generate → validate |
 
-## The algorithm (current: bundle `b25adb6ca18c`, 2026-10)
+## The algorithm (current: bundle `7f5eff7ebada`, 2026-10)
 
 **Key rotation ≠ family change.** A 403 with `"code":"key_retired"` means comix
 rotated the keys inside the same family (new token prefix, midstates and
-decrypt table — `gfs.` → `hqm.` on 2026-10-07). Refresh `ComixBundle.ts` and
+decrypt table — `gfs.` → `hqm.` on 2026-10-07, → `6l1.` on 2026-10-10). Refresh `ComixBundle.ts` and
 rerun `npm run crypto:pipeline`; no code changes needed.
 
 **Signer — `hmac-sha256-midstate`.**
@@ -123,18 +123,24 @@ derived from `cfg`) and rotate with `secure-*.js`. Previous families: see
 
 ## How extraction stays rotation-proof
 
-- **Decrypt table** read straight off the live decrypt: an all-zero body under
-  header `0,0` decrypts to `K` itself (captured at the `TextDecoder` boundary).
-  The period is measured, and the XOR/offset model is checked on 200 random
-  ciphertexts.
+- **Decrypt table** read through a JSON-digit oracle on the live `resI`. Since
+  bundle `7f5eff7ebada` the bundle decodes UTF-8 and parses JSON inside the VM
+  (no `TextDecoder`, no `JSON.parse`), so raw plaintext is not observable — but
+  a one-byte plaintext that is a JSON digit comes back as a number, anything
+  else returns the `{e}` envelope untouched. The 2-byte header puts any table
+  index `j` at position 0, so `K[j] = c ^ ("0" + digit)` for the first body
+  byte `c` that yields a digit (~25 tries/index, ~30 s total). The period is
+  found from the header arithmetic, and 30 full JSON round-trips through `resI`
+  (random headers, unicode, large lists, error bodies) verify the table.
 - **Signer midstates** read off the instrumented op trace
   (`bootBundle({ instrument: true })` rewrites every `^ & | << >> >>> + - * %`
   into a traced call; the anti-tamper does not notice). Each SHA-256
   compression ends with a feed-forward `state[i] + work[i]`; signing two
-  same-length messages, the `state[i]` operand stays fixed while the sum
-  changes — that isolates the 8 inner and 8 outer state words. Compressions
-  are located by where the standard SHA-256 round constants `K[0]`/`K[63]` are
-  used, never by VM names.
+  messages, a `state[i]` is an addend in both traces with different sums,
+  while VM bookkeeping adds give identical sums and data values never recur.
+  Matched **by value, not trace position** (the VM can run a few extra adds for
+  one message). Compressions are located by where the standard SHA-256 round
+  constants `K[0]`/`K[63]` are used, never by VM names.
 - **Self-verification** before writing: the native signer must reproduce live
   tokens for 150 random paths (1–3 SHA blocks, non-ASCII) plus a canonical
   query, and an encrypted round-trip must match the live `resI`.

@@ -1,38 +1,38 @@
 {
-  "bundleId": "b25adb6ca18c",
+  "bundleId": "7f5eff7ebada",
   "cfg": "ZZYdbXagjEpeaRwTE56mTpBkKVnnIBmAB3gdwWXXjEM7ZqAcLgonw0ylNjY621zM0zefn1Qg_jIQEn0oAIFnaXeGk3K4XZgY6S1Ldadwahluwgs-siIh0m-Lbw",
-  "generatedAt": "2026-10-08T04:44:54.129Z",
+  "generatedAt": "2026-10-11T01:56:33.570Z",
   "signer": {
     "algorithm": "hmac-sha256-midstate",
     "note": "token = prefix + b64url(HMAC-SHA256(key, path[?canonicalQuery])[0:macBytes]); istate/ostate = SHA-256 state after the ipad/opad block",
-    "prefix": "hqm.",
+    "prefix": "6l1.",
     "macBytes": 12,
     "istate": [
-      "0xeef74cba",
-      "0x9a98a869",
-      "0x89663ef4",
-      "0xd2154fb2",
-      "0x620ed2be",
-      "0x998f48ab",
-      "0x8c9cb5fa",
-      "0xfbec0670"
+      "0x9fae0fac",
+      "0xa31594fe",
+      "0x8e814c86",
+      "0x41bf4cf5",
+      "0xbea6d6be",
+      "0xd5475f99",
+      "0x4005e767",
+      "0xe05d6ecc"
     ],
     "ostate": [
-      "0x55c52c6e",
-      "0x4852f8cf",
-      "0x9cb15a73",
-      "0x89c7a929",
-      "0x69d17316",
-      "0xf96d3d0d",
-      "0x513adbe5",
-      "0xf232e7bd"
+      "0xd5fc724a",
+      "0xa46a1079",
+      "0x485fc67f",
+      "0x01068414",
+      "0x11112831",
+      "0x161901ad",
+      "0xe574c6c9",
+      "0x37818854"
     ]
   },
   "decrypt": {
     "algorithm": "xor-offset",
     "xEnc": "2",
     "note": "ct = [h0,h1,body]; off = ((h0<<8)|h1) % K.length; pt[i] = body[i] ^ K[(off+i) % K.length]",
-    "keyB64": "hW1+w0+50CDM0snPVoL3+Pubf0gvHOLo4dAiUVa87oYePhd1UeZlbDrs/BjT+5YyxDgSJ7q3WvUjWQt2TUbDuVaDTyr+GhJK9BBTvkydzVdC+MnNNXrHCYVuxwUzzip5PSqkH5DrVh/2dz2dZ3KqNvTNKXxecFBJzbKEkYepTE8y9ImOvrA+EWb3jGWQMQ8Sk+VNBZi6ZMWtlmeXJabd0kBxZ8CUA5BF5y2GwNT4u0BbGx6gbC/m74mwteLYlzBwoSx23VRWz0C7cvnYqyhJ8WqUP1IsJMbKFNo/0yrPiDk3w+iwSXV3yik7NYPbskHtktLag8tzaHEEKsYmHy2HGHenfkb13c2JouZuoJ08Erjbx/XyfOqU8F6ELEX3+UVJMAObeFx6/1ZMqNoGf6LQ42VM3sHVt5pjq6yKlLPZ/hlYaC+ytx4R1cGI7dnrrkNU4EplzOgkGYrvofHvDscoMH8BydutDn4XN9E6jmemkHlaGiaYcAdZnIFl++HPhgDBFhw8AFxM1WfSvQkhy2Pru5nZjIPj0PfujrL2/mfX+Twv9aOc+NinuAQYCqra9AdB8vhFkTPZY4nRZSY3uPlGa7QL8g6t6ZfhbGeoOqmh7nnH4oNBhQsVMfkQbqeb6zlfspIivp1dQpsYC1S1RG+iZg/DUYUwids+jBFWss02QuZo2i3mBTwyeGBN+LAqu/kuMUGe+NEckSgHRV359HXwSRhF5S2RrnD+YkuHJ41uNXmC8w7V6JUauTG3PXrCs4UmKa03sJtYhP8+5iFvOCE7K8I7sJ07zpFpTNMhjeZfgp6siB7RVJ57YqkF9sosiS4a78DEo9uOdiBDL747yB2uq3DKC2tH5IAsqtqG5rQuv8ooPYECbSV0ApemROY/F46C5H7Sg3xMItFMnk4hQKCri0BiiWR/BPshpkFpcjEM3SY+LzcEXCN02bJ9TSuh0G6uKA6U7N9aJjJ1vGfkHOT8X2PZS/TFaijdWqbNvhwi4ijoeLP8tHNVD7QH/ldtErey1NWH9rvg8BlcEXvvj4/UDEhZYD4hZ507GaONdQtKAMW8qPslqXXZytHGGevPo+eNCVWG2oIucPxI4bpEKQmYS4Y37znwN5ipOqGg3I10VoNuVzO0C2De6iBnnBG9r/Nl024zRjUmGjH0wY5j2XSF4bJKdbpF5CG/Wwpm1tGF6zrSMZDbIW0rj6xVqy18CacXq1nlWDiJkqkP7HAh6vh3QnXPXIFmZo4ZMxHrHDF9JSo2vwUnGm+49TWXEuWsWlj0nQFs/fexRnAecSwoVXzCcZ9bIvdu/wPavqsAO3/rFyYbIQ2hSj5MIfWOk0nhDx3YazFg2yzQJOSBtoozbW4SpQ=="
+    "keyB64": "cDNQYcFzO3AR9vKV8et8JNkOebp8PP11TcGlxXsoeMt1BFuv2iwnlwu7Jg+s8cuU8H5d9ONVhH4LJuUBaz9QvL06pn+Bf8YduuVx8Q1wkjo8/icdNOY40JZZeAE+dBDqJovgTiB+6r+aBaiX4RbywUzm8IiXZNrBcGjJDWK40wzHhLovM6viKdrA5B0D2OXOQMKZCpB84+VxmZN52SSBnzwA3a0XbSBko1Wh+y2x0WxdcsfhvGvW1rg5R787wZvW5hrCLd1sJn6yKQroj4xcwNcydlsyg1u63kUrEMwXXJhDjvh7RqqkAj8uowWUkx011H01RKy9TRws/zwuQam7ssq2G5hGRyGPYlUJLnEDM6pi47/wfNMO8i8HT/cL8FKDKRACWi1jdIKq1ehCGFvcWF/LCqeF2CO8XQbeM4l4hHhCnq0zundhWWp7YQpwEhIYzsp6u94insLyAWV8QoMG+2eiC0VimTnzCPTvb6HN/OOomkSblhSDYGxTWNQeLJ7FCTjK73Y+/QcQDIybmKC6NpUjmz5C893YqJXTsh7qdIRBj9vaXWuPM9XtY6U9Pf3esTuzLsAsitSeM4Zl2Fh7knia6GMnh8x5wtWSbBb0ukv1tlHyY5sD3YAkhHEEwpl7s/OEjGSVHLjTjSBbYI1jTZkkyoYiJNMwfrcd14qy6INwn4GSV9o/AY2TPTidwra5qLK05C6HWmZwn/vq5blJY8nGbHuEBuGowark4ooLM1h9bRMzCbBHMDenfc1xaH6rGI/ekdl+b8FrTs6gVFcnMW7t2xinoPCzOPGwhJ1Qh4jIPj4YajLhEsqZMa2tqhwtDXRCPKM8kea1vhdW07YezrvB7AWTwAjrvonyqIvka3sGSicUwgPFZPIqkniJMvvk2A7lQ5cELLb1wvryYlSAiBE2+gBnvnqj9hsnNPaDH92xL1/JHLJmwp6692OpqUf9s2KaqW90wqyaBlH8t0bYXFqCTdLcGM+mS1Bq+6NhBkXqfJ2odCItIF59NYoq5Ai19P1CS13YrZ5ixQH6fGFf1dNQrgIejZQztsMXKLMwwz4zqGLrdnQ7CleQwpEGB/2iOZFXyTizuGe2gTBJnYKhDdQqIRLh1nQun8jtX2wfQU+n51aWitPrSUQVEe6+SElJSnvU1hVSvtzeUmS0XXGeXtMUOQzVdSKjZ91dvYWjPsdL8DnsMSQyGV8HG5pXhzsWjFiTBVh9u5wULn537Xw1OMCbSlBj167XUmDF5LjzBb7vhOsTr9Ckr5oEbQxXA4FOQO0+epxlmTBieNwr3A/PzrLw3T2fjw4eQtT/373ZIg0P/7txtjsl4vh5U6hOF8Y5X6gPF75X/ScnCeBbwtBLeg=="
   },
   "verified": {
     "signer": true,
