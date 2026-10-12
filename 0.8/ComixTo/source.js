@@ -1281,13 +1281,42 @@ var _Sources = (() => {
     comixQueue = run.catch(() => void 0);
     return run;
   }
-  function throwIfSecurityCheck(response) {
+  function wafPassExpiry(cookie) {
+    const fromValue = /^(\d{10})\./.exec(cookie.value);
+    if (fromValue) return Number(fromValue[1]) * 1e3;
+    const expires = cookie.expires ? new Date(cookie.expires).getTime() : NaN;
+    return isNaN(expires) ? null : expires;
+  }
+  function throwIfSecurityCheck(response, requestManager) {
     if (response.status !== 403) return;
     const data = response.data ?? "";
     if (!data.includes("captcha_required") && !data.includes("/@waf/challenge")) return;
-    throw new Error(
-      `Comix security check required: comix.to is asking to verify you're human. Open this source in the web view (the Cloudflare / globe button), complete the "Verify you're human" check, then try again.`
-    );
+    const solve = `complete the "Verify you're human" check in the web view (the cloud / globe button), then retry`;
+    let detail;
+    let cookies = null;
+    try {
+      cookies = requestManager?.cookieStore?.getAllCookies() ?? null;
+    } catch {
+      cookies = null;
+    }
+    const pass = cookies?.find((c) => c.name === "waf_pass" && c.domain.replace(/^\./, "").endsWith("comix.to"));
+    if (!cookies) {
+      detail = `Please ${solve} within 5 minutes.`;
+    } else if (!pass) {
+      detail = `No security pass (waf_pass) found. Please ${solve}. If you just did, Paperback may not be sharing the web view's cookies with this source.`;
+    } else {
+      const expiry = wafPassExpiry(pass);
+      const now = Date.now();
+      if (expiry !== null && expiry <= now) {
+        const mins = Math.max(1, Math.round((now - expiry) / 6e4));
+        detail = `Your security pass expired ${mins} min ago (passes last about 5 minutes). Please ${solve}.`;
+      } else {
+        const left = expiry !== null ? ` (valid ~${Math.max(0, Math.round((expiry - now) / 1e3))}s more)` : "";
+        detail = `A security pass was found${left} but comix rejected it. Passes only work with the User-Agent they were issued to: if you changed Settings > Custom User-Agent after passing the check, or the web view uses a different User-Agent, ${solve}.`;
+      }
+    }
+    const ua = response.request?.headers?.["User-Agent"];
+    throw new Error(`Comix security check required: comix.to is asking to verify you're human. ${detail}${ua ? ` [UA: ${ua}]` : ""}`);
   }
   async function requestSignedUrl(requestManager, url) {
     return scheduleComix(requestManager, App.createRequest({
@@ -1300,8 +1329,8 @@ var _Sources = (() => {
       }
     }));
   }
-  function checkSignedResponseError(response) {
-    throwIfSecurityCheck(response);
+  function checkSignedResponseError(response, requestManager) {
+    throwIfSecurityCheck(response, requestManager);
     const data = response.data ?? "";
     const preview = data.substring(0, 200).replace(/\s+/g, " ");
     const headers = response.headers ?? {};
@@ -1345,7 +1374,7 @@ var _Sources = (() => {
     const status = response.status;
     const bytes = (response.data ?? "").length;
     try {
-      checkSignedResponseError(response);
+      checkSignedResponseError(response, requestManager);
     } catch (err) {
       emit({ label, path: telPath, status, bytes, signMs, fetchMs, parseMs: 0, decryptMs: 0, totalMs: Date.now() - totalStart });
       throw err;
@@ -1407,6 +1436,18 @@ var _Sources = (() => {
   var getUploaderInput = async (stateManager) => {
     return await stateManager.retrieve("uploader_input") ?? "";
   };
+  var customUserAgentCache = null;
+  var getCustomUserAgent = async (stateManager) => {
+    if (customUserAgentCache === null) {
+      customUserAgentCache = (await stateManager.retrieve("custom_user_agent") ?? "").trim();
+    }
+    return customUserAgentCache;
+  };
+  var setCustomUserAgent = async (stateManager, value) => {
+    const trimmed = (value ?? "").trim();
+    await stateManager.store("custom_user_agent", trimmed || null);
+    customUserAgentCache = trimmed;
+  };
   var getSelectedUploaders = async (stateManager) => {
     return await stateManager.retrieve("uploaders_selected") ?? [];
   };
@@ -1457,6 +1498,23 @@ var _Sources = (() => {
                 labelResolver: async (value) => {
                   return CONTENT_RATINGS.find((r) => r.id === value)?.label ?? value;
                 }
+              })
+            ])
+          }),
+          // 3. Network
+          App.createDUISection({
+            id: "network_settings",
+            header: "Network",
+            footer: "Leave blank to use Paperback's default. Used for every comix.to request and the cloud-button (web view) bypass. comix's security-check pass only works with the User-Agent it was issued to, so after changing this, complete the security check again.",
+            isHidden: false,
+            rows: async () => keepAlive([
+              App.createDUIInputField({
+                id: "custom_user_agent",
+                label: "Custom User-Agent",
+                value: App.createDUIBinding({
+                  get: async () => await getCustomUserAgent(stateManager),
+                  set: async (newValue) => await setCustomUserAgent(stateManager, newValue)
+                })
               })
             ])
           })
@@ -1768,6 +1826,7 @@ var _Sources = (() => {
         await stateManager.store("tag_and_mode", null);
         await stateManager.store("type_filter", null);
         await stateManager.store("comix.remoteConstants.v2", null);
+        await setCustomUserAgent(stateManager, null);
         resetTagCacheWarmUp();
       }
     }));
@@ -1987,7 +2046,7 @@ var _Sources = (() => {
     return /^https?:\/\/([^/]+\.)?comix\.to(\/|$|\?|#)/i.test(url ?? "");
   }
   var ComixToInfo = {
-    version: "1.9.26",
+    version: "1.9.27",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
@@ -2015,7 +2074,7 @@ var _Sources = (() => {
           interceptRequest: async (request) => {
             const headers = {
               ...request.headers ?? {},
-              "User-Agent": await this.requestManager.getDefaultUserAgent()
+              "User-Agent": await this.userAgent()
             };
             delete headers["referer"];
             if (isComixUrl(request.url)) headers["Referer"] = `${DOMAIN}/`;
@@ -2445,9 +2504,18 @@ var _Sources = (() => {
         method: "GET",
         headers: {
           "Referer": `${DOMAIN}/`,
-          "User-Agent": await this.requestManager.getDefaultUserAgent()
+          "User-Agent": await this.userAgent()
         }
       });
+    }
+    /**
+     * User-Agent for every comix.to request and the cloud-button bypass: the
+     * Custom User-Agent setting if set, else Paperback's default. Both must match —
+     * comix's security-check pass (waf_pass) is only accepted with the UA it was
+     * issued to.
+     */
+    async userAgent() {
+      return await getCustomUserAgent(this.stateManager) || await this.requestManager.getDefaultUserAgent();
     }
     checkResponseError(response) {
       const data = response.data ?? "";
@@ -2458,7 +2526,7 @@ var _Sources = (() => {
       const cfRay = headers["Cf-Ray"] ?? headers["cf-ray"] ?? "?";
       const reqUrl = response.request?.url ?? "?";
       const ctx = `status=${response.status} ct=${ct} server=${server} cf-ray=${cfRay} url=${reqUrl} preview="${preview}"`;
-      throwIfSecurityCheck(response);
+      throwIfSecurityCheck(response, this.requestManager);
       if (response.status < 200 || response.status >= 300) {
         throw new Error(`HTTP ${response.status}: Unexpected response from server [${ctx}]`);
       }
