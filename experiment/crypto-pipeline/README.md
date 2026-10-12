@@ -88,11 +88,11 @@ APIs — manual base64, UTF-8 and SHA-256), strict-mode clean, and embed the con
 | `validate.mjs` | transpile the **emitted** files and check them vs the live signer + `resI` |
 | `run.mjs` | orchestrate extract → generate → validate |
 
-## The algorithm (current: bundle `7f5eff7ebada`, 2026-10)
+## The algorithm (current: bundle `952cca07acbe`, 2026-10)
 
 **Key rotation ≠ family change.** A 403 with `"code":"key_retired"` means comix
 rotated the keys inside the same family (new token prefix, midstates and
-decrypt table — `gfs.` → `hqm.` on 2026-10-07, → `6l1.` on 2026-10-10). Refresh `ComixBundle.ts` and
+decrypt table — `gfs.` → `hqm.` on 2026-10-07, → `6l1.` on 2026-10-10, → `kuh.` on 2026-10-11). Refresh `ComixBundle.ts` and
 rerun `npm run crypto:pipeline`; no code changes needed.
 
 **Signer — `hmac-sha256-midstate`.**

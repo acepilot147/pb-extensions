@@ -22,7 +22,7 @@ import {
 } from "@paperback/types";
 
 import { Parser } from "./Parser";
-import { fetchSigned, signUrl, decodeComixResponse } from "./ComixHash";
+import { fetchSigned, signUrl, decodeComixResponse, scheduleComix, throwIfSecurityCheck } from "./ComixHash";
 import { emit } from "./Telemetry";
 import { debugLog, DEBUG } from "./DebugLog";
 import {
@@ -74,7 +74,7 @@ function isComixUrl(url: string): boolean {
 }
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.9.25",
+  version: "1.9.26",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -282,7 +282,7 @@ requestManager = App.createRequestManager({
     const path = apiPath.split("?")[0]!;
     const request = App.createRequest({ url: signedUrl, method: "GET" });
     const fetchStart = Date.now();
-    const response = await this.requestManager.schedule(request, 1);
+    const response = await scheduleComix(this.requestManager, request);
     const fetchMs = Date.now() - fetchStart;
     this.checkResponseError(response);
 
@@ -306,17 +306,14 @@ requestManager = App.createRequestManager({
       `${API_BASE}/manga/${mangaId}/chapters?page=${page}&limit=100&order[number]=desc`,
     );
 
+    // One page at a time (not Promise.all): a long series is 10–20 pages, and
+    // firing them in one burst is what trips comix's rate-based security check.
     const firstResult = await fetchPage(1);
     const lastPage = firstResult.meta?.lastPage ?? 1;
-
-    const restResults = lastPage > 1
-      ? await Promise.all(Array.from({ length: lastPage - 1 }, (_, i) => fetchPage(i + 2)))
-      : [];
-
-    const chapters: any[] = [
-      ...firstResult.items,
-      ...restResults.flatMap(r => r.items),
-    ];
+    const chapters: any[] = [...firstResult.items];
+    for (let page = 2; page <= lastPage; page++) {
+      chapters.push(...(await fetchPage(page)).items);
+    }
 
     const [isFiltering, isWhitelist, isStrict, savedGroups] = await Promise.all([
       getUploadersFiltering(this.stateManager),
@@ -689,6 +686,7 @@ requestManager = App.createRequestManager({
     const reqUrl = (response as any).request?.url ?? "?";
     const ctx = `status=${response.status} ct=${ct} server=${server} cf-ray=${cfRay} url=${reqUrl} preview="${preview}"`;
 
+    throwIfSecurityCheck(response);
     if (response.status < 200 || response.status >= 300) {
       throw new Error(`HTTP ${response.status}: Unexpected response from server [${ctx}]`);
     }

@@ -6,7 +6,7 @@ import {
 } from '@paperback/types'
 
 import { API_BASE, APIResponse, APIGenreItem, APIGenreResult, CONTENT_TYPES, CONTENT_RATINGS } from './Common'
-import { signUrl } from './ComixHash'
+import { scheduleComix, signUrl } from './ComixHash'
 
 interface TagCache {
     genre: APIGenreItem[];
@@ -318,7 +318,9 @@ const warmUpTagCache = (stateManager: SourceStateManager, requestManager: Reques
                         url: signUrl(`${API_BASE}/tags/search?type=${type}&limit=50`),
                         method: 'GET',
                     });
-                    const res = await requestManager.schedule(req, 1);
+                    const res = await scheduleComix(requestManager, req);
+                    // A 403 (e.g. the WAF security check) must not be cached as an empty tag list.
+                    if (res.status !== 200) throw new Error(`tags/search ${type}: HTTP ${res.status}`);
                     const json = JSON.parse(res.data ?? '{}') as APIResponse<APIGenreResult>;
                     return Array.isArray(json.result) ? json.result : [];
                 };

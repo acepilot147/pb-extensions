@@ -10,7 +10,7 @@
  *     experiment/crypto-pipeline/README.md)
  */
 
-import { RequestManager, Response } from "@paperback/types";
+import { Request, RequestManager, Response } from "@paperback/types";
 import { fastGenerateHash } from "./ComixFastSigner";
 import { fastDecryptComixPayload } from "./ComixFastDecrypt";
 import { emit } from "./Telemetry";
@@ -56,8 +56,36 @@ export function signUrl(url: string): string {
     return `${url}${sep}_=${token}`;
 }
 
+// comix blocks clients that hit its API too hard: since 2026-10 its own WAF
+// answers every request with 403 {"error":"captcha_required"} and redirects the
+// site to a "Verify you're human" check at /@waf/challenge (Mihon throttles to
+// 2 req/s for the same reason). Paperback 0.8 has no timers, so requests can't
+// be spaced in time; instead every comix.to API call goes through this
+// single-flight queue — one request in flight at a time, which at typical
+// latency (~250–400 ms) keeps it around 2–4 req/s instead of bursts of 10–20.
+// Images are on other hosts and don't go through here.
+let comixQueue: Promise<unknown> = Promise.resolve();
+
+export function scheduleComix(requestManager: RequestManager, request: Request): Promise<Response> {
+    const run = comixQueue.then(() => requestManager.schedule(request, 1));
+    comixQueue = run.catch(() => undefined);
+    return run;
+}
+
+// Turn the WAF's captcha wall into an actionable error instead of a bare 403.
+export function throwIfSecurityCheck(response: Response): void {
+    if (response.status !== 403) return;
+    const data = response.data ?? "";
+    if (!data.includes("captcha_required") && !data.includes("/@waf/challenge")) return;
+    throw new Error(
+        "Comix security check required: comix.to is asking to verify you're human. " +
+        "Open this source in the web view (the Cloudflare / globe button), complete the " +
+        "\"Verify you're human\" check, then try again.",
+    );
+}
+
 async function requestSignedUrl(requestManager: RequestManager, url: string): Promise<Response> {
-    return requestManager.schedule(App.createRequest({
+    return scheduleComix(requestManager, App.createRequest({
         url,
         method: "GET",
         headers: {
@@ -65,10 +93,11 @@ async function requestSignedUrl(requestManager: RequestManager, url: string): Pr
             "X-Requested-With": "XMLHttpRequest",
             "Referer": "https://comix.to/",
         },
-    }), 1);
+    }));
 }
 
 function checkSignedResponseError(response: Response): void {
+    throwIfSecurityCheck(response);
     const data = response.data ?? "";
     const preview = data.substring(0, 200).replace(/\s+/g, " ");
     const headers = response.headers ?? {};
