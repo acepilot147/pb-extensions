@@ -10,7 +10,7 @@
  *     experiment/crypto-pipeline/README.md)
  */
 
-import { Request, RequestManager, Response } from "@paperback/types";
+import { Cookie, Request, RequestManager, Response } from "@paperback/types";
 import { fastGenerateHash } from "./ComixFastSigner";
 import { fastDecryptComixPayload } from "./ComixFastDecrypt";
 import { emit } from "./Telemetry";
@@ -72,16 +72,45 @@ export function scheduleComix(requestManager: RequestManager, request: Request):
     return run;
 }
 
-// Turn the WAF's captcha wall into an actionable error instead of a bare 403.
-export function throwIfSecurityCheck(response: Response): void {
+// Passing the check (POST /@waf/verify) sets an HttpOnly `waf_pass` cookie that
+// clears the wall for ~5 minutes, and only for the User-Agent it was issued to.
+// Its value starts with its own unix expiry ("1791779685.<sig>").
+function wafPassExpiry(cookie: Cookie): number | null {
+    const fromValue = /^(\d{10})\./.exec(cookie.value);
+    if (fromValue) return Number(fromValue[1]) * 1000;
+    const expires = cookie.expires ? new Date(cookie.expires).getTime() : NaN;
+    return isNaN(expires) ? null : expires;
+}
+
+// Turn the WAF's captcha wall into an actionable error instead of a bare 403,
+// saying what state the user's waf_pass is in (from Paperback's cookie store).
+export function throwIfSecurityCheck(response: Response, requestManager?: RequestManager): void {
     if (response.status !== 403) return;
     const data = response.data ?? "";
     if (!data.includes("captcha_required") && !data.includes("/@waf/challenge")) return;
-    throw new Error(
-        "Comix security check required: comix.to is asking to verify you're human. " +
-        "Open this source in the web view (the Cloudflare / globe button), complete the " +
-        "\"Verify you're human\" check, then try again.",
-    );
+
+    const solve = "complete the \"Verify you're human\" check in the web view (the cloud / globe button), then retry";
+    let detail: string;
+    let cookies: Cookie[] | null = null;
+    try { cookies = requestManager?.cookieStore?.getAllCookies() ?? null; } catch { cookies = null; }
+    const pass = cookies?.find((c) => c.name === "waf_pass" && c.domain.replace(/^\./, "").endsWith("comix.to"));
+    if (!cookies) {
+        detail = `Please ${solve} within 5 minutes.`;
+    } else if (!pass) {
+        detail = `No security pass (waf_pass) found. Please ${solve}. If you just did, Paperback may not be sharing the web view's cookies with this source.`;
+    } else {
+        const expiry = wafPassExpiry(pass);
+        const now = Date.now();
+        if (expiry !== null && expiry <= now) {
+            const mins = Math.max(1, Math.round((now - expiry) / 60000));
+            detail = `Your security pass expired ${mins} min ago (passes last about 5 minutes). Please ${solve}.`;
+        } else {
+            const left = expiry !== null ? ` (valid ~${Math.max(0, Math.round((expiry - now) / 1000))}s more)` : "";
+            detail = `A security pass was found${left} but comix rejected it. Passes only work with the User-Agent they were issued to: if you changed Settings > Custom User-Agent after passing the check, or the web view uses a different User-Agent, ${solve}.`;
+        }
+    }
+    const ua = (response as any).request?.headers?.["User-Agent"] as string | undefined;
+    throw new Error(`Comix security check required: comix.to is asking to verify you're human. ${detail}${ua ? ` [UA: ${ua}]` : ""}`);
 }
 
 async function requestSignedUrl(requestManager: RequestManager, url: string): Promise<Response> {
@@ -96,8 +125,8 @@ async function requestSignedUrl(requestManager: RequestManager, url: string): Pr
     }));
 }
 
-function checkSignedResponseError(response: Response): void {
-    throwIfSecurityCheck(response);
+function checkSignedResponseError(response: Response, requestManager: RequestManager): void {
+    throwIfSecurityCheck(response, requestManager);
     const data = response.data ?? "";
     const preview = data.substring(0, 200).replace(/\s+/g, " ");
     const headers = response.headers ?? {};
@@ -174,7 +203,7 @@ export async function fetchSigned<T>(
     const bytes = (response.data ?? "").length;
 
     try {
-        checkSignedResponseError(response);
+        checkSignedResponseError(response, requestManager);
     } catch (err) {
         emit({ label, path: telPath, status, bytes, signMs, fetchMs, parseMs: 0, decryptMs: 0, totalMs: Date.now() - totalStart });
         throw err;

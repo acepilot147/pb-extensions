@@ -83,6 +83,24 @@ export const getUploaderInput = async (stateManager: SourceStateManager): Promis
     return (await stateManager.retrieve('uploader_input') as string) ?? '';
 }
 
+// Custom User-Agent for every comix.to request and the cloud-button bypass
+// request ('' = Paperback's default). Cached in memory because the request
+// interceptor reads it on every request, images included.
+let customUserAgentCache: string | null = null;
+
+export const getCustomUserAgent = async (stateManager: SourceStateManager): Promise<string> => {
+    if (customUserAgentCache === null) {
+        customUserAgentCache = ((await stateManager.retrieve('custom_user_agent') as string | null) ?? '').trim();
+    }
+    return customUserAgentCache;
+}
+
+const setCustomUserAgent = async (stateManager: SourceStateManager, value: string | null): Promise<void> => {
+    const trimmed = (value ?? '').trim();
+    await stateManager.store('custom_user_agent', trimmed || null);
+    customUserAgentCache = trimmed;
+}
+
 export const getSelectedUploaders = async (stateManager: SourceStateManager): Promise<string[]> => {
     return (await stateManager.retrieve('uploaders_selected') as string[]) ??[];
 }
@@ -136,6 +154,23 @@ export const contentSettings = (stateManager: SourceStateManager): DUINavigation
                             labelResolver: async (value: string) => {
                                 return CONTENT_RATINGS.find(r => r.id === value)?.label ?? value;
                             }
+                        })
+                    ])
+                }),
+                // 3. Network
+                App.createDUISection({
+                    id: 'network_settings',
+                    header: 'Network',
+                    footer: "Leave blank to use Paperback's default. Used for every comix.to request and the cloud-button (web view) bypass. comix's security-check pass only works with the User-Agent it was issued to, so after changing this, complete the security check again.",
+                    isHidden: false,
+                    rows: async () => keepAlive([
+                        App.createDUIInputField({
+                            id: 'custom_user_agent',
+                            label: 'Custom User-Agent',
+                            value: App.createDUIBinding({
+                                get: async () => await getCustomUserAgent(stateManager),
+                                set: async (newValue: string) => await setCustomUserAgent(stateManager, newValue)
+                            })
                         })
                     ])
                 })
@@ -478,6 +513,7 @@ export const resetSettings = (stateManager: SourceStateManager): DUIButton => {
             await stateManager.store('tag_and_mode', null);
             await stateManager.store('type_filter', null);
             await stateManager.store('comix.remoteConstants.v2', null);
+            await setCustomUserAgent(stateManager, null);
             resetTagCacheWarmUp();
         }
     }))

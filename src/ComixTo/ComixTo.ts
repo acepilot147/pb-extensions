@@ -55,6 +55,7 @@ import {
     getTagAndMode,
     getTypeFilter,
     getCachedTags,
+    getCustomUserAgent,
 } from "./Settings";
 
 import { readEncHeaders, decryptComixImageByParams, readScrambleHeaders, computeDescrambleLookup } from './ComixDescramble';
@@ -74,7 +75,7 @@ function isComixUrl(url: string): boolean {
 }
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.9.26",
+  version: "1.9.27",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -112,7 +113,7 @@ requestManager = App.createRequestManager({
     interceptRequest: async (request: Request): Promise<Request> => {
       const headers: Record<string, string> = {
         ...(request.headers ?? {}),
-        "User-Agent": await this.requestManager.getDefaultUserAgent()
+        "User-Agent": await this.userAgent()
       };
       // Only comix.to itself gets the comix Referer. Page images are served from a
       // rotating pool of third-party hosts (e.g. 447.nickslog.site/hi/<token>, seen
@@ -670,9 +671,19 @@ requestManager = App.createRequestManager({
       method: "GET",
       headers: {
         "Referer": `${DOMAIN}/`,
-        "User-Agent": await this.requestManager.getDefaultUserAgent()
+        "User-Agent": await this.userAgent()
       },
     });
+  }
+
+  /**
+   * User-Agent for every comix.to request and the cloud-button bypass: the
+   * Custom User-Agent setting if set, else Paperback's default. Both must match —
+   * comix's security-check pass (waf_pass) is only accepted with the UA it was
+   * issued to.
+   */
+  private async userAgent(): Promise<string> {
+    return (await getCustomUserAgent(this.stateManager)) || (await this.requestManager.getDefaultUserAgent());
   }
 
   checkResponseError(response: Response): void {
@@ -686,7 +697,7 @@ requestManager = App.createRequestManager({
     const reqUrl = (response as any).request?.url ?? "?";
     const ctx = `status=${response.status} ct=${ct} server=${server} cf-ray=${cfRay} url=${reqUrl} preview="${preview}"`;
 
-    throwIfSecurityCheck(response);
+    throwIfSecurityCheck(response, this.requestManager);
     if (response.status < 200 || response.status >= 300) {
       throw new Error(`HTTP ${response.status}: Unexpected response from server [${ctx}]`);
     }
