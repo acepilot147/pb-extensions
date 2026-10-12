@@ -1436,17 +1436,51 @@ var _Sources = (() => {
   var getUploaderInput = async (stateManager) => {
     return await stateManager.retrieve("uploader_input") ?? "";
   };
-  var customUserAgentCache = null;
-  var getCustomUserAgent = async (stateManager) => {
-    if (customUserAgentCache === null) {
-      customUserAgentCache = (await stateManager.retrieve("custom_user_agent") ?? "").trim();
+  var USER_AGENT_DEFAULT_ID = "default";
+  var USER_AGENT_PRESETS = [
+    { id: "iphone-safari-18-3-1", label: "iPhone \xB7 Safari 18.3.1 (iOS 18.3.2)", ua: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3.1 Mobile/15E148 Safari/604.1" },
+    // ending repaired (truncated upstream)
+    { id: "iphone-safari-18-3", label: "iPhone \xB7 Safari 18.3 (iOS 18.3.1)", ua: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1" },
+    // ending repaired (truncated upstream)
+    { id: "iphone-safari-18-1", label: "iPhone \xB7 Safari 18.1.1 (iOS 18.1.1)", ua: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_1_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1.1 Mobile/15E148 Safari/604.1" },
+    // ending repaired (truncated upstream)
+    { id: "iphone-safari-18-3-ios17", label: "iPhone \xB7 Safari 18.3 (iOS 17.7.2)", ua: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_7_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1" },
+    { id: "iphone-safari-17-5", label: "iPhone \xB7 Safari 17.5 (iOS 17.5.1)", ua: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1" },
+    // ending repaired (truncated upstream)
+    { id: "iphone-safari-16-6", label: "iPhone \xB7 Safari 16.6 (iOS 16.7.10)", ua: "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_10 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1" },
+    // ending repaired (truncated upstream)
+    { id: "iphone-chrome-134", label: "iPhone \xB7 Chrome 134 (iOS 18.3.2)", ua: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/134.0.6998.99 Mobile/15E148 Safari/604.1" },
+    // ending repaired (truncated upstream)
+    { id: "iphone-edge-134", label: "iPhone \xB7 Edge 134 (iOS 17.7.2)", ua: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_7_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 EdgiOS/134.3124.77 Mobile/15E148 Safari/605.1.15" },
+    { id: "iphone-firefox-136", label: "iPhone \xB7 Firefox 136 (iOS 14.7.4)", ua: "Mozilla/5.0 (iPhone; CPU iPhone OS 14_7_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/136.0 Mobile/15E148 Safari/605.1.15" },
+    { id: "ipad-safari-18-3", label: "iPad \xB7 Safari 18.3 (iPadOS 17.7.2)", ua: "Mozilla/5.0 (iPad; CPU OS 17_7_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1" },
+    { id: "ipad-firefox-136", label: "iPad \xB7 Firefox 136 (iPadOS 14.7.4)", ua: "Mozilla/5.0 (iPad; CPU OS 14_7_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/136.0 Mobile/15E148 Safari/605.1.15" },
+    { id: "mac-safari-18-3", label: "Mac \xB7 Safari 18.3 (macOS 14.7.4)", ua: "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Safari/605.1.15" }
+  ];
+  var userAgentOverrideCache = null;
+  var getCustomUserAgent = async (stateManager) => (await stateManager.retrieve("custom_user_agent") ?? "").trim();
+  var getUserAgentPresetId = async (stateManager) => {
+    const val = await stateManager.retrieve("user_agent_preset");
+    const id = val?.[0] ?? USER_AGENT_DEFAULT_ID;
+    return USER_AGENT_PRESETS.some((p) => p.id === id) ? id : USER_AGENT_DEFAULT_ID;
+  };
+  var getUserAgentOverride = async (stateManager) => {
+    if (userAgentOverrideCache === null) {
+      const custom = await getCustomUserAgent(stateManager);
+      const presetId = await getUserAgentPresetId(stateManager);
+      userAgentOverrideCache = custom || (USER_AGENT_PRESETS.find((p) => p.id === presetId)?.ua ?? "");
     }
-    return customUserAgentCache;
+    return userAgentOverrideCache;
   };
   var setCustomUserAgent = async (stateManager, value) => {
     const trimmed = (value ?? "").trim();
     await stateManager.store("custom_user_agent", trimmed || null);
-    customUserAgentCache = trimmed;
+    userAgentOverrideCache = null;
+  };
+  var setUserAgentPreset = async (stateManager, value) => {
+    const id = value?.[0];
+    await stateManager.store("user_agent_preset", id && id !== USER_AGENT_DEFAULT_ID ? [id] : null);
+    userAgentOverrideCache = null;
   };
   var getSelectedUploaders = async (stateManager) => {
     return await stateManager.retrieve("uploaders_selected") ?? [];
@@ -1505,9 +1539,23 @@ var _Sources = (() => {
           App.createDUISection({
             id: "network_settings",
             header: "Network",
-            footer: "Leave blank to use Paperback's default. Used for every comix.to request and the cloud-button (web view) bypass. comix's security-check pass only works with the User-Agent it was issued to, so after changing this, complete the security check again.",
+            footer: "Used for every comix.to request and the cloud-button (web view) bypass. Typing a Custom User-Agent overrides the selection above it; clear it to go back. comix's security-check pass only works with the User-Agent it was issued to, so after changing either, complete the security check again.",
             isHidden: false,
             rows: async () => keepAlive([
+              App.createDUISelect({
+                id: "user_agent_preset",
+                label: "User-Agent",
+                options: [USER_AGENT_DEFAULT_ID, ...USER_AGENT_PRESETS.map((p) => p.id)],
+                value: App.createDUIBinding({
+                  get: async () => [await getUserAgentPresetId(stateManager)],
+                  set: async (newValue) => await setUserAgentPreset(stateManager, newValue)
+                }),
+                allowsMultiselect: false,
+                labelResolver: async (value) => {
+                  if (value === USER_AGENT_DEFAULT_ID) return "Paperback default";
+                  return USER_AGENT_PRESETS.find((p) => p.id === value)?.label ?? value;
+                }
+              }),
               App.createDUIInputField({
                 id: "custom_user_agent",
                 label: "Custom User-Agent",
@@ -1515,6 +1563,14 @@ var _Sources = (() => {
                   get: async () => await getCustomUserAgent(stateManager),
                   set: async (newValue) => await setCustomUserAgent(stateManager, newValue)
                 })
+              }),
+              App.createDUIButton({
+                id: "reset_user_agent",
+                label: "Reset User-Agent to Default",
+                onTap: async () => {
+                  await setCustomUserAgent(stateManager, null);
+                  await setUserAgentPreset(stateManager, null);
+                }
               })
             ])
           })
@@ -1827,6 +1883,7 @@ var _Sources = (() => {
         await stateManager.store("type_filter", null);
         await stateManager.store("comix.remoteConstants.v2", null);
         await setCustomUserAgent(stateManager, null);
+        await setUserAgentPreset(stateManager, null);
         resetTagCacheWarmUp();
       }
     }));
@@ -2046,7 +2103,7 @@ var _Sources = (() => {
     return /^https?:\/\/([^/]+\.)?comix\.to(\/|$|\?|#)/i.test(url ?? "");
   }
   var ComixToInfo = {
-    version: "1.9.27",
+    version: "1.9.28",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
@@ -2510,12 +2567,13 @@ var _Sources = (() => {
     }
     /**
      * User-Agent for every comix.to request and the cloud-button bypass: the
-     * Custom User-Agent setting if set, else Paperback's default. Both must match —
+     * Network settings (Custom User-Agent text, else the selected preset), else
+     * Paperback's default. Both must match —
      * comix's security-check pass (waf_pass) is only accepted with the UA it was
      * issued to.
      */
     async userAgent() {
-      return await getCustomUserAgent(this.stateManager) || await this.requestManager.getDefaultUserAgent();
+      return await getUserAgentOverride(this.stateManager) || await this.requestManager.getDefaultUserAgent();
     }
     checkResponseError(response) {
       const data = response.data ?? "";
