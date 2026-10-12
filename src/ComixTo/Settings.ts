@@ -83,22 +83,61 @@ export const getUploaderInput = async (stateManager: SourceStateManager): Promis
     return (await stateManager.retrieve('uploader_input') as string) ?? '';
 }
 
-// Custom User-Agent for every comix.to request and the cloud-button bypass
-// request ('' = Paperback's default). Cached in memory because the request
-// interceptor reads it on every request, images included.
-let customUserAgentCache: string | null = null;
+// User-Agent for every comix.to request and the cloud-button bypass request.
+// Priority: Custom User-Agent text (if anything is typed) > the selected preset
+// > Paperback's default. Presets: Apple-WebKit entries from keiyoushi's list
+// (keiyoushi.github.io/user-agents/user-agents.json, snapshot 2026-10) — Paperback
+// talks to the network through Apple's stack, so a Windows/Android User-Agent
+// would mismatch the connection and is more likely to trip comix's firewall.
+// The effective value is cached in memory: the request interceptor reads it on
+// every request, images included.
+export const USER_AGENT_DEFAULT_ID = 'default';
+export const USER_AGENT_PRESETS: { id: string; label: string; ua: string }[] = [
+{ id: 'iphone-safari-18-3-1', label: 'iPhone · Safari 18.3.1 (iOS 18.3.2)', ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3.1 Mobile/15E148 Safari/604.1' }, // ending repaired (truncated upstream)
+    { id: 'iphone-safari-18-3', label: 'iPhone · Safari 18.3 (iOS 18.3.1)', ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1' }, // ending repaired (truncated upstream)
+    { id: 'iphone-safari-18-1', label: 'iPhone · Safari 18.1.1 (iOS 18.1.1)', ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1.1 Mobile/15E148 Safari/604.1' }, // ending repaired (truncated upstream)
+    { id: 'iphone-safari-18-3-ios17', label: 'iPhone · Safari 18.3 (iOS 17.7.2)', ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_7_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1' },
+    { id: 'iphone-safari-17-5', label: 'iPhone · Safari 17.5 (iOS 17.5.1)', ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1' }, // ending repaired (truncated upstream)
+    { id: 'iphone-safari-16-6', label: 'iPhone · Safari 16.6 (iOS 16.7.10)', ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_10 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1' }, // ending repaired (truncated upstream)
+    { id: 'iphone-chrome-134', label: 'iPhone · Chrome 134 (iOS 18.3.2)', ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/134.0.6998.99 Mobile/15E148 Safari/604.1' }, // ending repaired (truncated upstream)
+    { id: 'iphone-edge-134', label: 'iPhone · Edge 134 (iOS 17.7.2)', ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_7_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 EdgiOS/134.3124.77 Mobile/15E148 Safari/605.1.15' },
+    { id: 'iphone-firefox-136', label: 'iPhone · Firefox 136 (iOS 14.7.4)', ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_7_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/136.0 Mobile/15E148 Safari/605.1.15' },
+    { id: 'ipad-safari-18-3', label: 'iPad · Safari 18.3 (iPadOS 17.7.2)', ua: 'Mozilla/5.0 (iPad; CPU OS 17_7_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1' },
+    { id: 'ipad-firefox-136', label: 'iPad · Firefox 136 (iPadOS 14.7.4)', ua: 'Mozilla/5.0 (iPad; CPU OS 14_7_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/136.0 Mobile/15E148 Safari/605.1.15' },
+    { id: 'mac-safari-18-3', label: 'Mac · Safari 18.3 (macOS 14.7.4)', ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Safari/605.1.15' },
+];
 
-export const getCustomUserAgent = async (stateManager: SourceStateManager): Promise<string> => {
-    if (customUserAgentCache === null) {
-        customUserAgentCache = ((await stateManager.retrieve('custom_user_agent') as string | null) ?? '').trim();
+let userAgentOverrideCache: string | null = null;
+
+const getCustomUserAgent = async (stateManager: SourceStateManager): Promise<string> =>
+    ((await stateManager.retrieve('custom_user_agent') as string | null) ?? '').trim();
+
+const getUserAgentPresetId = async (stateManager: SourceStateManager): Promise<string> => {
+    const val = await stateManager.retrieve('user_agent_preset') as string[] | null;
+    const id = val?.[0] ?? USER_AGENT_DEFAULT_ID;
+    return USER_AGENT_PRESETS.some(p => p.id === id) ? id : USER_AGENT_DEFAULT_ID;
+}
+
+/** The User-Agent to send, or '' for Paperback's default. */
+export const getUserAgentOverride = async (stateManager: SourceStateManager): Promise<string> => {
+    if (userAgentOverrideCache === null) {
+        const custom = await getCustomUserAgent(stateManager);
+        const presetId = await getUserAgentPresetId(stateManager);
+        userAgentOverrideCache = custom || (USER_AGENT_PRESETS.find(p => p.id === presetId)?.ua ?? '');
     }
-    return customUserAgentCache;
+    return userAgentOverrideCache;
 }
 
 const setCustomUserAgent = async (stateManager: SourceStateManager, value: string | null): Promise<void> => {
     const trimmed = (value ?? '').trim();
     await stateManager.store('custom_user_agent', trimmed || null);
-    customUserAgentCache = trimmed;
+    userAgentOverrideCache = null;
+}
+
+const setUserAgentPreset = async (stateManager: SourceStateManager, value: string[] | null): Promise<void> => {
+    const id = value?.[0];
+    await stateManager.store('user_agent_preset', id && id !== USER_AGENT_DEFAULT_ID ? [id] : null);
+    userAgentOverrideCache = null;
 }
 
 export const getSelectedUploaders = async (stateManager: SourceStateManager): Promise<string[]> => {
@@ -161,9 +200,23 @@ export const contentSettings = (stateManager: SourceStateManager): DUINavigation
                 App.createDUISection({
                     id: 'network_settings',
                     header: 'Network',
-                    footer: "Leave blank to use Paperback's default. Used for every comix.to request and the cloud-button (web view) bypass. comix's security-check pass only works with the User-Agent it was issued to, so after changing this, complete the security check again.",
+                    footer: "Used for every comix.to request and the cloud-button (web view) bypass. Typing a Custom User-Agent overrides the selection above it; clear it to go back. comix's security-check pass only works with the User-Agent it was issued to, so after changing either, complete the security check again.",
                     isHidden: false,
                     rows: async () => keepAlive([
+                        App.createDUISelect({
+                            id: 'user_agent_preset',
+                            label: 'User-Agent',
+                            options: [USER_AGENT_DEFAULT_ID, ...USER_AGENT_PRESETS.map(p => p.id)],
+                            value: App.createDUIBinding({
+                                get: async () => [await getUserAgentPresetId(stateManager)],
+                                set: async (newValue: string[]) => await setUserAgentPreset(stateManager, newValue)
+                            }),
+                            allowsMultiselect: false,
+                            labelResolver: async (value: string) => {
+                                if (value === USER_AGENT_DEFAULT_ID) return 'Paperback default';
+                                return USER_AGENT_PRESETS.find(p => p.id === value)?.label ?? value;
+                            }
+                        }),
                         App.createDUIInputField({
                             id: 'custom_user_agent',
                             label: 'Custom User-Agent',
@@ -171,6 +224,14 @@ export const contentSettings = (stateManager: SourceStateManager): DUINavigation
                                 get: async () => await getCustomUserAgent(stateManager),
                                 set: async (newValue: string) => await setCustomUserAgent(stateManager, newValue)
                             })
+                        }),
+                        App.createDUIButton({
+                            id: 'reset_user_agent',
+                            label: 'Reset User-Agent to Default',
+                            onTap: async () => {
+                                await setCustomUserAgent(stateManager, null);
+                                await setUserAgentPreset(stateManager, null);
+                            }
                         })
                     ])
                 })
@@ -514,6 +575,7 @@ export const resetSettings = (stateManager: SourceStateManager): DUIButton => {
             await stateManager.store('type_filter', null);
             await stateManager.store('comix.remoteConstants.v2', null);
             await setCustomUserAgent(stateManager, null);
+            await setUserAgentPreset(stateManager, null);
             resetTagCacheWarmUp();
         }
     }))

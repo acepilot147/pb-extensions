@@ -55,7 +55,7 @@ import {
     getTagAndMode,
     getTypeFilter,
     getCachedTags,
-    getCustomUserAgent,
+    getUserAgentOverride,
 } from "./Settings";
 
 import { readEncHeaders, decryptComixImageByParams, readScrambleHeaders, computeDescrambleLookup } from './ComixDescramble';
@@ -75,7 +75,7 @@ function isComixUrl(url: string): boolean {
 }
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.9.27",
+  version: "1.9.28",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -678,12 +678,13 @@ requestManager = App.createRequestManager({
 
   /**
    * User-Agent for every comix.to request and the cloud-button bypass: the
-   * Custom User-Agent setting if set, else Paperback's default. Both must match —
+   * Network settings (Custom User-Agent text, else the selected preset), else
+   * Paperback's default. Both must match —
    * comix's security-check pass (waf_pass) is only accepted with the UA it was
    * issued to.
    */
   private async userAgent(): Promise<string> {
-    return (await getCustomUserAgent(this.stateManager)) || (await this.requestManager.getDefaultUserAgent());
+    return (await getUserAgentOverride(this.stateManager)) || (await this.requestManager.getDefaultUserAgent());
   }
 
   checkResponseError(response: Response): void {
