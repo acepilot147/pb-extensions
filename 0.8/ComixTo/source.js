@@ -910,10 +910,10 @@ var _Sources = (() => {
 
   // src/ComixTo/ComixFastSigner.ts
   var B64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  var TOKEN_PREFIX = "6l1.";
+  var TOKEN_PREFIX = "kuh.";
   var MAC_BYTES = 12;
-  var ISTATE = [2678984620, 2736100606, 2390838406, 1103056117, 3198604990, 3578224537, 1074128743, 3764219596];
-  var OSTATE = [3590091338, 2758414457, 1214236287, 17204244, 286337073, 370737581, 3849635529, 931235924];
+  var ISTATE = [1244152716, 1278920240, 1207175159, 2476044375, 2316597635, 4285837010, 4196377512, 3799384193];
+  var OSTATE = [892551870, 2302264214, 3040572778, 2386034351, 2908446763, 3129105715, 4250671921, 834741268];
   var SHA256_K = [
     1116352408,
     1899447441,
@@ -1146,7 +1146,7 @@ var _Sources = (() => {
     return out;
   }
   var X_ENC = "2";
-  var KEY_B64 = "cDNQYcFzO3AR9vKV8et8JNkOebp8PP11TcGlxXsoeMt1BFuv2iwnlwu7Jg+s8cuU8H5d9ONVhH4LJuUBaz9QvL06pn+Bf8YduuVx8Q1wkjo8/icdNOY40JZZeAE+dBDqJovgTiB+6r+aBaiX4RbywUzm8IiXZNrBcGjJDWK40wzHhLovM6viKdrA5B0D2OXOQMKZCpB84+VxmZN52SSBnzwA3a0XbSBko1Wh+y2x0WxdcsfhvGvW1rg5R787wZvW5hrCLd1sJn6yKQroj4xcwNcydlsyg1u63kUrEMwXXJhDjvh7RqqkAj8uowWUkx011H01RKy9TRws/zwuQam7ssq2G5hGRyGPYlUJLnEDM6pi47/wfNMO8i8HT/cL8FKDKRACWi1jdIKq1ehCGFvcWF/LCqeF2CO8XQbeM4l4hHhCnq0zundhWWp7YQpwEhIYzsp6u94insLyAWV8QoMG+2eiC0VimTnzCPTvb6HN/OOomkSblhSDYGxTWNQeLJ7FCTjK73Y+/QcQDIybmKC6NpUjmz5C893YqJXTsh7qdIRBj9vaXWuPM9XtY6U9Pf3esTuzLsAsitSeM4Zl2Fh7knia6GMnh8x5wtWSbBb0ukv1tlHyY5sD3YAkhHEEwpl7s/OEjGSVHLjTjSBbYI1jTZkkyoYiJNMwfrcd14qy6INwn4GSV9o/AY2TPTidwra5qLK05C6HWmZwn/vq5blJY8nGbHuEBuGowark4ooLM1h9bRMzCbBHMDenfc1xaH6rGI/ekdl+b8FrTs6gVFcnMW7t2xinoPCzOPGwhJ1Qh4jIPj4YajLhEsqZMa2tqhwtDXRCPKM8kea1vhdW07YezrvB7AWTwAjrvonyqIvka3sGSicUwgPFZPIqkniJMvvk2A7lQ5cELLb1wvryYlSAiBE2+gBnvnqj9hsnNPaDH92xL1/JHLJmwp6692OpqUf9s2KaqW90wqyaBlH8t0bYXFqCTdLcGM+mS1Bq+6NhBkXqfJ2odCItIF59NYoq5Ai19P1CS13YrZ5ixQH6fGFf1dNQrgIejZQztsMXKLMwwz4zqGLrdnQ7CleQwpEGB/2iOZFXyTizuGe2gTBJnYKhDdQqIRLh1nQun8jtX2wfQU+n51aWitPrSUQVEe6+SElJSnvU1hVSvtzeUmS0XXGeXtMUOQzVdSKjZ91dvYWjPsdL8DnsMSQyGV8HG5pXhzsWjFiTBVh9u5wULn537Xw1OMCbSlBj167XUmDF5LjzBb7vhOsTr9Ckr5oEbQxXA4FOQO0+epxlmTBieNwr3A/PzrLw3T2fjw4eQtT/373ZIg0P/7txtjsl4vh5U6hOF8Y5X6gPF75X/ScnCeBbwtBLeg==";
+  var KEY_B64 = "MLXTha26vcxBZhR+aX0DJtGexpcyDJ3w8xSwl8kXMVs7FrC7KMmqlC2soZ4NtQq+FFslCJM1kpnWB0QjsJoS9BCpz4/IBmrMJdUc4W0wC8SD6nm7HY0vuXdlThpH4v2ylhsDhwyC+LtGG13s8HiJb4Z8jReIqBPfSfyp990wwdpv2tOJiao+o2EVzp1c0a3dMgbvHtEqRaMh6bZk7OQ/Wt2Y0yv30+BOXmXulBMJyOMm+zurgBT99zlHwz5Tzyarbzo92LAo8A4eKGhlcotfv0+WsRfb1Wwg0lXPWjiMvM3/0I+1SNfWVXlm5SKc3b64r4No36z38CQ229NhY33nEBkeAAIv7qchqP1kkSoer9kRCpyEf/O/QscgiO9x3KqYrny2+98GGS4Fn2QFCTKrCG252rtRYVRA3zzODT8M/s4Pt2lX9lQtVVzk0M+nDImjlZr+IWtyDV5zIta0c3mN6qCb18ynokFnLDFfRMSAcC7v6WEUgOKWF+bU2U1c4x+XYOD3TcLnL2SrM6D+t2ym7YXi4BYpHkd+qt7g99cNO04GPJL95tae38NsupiK35sYswKQgKSR00wRzsAbCrelJSJ9lash/CUSFUIVwbjMdBl3Qza0SRLies2ZGaghL5/VPtYZ1m5LkqjRC8ZefpBjbimV/y+0H2uNqaKCRcPbnQ9qcieYGcCc46Zzqq4FI5qsTwFeVzoihO/S8VnUd5rPDcyL57heVbbre8WPL9EwwwulkFdb6v8eQHxKU7L7cUA6dtEFaYQ6WwAUN8v6gLGVXiQsnUGaoB/73qsdGYrmz18FivNvQkP8XGWsyezOQmnBMXZQ0VIzHrparRvGvFbWSdqkVv62Oglju0GyVMvoq7hrmEIp7Pt50Lwro5MOrWHeeNEOpoZKQPmCDJk7g0noanIUn7YSqu6peQfIet9qzTA+Of0l6kg8UxC4s2ohv9piuhjmLTktkFd5NPaWFaDniMi9ogSiCkieIWnaj10eW3JA1iQ78QjqstuBaEm/vqJNDlPQA4/wxyeZd8xF87JLOAjN+cgCBuDSElHCMzQoXBRvFHNHgZ0RynIz9UDbJCIl71eKaj5ZX8Kwl88nbGniskAK5nWzKzjyTHeKvb6Qa1mhr2lI40fzG55tBBwC7Vpgb5Xr1cs+qyA16ZSLA+M1GeWz5yeDvSFo0r85fsidV9d3AY3+F2RK5tIWoZXybCYsdB+UMaCrnYUMXT4Atbkm5jEagNkYKUutzPZgpRp81O+H65Zrje1+sNkhaBHAu9QEfA1SedNgeCX7akzetgZ41pisUMlmWK6s7uCFUlwmkfNS8k/EZyjT2FttJLxCr5fcIUDHAdqtyR+fw8iDl/avdQ==";
   var KEY = null;
   function utf8Decode(bytes) {
     let out = "";
@@ -1275,8 +1275,22 @@ var _Sources = (() => {
     const sep = url.includes("?") ? "&" : "?";
     return `${url}${sep}_=${token}`;
   }
+  var comixQueue = Promise.resolve();
+  function scheduleComix(requestManager, request) {
+    const run = comixQueue.then(() => requestManager.schedule(request, 1));
+    comixQueue = run.catch(() => void 0);
+    return run;
+  }
+  function throwIfSecurityCheck(response) {
+    if (response.status !== 403) return;
+    const data = response.data ?? "";
+    if (!data.includes("captcha_required") && !data.includes("/@waf/challenge")) return;
+    throw new Error(
+      `Comix security check required: comix.to is asking to verify you're human. Open this source in the web view (the Cloudflare / globe button), complete the "Verify you're human" check, then try again.`
+    );
+  }
   async function requestSignedUrl(requestManager, url) {
-    return requestManager.schedule(App.createRequest({
+    return scheduleComix(requestManager, App.createRequest({
       url,
       method: "GET",
       headers: {
@@ -1284,9 +1298,10 @@ var _Sources = (() => {
         "X-Requested-With": "XMLHttpRequest",
         "Referer": "https://comix.to/"
       }
-    }), 1);
+    }));
   }
   function checkSignedResponseError(response) {
+    throwIfSecurityCheck(response);
     const data = response.data ?? "";
     const preview = data.substring(0, 200).replace(/\s+/g, " ");
     const headers = response.headers ?? {};
@@ -1605,7 +1620,8 @@ var _Sources = (() => {
               url: signUrl(`${API_BASE}/tags/search?type=${type}&limit=50`),
               method: "GET"
             });
-            const res = await requestManager.schedule(req, 1);
+            const res = await scheduleComix(requestManager, req);
+            if (res.status !== 200) throw new Error(`tags/search ${type}: HTTP ${res.status}`);
             const json = JSON.parse(res.data ?? "{}");
             return Array.isArray(json.result) ? json.result : [];
           };
@@ -1971,7 +1987,7 @@ var _Sources = (() => {
     return /^https?:\/\/([^/]+\.)?comix\.to(\/|$|\?|#)/i.test(url ?? "");
   }
   var ComixToInfo = {
-    version: "1.9.25",
+    version: "1.9.26",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
@@ -2133,7 +2149,7 @@ var _Sources = (() => {
       const path = apiPath.split("?")[0];
       const request = App.createRequest({ url: signedUrl, method: "GET" });
       const fetchStart = Date.now();
-      const response = await this.requestManager.schedule(request, 1);
+      const response = await scheduleComix(this.requestManager, request);
       const fetchMs = Date.now() - fetchStart;
       this.checkResponseError(response);
       const timing = { parseMs: 0, decryptMs: 0 };
@@ -2155,11 +2171,10 @@ var _Sources = (() => {
       );
       const firstResult = await fetchPage(1);
       const lastPage = firstResult.meta?.lastPage ?? 1;
-      const restResults = lastPage > 1 ? await Promise.all(Array.from({ length: lastPage - 1 }, (_, i) => fetchPage(i + 2))) : [];
-      const chapters = [
-        ...firstResult.items,
-        ...restResults.flatMap((r) => r.items)
-      ];
+      const chapters = [...firstResult.items];
+      for (let page = 2; page <= lastPage; page++) {
+        chapters.push(...(await fetchPage(page)).items);
+      }
       const [isFiltering, isWhitelist, isStrict, savedGroups] = await Promise.all([
         getUploadersFiltering(this.stateManager),
         getUploadersWhitelisted(this.stateManager),
@@ -2443,6 +2458,7 @@ var _Sources = (() => {
       const cfRay = headers["Cf-Ray"] ?? headers["cf-ray"] ?? "?";
       const reqUrl = response.request?.url ?? "?";
       const ctx = `status=${response.status} ct=${ct} server=${server} cf-ray=${cfRay} url=${reqUrl} preview="${preview}"`;
+      throwIfSecurityCheck(response);
       if (response.status < 200 || response.status >= 300) {
         throw new Error(`HTTP ${response.status}: Unexpected response from server [${ctx}]`);
       }
