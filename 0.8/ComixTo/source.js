@@ -910,10 +910,10 @@ var _Sources = (() => {
 
   // src/ComixTo/ComixFastSigner.ts
   var B64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  var TOKEN_PREFIX = "kuh.";
+  var TOKEN_PREFIX = "pgr.";
   var MAC_BYTES = 12;
-  var ISTATE = [1244152716, 1278920240, 1207175159, 2476044375, 2316597635, 4285837010, 4196377512, 3799384193];
-  var OSTATE = [892551870, 2302264214, 3040572778, 2386034351, 2908446763, 3129105715, 4250671921, 834741268];
+  var ISTATE = [3958341849, 3854274261, 899616190, 2510495354, 26226049, 4131543014, 1218189297, 455465726];
+  var OSTATE = [3809755885, 2641459694, 4044779759, 3209141267, 816666438, 3579346729, 2935641099, 4027612886];
   var SHA256_K = [
     1116352408,
     1899447441,
@@ -1146,7 +1146,7 @@ var _Sources = (() => {
     return out;
   }
   var X_ENC = "2";
-  var KEY_B64 = "MLXTha26vcxBZhR+aX0DJtGexpcyDJ3w8xSwl8kXMVs7FrC7KMmqlC2soZ4NtQq+FFslCJM1kpnWB0QjsJoS9BCpz4/IBmrMJdUc4W0wC8SD6nm7HY0vuXdlThpH4v2ylhsDhwyC+LtGG13s8HiJb4Z8jReIqBPfSfyp990wwdpv2tOJiao+o2EVzp1c0a3dMgbvHtEqRaMh6bZk7OQ/Wt2Y0yv30+BOXmXulBMJyOMm+zurgBT99zlHwz5Tzyarbzo92LAo8A4eKGhlcotfv0+WsRfb1Wwg0lXPWjiMvM3/0I+1SNfWVXlm5SKc3b64r4No36z38CQ229NhY33nEBkeAAIv7qchqP1kkSoer9kRCpyEf/O/QscgiO9x3KqYrny2+98GGS4Fn2QFCTKrCG252rtRYVRA3zzODT8M/s4Pt2lX9lQtVVzk0M+nDImjlZr+IWtyDV5zIta0c3mN6qCb18ynokFnLDFfRMSAcC7v6WEUgOKWF+bU2U1c4x+XYOD3TcLnL2SrM6D+t2ym7YXi4BYpHkd+qt7g99cNO04GPJL95tae38NsupiK35sYswKQgKSR00wRzsAbCrelJSJ9lash/CUSFUIVwbjMdBl3Qza0SRLies2ZGaghL5/VPtYZ1m5LkqjRC8ZefpBjbimV/y+0H2uNqaKCRcPbnQ9qcieYGcCc46Zzqq4FI5qsTwFeVzoihO/S8VnUd5rPDcyL57heVbbre8WPL9EwwwulkFdb6v8eQHxKU7L7cUA6dtEFaYQ6WwAUN8v6gLGVXiQsnUGaoB/73qsdGYrmz18FivNvQkP8XGWsyezOQmnBMXZQ0VIzHrparRvGvFbWSdqkVv62Oglju0GyVMvoq7hrmEIp7Pt50Lwro5MOrWHeeNEOpoZKQPmCDJk7g0noanIUn7YSqu6peQfIet9qzTA+Of0l6kg8UxC4s2ohv9piuhjmLTktkFd5NPaWFaDniMi9ogSiCkieIWnaj10eW3JA1iQ78QjqstuBaEm/vqJNDlPQA4/wxyeZd8xF87JLOAjN+cgCBuDSElHCMzQoXBRvFHNHgZ0RynIz9UDbJCIl71eKaj5ZX8Kwl88nbGniskAK5nWzKzjyTHeKvb6Qa1mhr2lI40fzG55tBBwC7Vpgb5Xr1cs+qyA16ZSLA+M1GeWz5yeDvSFo0r85fsidV9d3AY3+F2RK5tIWoZXybCYsdB+UMaCrnYUMXT4Atbkm5jEagNkYKUutzPZgpRp81O+H65Zrje1+sNkhaBHAu9QEfA1SedNgeCX7akzetgZ41pisUMlmWK6s7uCFUlwmkfNS8k/EZyjT2FttJLxCr5fcIUDHAdqtyR+fw8iDl/avdQ==";
+  var KEY_B64 = "bTPbxxkO053IzoCxN8MpVIXz0iCjUfY1gpGXjtM4QGk/qHkVKL6hX6wp6WZJx/5nDK3XobeAm4fMjrCw5s5o8oiJOp6OjDy5RBNUgSYq6SX6crPWAyop0LM9rrgb4JsLNNIVSXM/zDfR5cjCu13CmSWMzp8YEwk/L8e/0epra37uRtN02PIjJYPwS6MVEcNQgfSK1Pcto6iyin4Dubn7XFMHmFuYlr2zmYgjMUvvPuGcZAVmd26j/LUnQVQLK6mGvjjuPCc2fxSUcbQTwdiFlg8WGBzCXDVbt4f4oHnyzZa1mSSwdsy65ZQ5Pgh2oMWJHFDt0UbdCiM9S3rcLlgkZeqpLT6hN4eykcspxCqXYe7iI4d4diNcKA+GDkfmBQehc1nYYwJHJwTSdjPRoi9kKFXC2XhlyOhd7QiOUSufs/IF7CriO2YRX00KbQ1SMWnaH8r27vCjkFPdmrtmC1eyIBndS9+P4k8TYo1sYlI6tLj269xIkJhJ6JnQg3eyqlk6BP5Nrfw1WlapqTTw4I41n4ZGenxlXVs5OgITq1/+Pcrg9Ot+Kr5Qg4xK7nsYnjb+KJAjXNYUJw9aVBZKqwF9/aFKsAnGfyPSahgzqpNJuyQ2w8THlhUFpSkVbGhEQLku0QjcXsIWFfxBmhXibf6DUyTNLf1czark4OIvIzscubtMaCmJQQXQL6lz+NzMZZAy8gKn7Ar5hiOTwpyAsOQC5PY1y72GwKYTzyPRrInhlrML2iBeGbEO+qABPVrIybgnuQAd9kxTNS8ewdsSjtn+JareVL5cJKpFIjoNknLqeMyaG6WiXYTsLAavsFocCKgY+Vs2baI3CCaEjq1ZVg/WXcP8+T8//l6MrhzQdnyKTkDOxx2SypbrdROKexP0PL/EgVyS7ZdhpJHRvafU6ylJnNgB32SRBYjIgFeCIOa0vyJUDBdX0qwnPqNEXv6Dw2lT80+NA/CbtP/x8fma6mN1wXKx+4hz6pWoGXuCc9YxfcT7lefb8ZnVg/9Lpwwx5va9F1gs6Ft6Y2RO/FXIVoZkai4lhUrVpSqBwAJNjWKuvaIjgunm/Uwf1wifw7J4scsd6GvDTOkUanagbMT2tDsEYGWe4R0/58AqBuJvTzsGifshBJzYF+gVh/uZI7qmoCwXNLpth2HNgUX4F7YS1eVt5SdrxEQBYeEpsQY/1gPIlWLwTMeeXXeebmen7ksQg+FtiflMp/bmUtkBi8GTctfnCBtUG/k2LFQJx2bsX7yPRaNadRRcoNvaWquhYWAJuRKW+kt7hYY89s5aeaTZTaNVYkcvGOY4eIfmqqU5XXQX+55hGdso8IeBcEzXF5By8Xy1lkdwHNnLFebw3TTTsAxH2w==";
   var KEY = null;
   function utf8Decode(bytes) {
     let out = "";
@@ -1291,7 +1291,7 @@ var _Sources = (() => {
     if (response.status !== 403) return;
     const data = response.data ?? "";
     if (!data.includes("captcha_required") && !data.includes("/@waf/challenge")) return;
-    const solve = `complete the "Verify you're human" check in the web view (the cloud / globe button), then retry`;
+    const solve = `tap the cloud / globe button and complete the "Verify you're human" check it opens (or open any title in the web view), then retry`;
     let detail;
     let cookies = null;
     try {
@@ -2103,7 +2103,7 @@ var _Sources = (() => {
     return /^https?:\/\/([^/]+\.)?comix\.to(\/|$|\?|#)/i.test(url ?? "");
   }
   var ComixToInfo = {
-    version: "1.9.28",
+    version: "1.9.29",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
@@ -2555,9 +2555,14 @@ var _Sources = (() => {
         metadata: nextPage
       });
     }
+    // Open comix's security-check page directly rather than the homepage: its WAF
+    // often blocks only some endpoints (e.g. chapter pages) while the homepage
+    // loads fine, so the homepage showed nothing to solve and users had to browse
+    // to a title in the web view first. Verified 2026-10-14: when blocked this
+    // page shows the captcha; when not, it auto-verifies and redirects to "/".
     async getCloudflareBypassRequestAsync() {
       return App.createRequest({
-        url: DOMAIN,
+        url: `${DOMAIN}/@waf/challenge?return=%2F`,
         method: "GET",
         headers: {
           "Referer": `${DOMAIN}/`,
