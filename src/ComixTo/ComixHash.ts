@@ -89,7 +89,7 @@ export function throwIfSecurityCheck(response: Response, requestManager?: Reques
     const data = response.data ?? "";
     if (!data.includes("captcha_required") && !data.includes("/@waf/challenge")) return;
 
-    const solve = "complete the \"Verify you're human\" check in the web view (the cloud / globe button), then retry";
+    const solve = "tap the cloud / globe button and complete the \"Verify you're human\" check it opens (or open any title in the web view), then retry";
     let detail: string;
     let cookies: Cookie[] | null = null;
     try { cookies = requestManager?.cookieStore?.getAllCookies() ?? null; } catch { cookies = null; }

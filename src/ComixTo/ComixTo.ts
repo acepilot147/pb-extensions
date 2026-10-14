@@ -75,7 +75,7 @@ function isComixUrl(url: string): boolean {
 }
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.9.28",
+  version: "1.9.29",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -665,9 +665,14 @@ requestManager = App.createRequestManager({
     });
   }
 
+  // Open comix's security-check page directly rather than the homepage: its WAF
+  // often blocks only some endpoints (e.g. chapter pages) while the homepage
+  // loads fine, so the homepage showed nothing to solve and users had to browse
+  // to a title in the web view first. Verified 2026-10-14: when blocked this
+  // page shows the captcha; when not, it auto-verifies and redirects to "/".
   async getCloudflareBypassRequestAsync(): Promise<Request> {
     return App.createRequest({
-      url: DOMAIN,
+      url: `${DOMAIN}/@waf/challenge?return=%2F`,
       method: "GET",
       headers: {
         "Referer": `${DOMAIN}/`,
