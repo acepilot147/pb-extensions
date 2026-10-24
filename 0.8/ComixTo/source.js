@@ -31,353 +31,353 @@ var _Sources = (() => {
   ));
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-  // node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUIBinding.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUIBinding.js
   var require_DUIBinding = __commonJS({
-    "node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUIBinding.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUIBinding.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUIForm.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUIForm.js
   var require_DUIForm = __commonJS({
-    "node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUIForm.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUIForm.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUIFormRow.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUIFormRow.js
   var require_DUIFormRow = __commonJS({
-    "node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUIFormRow.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUIFormRow.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUISection.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUISection.js
   var require_DUISection = __commonJS({
-    "node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUISection.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUISection.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIButton.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIButton.js
   var require_DUIButton = __commonJS({
-    "node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIButton.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIButton.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIHeader.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIHeader.js
   var require_DUIHeader = __commonJS({
-    "node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIHeader.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIHeader.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIInputField.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIInputField.js
   var require_DUIInputField = __commonJS({
-    "node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIInputField.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIInputField.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUILabel.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUILabel.js
   var require_DUILabel = __commonJS({
-    "node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUILabel.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUILabel.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUILink.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUILink.js
   var require_DUILink = __commonJS({
-    "node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUILink.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUILink.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIMultilineLabel.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIMultilineLabel.js
   var require_DUIMultilineLabel = __commonJS({
-    "node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIMultilineLabel.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIMultilineLabel.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUINavigationButton.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUINavigationButton.js
   var require_DUINavigationButton = __commonJS({
-    "node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUINavigationButton.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUINavigationButton.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIOAuthButton.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIOAuthButton.js
   var require_DUIOAuthButton = __commonJS({
-    "node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIOAuthButton.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIOAuthButton.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUISecureInputField.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUISecureInputField.js
   var require_DUISecureInputField = __commonJS({
-    "node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUISecureInputField.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUISecureInputField.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUISelect.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUISelect.js
   var require_DUISelect = __commonJS({
-    "node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUISelect.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUISelect.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIStepper.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIStepper.js
   var require_DUIStepper = __commonJS({
-    "node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIStepper.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIStepper.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUISwitch.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUISwitch.js
   var require_DUISwitch = __commonJS({
-    "node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUISwitch.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUISwitch.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/ChapterDetails.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/ChapterDetails.js
   var require_ChapterDetails = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/ChapterDetails.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/ChapterDetails.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/Chapter.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/Chapter.js
   var require_Chapter = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/Chapter.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/Chapter.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/Cookie.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/Cookie.js
   var require_Cookie = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/Cookie.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/Cookie.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/HomeSection.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/HomeSection.js
   var require_HomeSection = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/HomeSection.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/HomeSection.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/IconText.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/IconText.js
   var require_IconText = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/IconText.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/IconText.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/MangaInfo.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/MangaInfo.js
   var require_MangaInfo = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/MangaInfo.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/MangaInfo.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/MangaProgress.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/MangaProgress.js
   var require_MangaProgress = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/MangaProgress.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/MangaProgress.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/PartialSourceManga.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/PartialSourceManga.js
   var require_PartialSourceManga = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/PartialSourceManga.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/PartialSourceManga.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/MangaUpdates.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/MangaUpdates.js
   var require_MangaUpdates = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/MangaUpdates.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/MangaUpdates.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/PBCanvas.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/PBCanvas.js
   var require_PBCanvas = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/PBCanvas.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/PBCanvas.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/PBImage.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/PBImage.js
   var require_PBImage = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/PBImage.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/PBImage.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/PagedResults.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/PagedResults.js
   var require_PagedResults = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/PagedResults.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/PagedResults.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/RawData.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/RawData.js
   var require_RawData = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/RawData.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/RawData.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/Request.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/Request.js
   var require_Request = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/Request.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/Request.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/SourceInterceptor.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SourceInterceptor.js
   var require_SourceInterceptor = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/SourceInterceptor.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SourceInterceptor.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/RequestManager.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/RequestManager.js
   var require_RequestManager = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/RequestManager.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/RequestManager.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/Response.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/Response.js
   var require_Response = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/Response.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/Response.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/SearchField.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SearchField.js
   var require_SearchField = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/SearchField.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SearchField.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/SearchRequest.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SearchRequest.js
   var require_SearchRequest = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/SearchRequest.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SearchRequest.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/SourceCookieStore.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SourceCookieStore.js
   var require_SourceCookieStore = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/SourceCookieStore.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SourceCookieStore.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/SourceManga.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SourceManga.js
   var require_SourceManga = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/SourceManga.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SourceManga.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/SecureStateManager.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SecureStateManager.js
   var require_SecureStateManager = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/SecureStateManager.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SecureStateManager.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/SourceStateManager.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SourceStateManager.js
   var require_SourceStateManager = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/SourceStateManager.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SourceStateManager.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/Tag.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/Tag.js
   var require_Tag = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/Tag.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/Tag.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/TagSection.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/TagSection.js
   var require_TagSection = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/TagSection.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/TagSection.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/TrackedMangaChapterReadAction.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/TrackedMangaChapterReadAction.js
   var require_TrackedMangaChapterReadAction = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/TrackedMangaChapterReadAction.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/TrackedMangaChapterReadAction.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/Exports/TrackerActionQueue.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/TrackerActionQueue.js
   var require_TrackerActionQueue = __commonJS({
-    "node_modules/@paperback/types/lib/generated/Exports/TrackerActionQueue.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/TrackerActionQueue.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/generated/_exports.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/_exports.js
   var require_exports = __commonJS({
-    "node_modules/@paperback/types/lib/generated/_exports.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/_exports.js"(exports) {
       "use strict";
       var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
         if (k2 === void 0) k2 = k;
@@ -442,9 +442,9 @@ var _Sources = (() => {
     }
   });
 
-  // node_modules/@paperback/types/lib/base/Source.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/Source.js
   var require_Source = __commonJS({
-    "node_modules/@paperback/types/lib/base/Source.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/Source.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
       exports.urlEncodeObject = exports.convertTime = exports.Source = void 0;
@@ -495,17 +495,17 @@ var _Sources = (() => {
     }
   });
 
-  // node_modules/@paperback/types/lib/base/ByteArray.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/ByteArray.js
   var require_ByteArray = __commonJS({
-    "node_modules/@paperback/types/lib/base/ByteArray.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/ByteArray.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/base/Badge.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/Badge.js
   var require_Badge = __commonJS({
-    "node_modules/@paperback/types/lib/base/Badge.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/Badge.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
       exports.BadgeColor = void 0;
@@ -520,65 +520,65 @@ var _Sources = (() => {
     }
   });
 
-  // node_modules/@paperback/types/lib/base/interfaces/ChapterProviding.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/ChapterProviding.js
   var require_ChapterProviding = __commonJS({
-    "node_modules/@paperback/types/lib/base/interfaces/ChapterProviding.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/ChapterProviding.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/base/interfaces/CloudflareBypassRequestProviding.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/CloudflareBypassRequestProviding.js
   var require_CloudflareBypassRequestProviding = __commonJS({
-    "node_modules/@paperback/types/lib/base/interfaces/CloudflareBypassRequestProviding.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/CloudflareBypassRequestProviding.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/base/interfaces/HomePageSectionsProviding.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/HomePageSectionsProviding.js
   var require_HomePageSectionsProviding = __commonJS({
-    "node_modules/@paperback/types/lib/base/interfaces/HomePageSectionsProviding.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/HomePageSectionsProviding.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/base/interfaces/MangaProgressProviding.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/MangaProgressProviding.js
   var require_MangaProgressProviding = __commonJS({
-    "node_modules/@paperback/types/lib/base/interfaces/MangaProgressProviding.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/MangaProgressProviding.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/base/interfaces/MangaProviding.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/MangaProviding.js
   var require_MangaProviding = __commonJS({
-    "node_modules/@paperback/types/lib/base/interfaces/MangaProviding.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/MangaProviding.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/base/interfaces/RequestManagerProviding.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/RequestManagerProviding.js
   var require_RequestManagerProviding = __commonJS({
-    "node_modules/@paperback/types/lib/base/interfaces/RequestManagerProviding.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/RequestManagerProviding.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/base/interfaces/SearchResultsProviding.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/SearchResultsProviding.js
   var require_SearchResultsProviding = __commonJS({
-    "node_modules/@paperback/types/lib/base/interfaces/SearchResultsProviding.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/SearchResultsProviding.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/base/interfaces/index.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/index.js
   var require_interfaces = __commonJS({
-    "node_modules/@paperback/types/lib/base/interfaces/index.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/index.js"(exports) {
       "use strict";
       var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
         if (k2 === void 0) k2 = k;
@@ -607,9 +607,9 @@ var _Sources = (() => {
     }
   });
 
-  // node_modules/@paperback/types/lib/base/SourceInfo.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/SourceInfo.js
   var require_SourceInfo = __commonJS({
-    "node_modules/@paperback/types/lib/base/SourceInfo.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/SourceInfo.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
       exports.ContentRating = exports.SourceIntents = void 0;
@@ -631,9 +631,9 @@ var _Sources = (() => {
     }
   });
 
-  // node_modules/@paperback/types/lib/base/HomeSectionType.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/HomeSectionType.js
   var require_HomeSectionType = __commonJS({
-    "node_modules/@paperback/types/lib/base/HomeSectionType.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/HomeSectionType.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
       exports.HomeSectionType = void 0;
@@ -647,17 +647,17 @@ var _Sources = (() => {
     }
   });
 
-  // node_modules/@paperback/types/lib/base/PaperbackExtensionBase.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/PaperbackExtensionBase.js
   var require_PaperbackExtensionBase = __commonJS({
-    "node_modules/@paperback/types/lib/base/PaperbackExtensionBase.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/PaperbackExtensionBase.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/base/index.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/index.js
   var require_base = __commonJS({
-    "node_modules/@paperback/types/lib/base/index.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/index.js"(exports) {
       "use strict";
       var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
         if (k2 === void 0) k2 = k;
@@ -686,17 +686,17 @@ var _Sources = (() => {
     }
   });
 
-  // node_modules/@paperback/types/lib/compat/DyamicUI.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/compat/DyamicUI.js
   var require_DyamicUI = __commonJS({
-    "node_modules/@paperback/types/lib/compat/DyamicUI.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/compat/DyamicUI.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // node_modules/@paperback/types/lib/index.js
+  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/index.js
   var require_lib = __commonJS({
-    "node_modules/@paperback/types/lib/index.js"(exports) {
+    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/index.js"(exports) {
       "use strict";
       var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
         if (k2 === void 0) k2 = k;
@@ -1256,6 +1256,971 @@ var _Sources = (() => {
     }
   }
 
+  // src/ComixTo/ImageDecode.ts
+  var B64_CHARS3 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  var B64_LOOKUP = new Int16Array(128).fill(-1);
+  for (let i = 0; i < 64; i++) B64_LOOKUP[B64_CHARS3.charCodeAt(i)] = i;
+  function base64ToBytes(s) {
+    const out = new Uint8Array(Math.floor(s.length * 3 / 4));
+    let n = 0, buf = 0, bits = 0;
+    for (let i = 0; i < s.length; i++) {
+      const c = s.charCodeAt(i);
+      if (c === 61) break;
+      const v = c < 128 ? B64_LOOKUP[c] : -1;
+      if (v < 0) continue;
+      buf = (buf << 6 | v) & 16777215;
+      bits += 6;
+      if (bits >= 8) {
+        bits -= 8;
+        out[n++] = buf >> bits & 255;
+      }
+    }
+    return out.subarray(0, n);
+  }
+  function decodeDataUrl(src) {
+    const comma = src.startsWith("data:") ? src.indexOf(",") : -1;
+    const bytes = base64ToBytes(comma >= 0 ? src.slice(comma + 1) : src);
+    if (bytes[0] === 137 && bytes[1] === 80 && bytes[2] === 78 && bytes[3] === 71) return decodePng(bytes);
+    if (bytes[0] === 255 && bytes[1] === 216) return decodeJpeg(bytes);
+    throw new Error("Could not decode the captcha image");
+  }
+  var LEN_BASE = [3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258];
+  var LEN_EXTRA = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0];
+  var DIST_BASE = [1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577];
+  var DIST_EXTRA = [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13];
+  var CODE_LENGTH_ORDER = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
+  function huffman(lengths, n) {
+    const counts = new Uint16Array(16), offsets = new Uint16Array(16), symbols = new Uint16Array(n);
+    for (let i = 0; i < n; i++) counts[lengths[i]]++;
+    counts[0] = 0;
+    for (let i = 1; i < 16; i++) offsets[i] = offsets[i - 1] + counts[i - 1];
+    for (let i = 0; i < n; i++) if (lengths[i]) symbols[offsets[lengths[i]]++] = i;
+    return { counts, symbols };
+  }
+  function fixedTables() {
+    const lengths = new Uint8Array(288);
+    lengths.fill(8, 0, 144);
+    lengths.fill(9, 144, 256);
+    lengths.fill(7, 256, 280);
+    lengths.fill(8, 280, 288);
+    return [huffman(lengths, 288), huffman(new Uint8Array(30).fill(5), 30)];
+  }
+  var FIXED = null;
+  function inflateZlib(input) {
+    let pos = 2, bitBuf = 0, bitCount = 0;
+    let out = new Uint8Array(Math.max(1024, input.length * 4)), outLen = 0;
+    const ensure = (extra) => {
+      if (outLen + extra <= out.length) return;
+      let size = out.length * 2;
+      while (size < outLen + extra) size *= 2;
+      const grown = new Uint8Array(size);
+      grown.set(out.subarray(0, outLen));
+      out = grown;
+    };
+    const bits = (n) => {
+      while (bitCount < n) {
+        if (pos >= input.length) throw new Error("Truncated PNG data");
+        bitBuf |= input[pos++] << bitCount;
+        bitCount += 8;
+      }
+      const v = bitBuf & (1 << n) - 1;
+      bitBuf >>>= n;
+      bitCount -= n;
+      return v;
+    };
+    const decode = (h) => {
+      let code = 0, first = 0, index = 0;
+      for (let len = 1; len < 16; len++) {
+        code |= bits(1);
+        const count = h.counts[len];
+        if (code - first < count) return h.symbols[index + code - first];
+        index += count;
+        first = first + count << 1;
+        code <<= 1;
+      }
+      throw new Error("Bad PNG data");
+    };
+    let last = 0;
+    while (!last) {
+      last = bits(1);
+      const type = bits(2);
+      if (type === 0) {
+        bitBuf = 0;
+        bitCount = 0;
+        const len = input[pos] | input[pos + 1] << 8;
+        pos += 4;
+        ensure(len);
+        out.set(input.subarray(pos, pos + len), outLen);
+        outLen += len;
+        pos += len;
+        continue;
+      }
+      let lit, dist;
+      if (type === 1) {
+        [lit, dist] = FIXED ?? (FIXED = fixedTables());
+      } else if (type === 2) {
+        const hlit = bits(5) + 257, hdist = bits(5) + 1, hclen = bits(4) + 4;
+        const clLengths = new Uint8Array(19);
+        for (let i = 0; i < hclen; i++) clLengths[CODE_LENGTH_ORDER[i]] = bits(3);
+        const cl = huffman(clLengths, 19);
+        const lengths = new Uint8Array(hlit + hdist);
+        for (let i = 0; i < hlit + hdist; ) {
+          const sym = decode(cl);
+          if (sym < 16) {
+            lengths[i++] = sym;
+            continue;
+          }
+          let repeat = 0, value = 0;
+          if (sym === 16) {
+            value = lengths[i - 1];
+            repeat = 3 + bits(2);
+          } else if (sym === 17) repeat = 3 + bits(3);
+          else repeat = 11 + bits(7);
+          while (repeat--) lengths[i++] = value;
+        }
+        lit = huffman(lengths.subarray(0, hlit), hlit);
+        dist = huffman(lengths.subarray(hlit), hdist);
+      } else {
+        throw new Error("Bad PNG data");
+      }
+      for (; ; ) {
+        const sym = decode(lit);
+        if (sym < 256) {
+          ensure(1);
+          out[outLen++] = sym;
+          continue;
+        }
+        if (sym === 256) break;
+        const l = LEN_BASE[sym - 257] + bits(LEN_EXTRA[sym - 257]);
+        const ds = decode(dist);
+        const d = DIST_BASE[ds] + bits(DIST_EXTRA[ds]);
+        ensure(l);
+        for (let i = 0; i < l; i++, outLen++) out[outLen] = out[outLen - d];
+      }
+    }
+    return out.subarray(0, outLen);
+  }
+  function decodePng(bytes) {
+    const u32 = (p) => (bytes[p] << 24 | bytes[p + 1] << 16 | bytes[p + 2] << 8 | bytes[p + 3]) >>> 0;
+    let width = 0, height = 0, depth = 0, colorType = 0, interlace = 0;
+    let palette = null, transparency = null;
+    const idat = [];
+    let idatLength = 0;
+    for (let p = 8; p + 8 <= bytes.length; ) {
+      const len = u32(p);
+      const type = String.fromCharCode(bytes[p + 4], bytes[p + 5], bytes[p + 6], bytes[p + 7]);
+      const body = bytes.subarray(p + 8, p + 8 + len);
+      if (type === "IHDR") {
+        width = u32(p + 8);
+        height = u32(p + 12);
+        depth = body[8];
+        colorType = body[9];
+        interlace = body[12];
+      } else if (type === "PLTE") palette = body;
+      else if (type === "tRNS") transparency = body;
+      else if (type === "IDAT") {
+        idat.push(body);
+        idatLength += len;
+      } else if (type === "IEND") break;
+      p += 12 + len;
+    }
+    if (!width || !height || interlace) throw new Error("Unsupported captcha image");
+    const zlib = new Uint8Array(idatLength);
+    let o = 0;
+    for (const chunk of idat) {
+      zlib.set(chunk, o);
+      o += chunk.length;
+    }
+    const raw = inflateZlib(zlib);
+    const channels = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[colorType];
+    if (!channels) throw new Error("Unsupported captcha image");
+    const bpp = Math.max(1, channels * depth >> 3);
+    const stride = Math.ceil(width * channels * depth / 8);
+    const lines = new Uint8Array(stride * height);
+    for (let y = 0, src = 0; y < height; y++) {
+      const filter = raw[src++];
+      const row = y * stride, prev = row - stride;
+      for (let x = 0; x < stride; x++) {
+        const a = x >= bpp ? lines[row + x - bpp] : 0;
+        const b = y > 0 ? lines[prev + x] : 0;
+        const c = x >= bpp && y > 0 ? lines[prev + x - bpp] : 0;
+        let v = raw[src++];
+        if (filter === 1) v += a;
+        else if (filter === 2) v += b;
+        else if (filter === 3) v += a + b >> 1;
+        else if (filter === 4) {
+          const pa = Math.abs(b - c), pb = Math.abs(a - c), pc = Math.abs(a + b - 2 * c);
+          v += pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
+        }
+        lines[row + x] = v & 255;
+      }
+    }
+    const sample = (row, n) => {
+      if (depth === 8) return lines[row + n];
+      if (depth === 16) return lines[row + n * 2];
+      const bit = n * depth, v = lines[row + (bit >> 3)] >> 8 - depth - (bit & 7) & (1 << depth) - 1;
+      return colorType === 3 ? v : Math.round(v * 255 / ((1 << depth) - 1));
+    };
+    const data = new Uint8Array(width * height * 4);
+    for (let y = 0; y < height; y++) {
+      const row = y * stride;
+      for (let x = 0; x < width; x++) {
+        const d = (y * width + x) * 4;
+        if (colorType === 3) {
+          const i = sample(row, x);
+          data[d] = palette?.[i * 3] ?? 0;
+          data[d + 1] = palette?.[i * 3 + 1] ?? 0;
+          data[d + 2] = palette?.[i * 3 + 2] ?? 0;
+          data[d + 3] = transparency && i < transparency.length ? transparency[i] : 255;
+        } else if (colorType === 0 || colorType === 4) {
+          const g = sample(row, x * channels);
+          data[d] = data[d + 1] = data[d + 2] = g;
+          data[d + 3] = colorType === 4 ? sample(row, x * 2 + 1) : 255;
+        } else {
+          data[d] = sample(row, x * channels);
+          data[d + 1] = sample(row, x * channels + 1);
+          data[d + 2] = sample(row, x * channels + 2);
+          data[d + 3] = colorType === 6 ? sample(row, x * 4 + 3) : 255;
+        }
+      }
+    }
+    return { width, height, data };
+  }
+  var ZIGZAG = new Uint8Array([
+    0,
+    1,
+    8,
+    16,
+    9,
+    2,
+    3,
+    10,
+    17,
+    24,
+    32,
+    25,
+    18,
+    11,
+    4,
+    5,
+    12,
+    19,
+    26,
+    33,
+    40,
+    48,
+    41,
+    34,
+    27,
+    20,
+    13,
+    6,
+    7,
+    14,
+    21,
+    28,
+    35,
+    42,
+    49,
+    56,
+    57,
+    50,
+    43,
+    36,
+    29,
+    22,
+    15,
+    23,
+    30,
+    37,
+    44,
+    51,
+    58,
+    59,
+    52,
+    45,
+    38,
+    31,
+    39,
+    46,
+    53,
+    60,
+    61,
+    54,
+    47,
+    55,
+    62,
+    63
+  ]);
+  var IDCT_COS = new Float64Array(64);
+  for (let x = 0; x < 8; x++) {
+    for (let u = 0; u < 8; u++) IDCT_COS[x * 8 + u] = (u === 0 ? Math.SQRT1_2 : 1) / 2 * Math.cos((2 * x + 1) * u * Math.PI / 16);
+  }
+  function jpegHuffman(counts, values) {
+    const maxCode = new Int32Array(18).fill(-1), valPtr = new Int32Array(17), minCode = new Int32Array(17);
+    let code = 0, k = 0;
+    for (let len = 1; len <= 16; len++) {
+      valPtr[len] = k;
+      minCode[len] = code;
+      code += counts[len - 1];
+      k += counts[len - 1];
+      if (counts[len - 1]) maxCode[len] = code - 1;
+      code <<= 1;
+    }
+    maxCode[17] = 2147483647;
+    return { maxCode, valPtr, minCode, values };
+  }
+  function decodeJpeg(bytes) {
+    const quant = [];
+    const dcTables = [], acTables = [];
+    let components2 = [];
+    let width = 0, height = 0, hMax = 1, vMax = 1, mcusPerLine = 0, mcusPerColumn = 0, restartInterval = 0;
+    let adobe = -1;
+    const u16 = (p2) => bytes[p2] << 8 | bytes[p2 + 1];
+    let p = 2;
+    while (p < bytes.length) {
+      if (bytes[p] !== 255) {
+        p++;
+        continue;
+      }
+      const marker = bytes[p + 1];
+      p += 2;
+      if (marker === 216 || marker >= 208 && marker <= 215 || marker === 1 || marker === 255) {
+        if (marker === 255) p--;
+        continue;
+      }
+      if (marker === 217) break;
+      const len = u16(p), end = p + len;
+      if (marker === 219) {
+        for (let q = p + 2; q < end; ) {
+          const precision = bytes[q] >> 4, id = bytes[q] & 15;
+          const table = new Int32Array(64);
+          q++;
+          for (let i = 0; i < 64; i++) {
+            table[ZIGZAG[i]] = precision ? u16(q) : bytes[q];
+            q += precision ? 2 : 1;
+          }
+          quant[id] = table;
+        }
+      } else if (marker === 196) {
+        for (let q = p + 2; q < end; ) {
+          const cls = bytes[q] >> 4, id = bytes[q] & 15;
+          const counts = bytes.subarray(q + 1, q + 17);
+          const total = counts.reduce((s, c) => s + c, 0);
+          const table = jpegHuffman(counts, bytes.subarray(q + 17, q + 17 + total));
+          (cls ? acTables : dcTables)[id] = table;
+          q += 17 + total;
+        }
+      } else if (marker === 192 || marker === 193) {
+        height = u16(p + 3);
+        width = u16(p + 5);
+        const n = bytes[p + 7];
+        components2 = [];
+        for (let i = 0; i < n; i++) {
+          const q = p + 8 + i * 3;
+          components2.push({
+            id: bytes[q],
+            h: bytes[q + 1] >> 4,
+            v: bytes[q + 1] & 15,
+            tq: bytes[q + 2],
+            td: 0,
+            ta: 0,
+            pred: 0,
+            blocksPerLine: 0,
+            blocksPerColumn: 0,
+            width: 0,
+            height: 0,
+            plane: new Uint8Array(0)
+          });
+        }
+        hMax = Math.max(...components2.map((c) => c.h));
+        vMax = Math.max(...components2.map((c) => c.v));
+        mcusPerLine = Math.ceil(width / (8 * hMax));
+        mcusPerColumn = Math.ceil(height / (8 * vMax));
+        for (const c of components2) {
+          c.width = Math.ceil(width * c.h / hMax);
+          c.height = Math.ceil(height * c.v / vMax);
+          c.blocksPerLine = mcusPerLine * c.h;
+          c.blocksPerColumn = mcusPerColumn * c.v;
+          c.plane = new Uint8Array(c.blocksPerLine * 8 * c.blocksPerColumn * 8);
+        }
+      } else if (marker >= 194 && marker <= 207 && marker !== 196 && marker !== 200 && marker !== 204) {
+        throw new Error("Unsupported captcha image (progressive JPEG)");
+      } else if (marker === 221) {
+        restartInterval = u16(p + 2);
+      } else if (marker === 238 && String.fromCharCode(...bytes.subarray(p + 2, p + 7)) === "Adobe") {
+        adobe = bytes[p + 13];
+      } else if (marker === 218) {
+        const n = bytes[p + 2];
+        const scan = [];
+        for (let i = 0; i < n; i++) {
+          const c = components2.find((x) => x.id === bytes[p + 3 + i * 2]);
+          c.td = bytes[p + 4 + i * 2] >> 4;
+          c.ta = bytes[p + 4 + i * 2] & 15;
+          scan.push(c);
+        }
+        p = decodeScan(bytes, end, scan, quant, dcTables, acTables, mcusPerLine, mcusPerColumn, restartInterval);
+        continue;
+      }
+      p = end;
+    }
+    if (!width || !components2.length) throw new Error("Could not decode the captcha image");
+    const data = new Uint8Array(width * height * 4);
+    const planes = components2.map((c) => upsample(c, width, height, hMax / c.h, vMax / c.v));
+    const transform = components2.length === 3 && adobe !== 0;
+    for (let i = 0, d = 0; i < width * height; i++, d += 4) {
+      if (components2.length < 3) {
+        data[d] = data[d + 1] = data[d + 2] = planes[0][i];
+      } else if (transform) {
+        const Y = planes[0][i], Cb = planes[1][i] - 128, Cr = planes[2][i] - 128;
+        data[d] = clamp(Y + 1.402 * Cr);
+        data[d + 1] = clamp(Y - 0.344136286 * Cb - 0.714136286 * Cr);
+        data[d + 2] = clamp(Y + 1.772 * Cb);
+      } else {
+        data[d] = planes[0][i];
+        data[d + 1] = planes[1][i];
+        data[d + 2] = planes[2][i];
+      }
+      data[d + 3] = 255;
+    }
+    return { width, height, data };
+  }
+  var clamp = (v) => v <= 0 ? 0 : v >= 255 ? 255 : Math.round(v);
+  function decodeScan(bytes, start, scan, quant, dcTables, acTables, mcusPerLine, mcusPerColumn, restartInterval) {
+    let p = start, bitBuf = 0, bitCount = 0;
+    const bit = () => {
+      if (bitCount === 0) {
+        let b = bytes[p++] ?? 0;
+        if (b === 255) {
+          const next = bytes[p];
+          if (next === 0) p++;
+          else if (next !== void 0 && next >= 208 && next <= 215) {
+            b = 0;
+            p--;
+          }
+        }
+        bitBuf = b;
+        bitCount = 8;
+      }
+      bitCount--;
+      return bitBuf >> bitCount & 1;
+    };
+    const receive = (n) => {
+      let v = 0;
+      for (let i = 0; i < n; i++) v = v << 1 | bit();
+      return v;
+    };
+    const extend = (v, n) => n === 0 ? 0 : v < 1 << n - 1 ? v - (1 << n) + 1 : v;
+    const decode = (h) => {
+      let code = bit(), len = 1;
+      while (code > h.maxCode[len]) {
+        code = code << 1 | bit();
+        if (++len > 16) throw new Error("Bad JPEG data");
+      }
+      return h.values[h.valPtr[len] + code - h.minCode[len]];
+    };
+    const coeffs = new Int32Array(64), block = new Float64Array(64), tmp = new Float64Array(64);
+    const decodeBlock = (c, row, col) => {
+      coeffs.fill(0);
+      const t = decode(dcTables[c.td]);
+      c.pred += extend(receive(t), t);
+      coeffs[0] = c.pred;
+      for (let k = 1; k < 64; ) {
+        const rs = decode(acTables[c.ta]);
+        const r = rs >> 4, s = rs & 15;
+        if (s === 0) {
+          if (r < 15) break;
+          k += 16;
+          continue;
+        }
+        k += r;
+        if (k > 63) break;
+        coeffs[ZIGZAG[k]] = extend(receive(s), s);
+        k++;
+      }
+      const q = quant[c.tq];
+      for (let i = 0; i < 64; i++) block[i] = coeffs[i] * q[i];
+      for (let y = 0; y < 8; y++) {
+        for (let x = 0; x < 8; x++) {
+          let s = 0;
+          for (let u = 0; u < 8; u++) s += IDCT_COS[x * 8 + u] * block[y * 8 + u];
+          tmp[y * 8 + x] = s;
+        }
+      }
+      const stride = c.blocksPerLine * 8;
+      for (let x = 0; x < 8; x++) {
+        for (let y = 0; y < 8; y++) {
+          let s = 0;
+          for (let v = 0; v < 8; v++) s += IDCT_COS[y * 8 + v] * tmp[v * 8 + x];
+          c.plane[(row * 8 + y) * stride + col * 8 + x] = clamp(s + 128);
+        }
+      }
+    };
+    const total = scan.length === 1 ? Math.ceil(scan[0].width / 8) * Math.ceil(scan[0].height / 8) : mcusPerLine * mcusPerColumn;
+    for (const c of scan) c.pred = 0;
+    for (let m = 0; m < total; m++) {
+      if (restartInterval && m > 0 && m % restartInterval === 0) {
+        bitCount = 0;
+        while (p < bytes.length && !(bytes[p] === 255 && bytes[p + 1] >= 208 && bytes[p + 1] <= 215)) p++;
+        p += 2;
+        for (const c of scan) c.pred = 0;
+      }
+      if (scan.length === 1) {
+        const c = scan[0], perLine = Math.ceil(c.width / 8);
+        decodeBlock(c, Math.floor(m / perLine), m % perLine);
+      } else {
+        const mcuRow = Math.floor(m / mcusPerLine), mcuCol = m % mcusPerLine;
+        for (const c of scan) {
+          for (let v = 0; v < c.v; v++) {
+            for (let h = 0; h < c.h; h++) decodeBlock(c, mcuRow * c.v + v, mcuCol * c.h + h);
+          }
+        }
+      }
+    }
+    while (p < bytes.length && !(bytes[p] === 255 && bytes[p + 1] !== 0 && !(bytes[p + 1] >= 208 && bytes[p + 1] <= 215))) p++;
+    return p;
+  }
+  function upsample(c, width, height, sx, sy) {
+    const stride = c.blocksPerLine * 8, out = new Uint8Array(width * height);
+    const at = (x, y) => c.plane[Math.min(y, c.height - 1) * stride + Math.min(Math.max(x, 0), c.width - 1)];
+    for (let y = 0; y < height; y++) {
+      const r = Math.floor(y / sy);
+      const far = sy === 2 ? Math.min(Math.max(y & 1 ? r + 1 : r - 1, 0), c.height - 1) : r;
+      for (let x = 0; x < width; x++) {
+        const col = Math.floor(x / sx);
+        let v;
+        if (sx === 2 && sy === 2) {
+          const sum = (cc) => 3 * at(cc, r) + at(cc, far);
+          const here = sum(col);
+          if (x & 1) v = col === c.width - 1 ? here * 4 + 7 >> 4 : here * 3 + sum(col + 1) + 7 >> 4;
+          else v = col === 0 ? here * 4 + 8 >> 4 : here * 3 + sum(col - 1) + 8 >> 4;
+        } else if (sx === 2 && sy === 1) {
+          const here = at(col, r);
+          if (x & 1) v = col === c.width - 1 ? here : 3 * here + at(col + 1, r) + 2 >> 2;
+          else v = col === 0 ? here : 3 * here + at(col - 1, r) + 1 >> 2;
+        } else {
+          v = at(col, r);
+        }
+        out[y * width + x] = v;
+      }
+    }
+    return out;
+  }
+
+  // src/ComixTo/WafSolver.ts
+  var DOMAIN2 = "https://comix.to";
+  var SHAPES = [
+    "AAAAAH4AAAAAAAAf8AAAAAAAA/+AAAAAAAB//AAAAAAAB//gAAAAAAB//gAAAA8AB//wAAAB+AD//wAAAD/gD//+AAAH/gD///wAAH/wD///8AAP/4D///+AAP/8H////AAP/+H////AAP/+H////AAP//H////AAf//n////AB///3///+AH///3///8AP///////wAf///////gA///////+AA///////4AA///////wAA////////wAf////////8f////////+P////////+H/////////A/////////AB////////AAAf//////AAA//////+AAB//////8AAH//////4AAP//////wAAf//////gAB//////+AAD//////8AAH//////8AAP//////8AAf//////8AAf///9//8AAf///9//8AA////87/8AAf///85/4AAf///48/4AAP///48fwAAD///48HAAAAA//4+AAAAAA//w+AAAAAAf/w+AAAAAAf/w+AAAAAAP/h+AAAAAAH/B+AAAAAAD8B4AAAAAAAADwAAAAAAAADAAAAAAAAACAAAAAAAAAAAAAA",
+    "AAAAAAAAAAAAAAAAAAAAAAAABwAAAAAAAAH8AAAAAAAAP+AAAAAAAAf/AAAAAAAB//gAAAAAAH//4AAAAAf/////AAAB//////gAAB//////wAAD//////wAAD//////4AAD//////4AAD//////4AAD//////4AAH//////4AAH//////4AAH//////8AAP//////+AAf///////AB////////gD////////wH////////4H////////8P////////8P////////8P////////8P////////8H////////8D////////4D////////wB////////wB////////gA////////gA////////gA////////gA////////gA////////gB////////gB////////gB////////wB////////wB////////gB////////gA////////AAf//////+AAH//////8AAA//////AAAAP////8AAAAH////4AAAAD////4AAAAD////wAAAAB////wAAAAB////gAAAAA//f/gAAAAAf4D/AAAAAAHAAcAAAAAAAAAAAAAAAAAAAAAAA",
+    "P+AAAAAAf8f+AAAAAAf+//AAAAAA////////////////////////////////////////////////////////////////AAAAAA///+AAAAAAf/P8AAAAAAP8H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4H4AAAAAAH4P8AAAAAAf+/+AAAAAA////AAAAAA////////////////////////////////////////////////////////////////AAAAAA//f+AAAAAA//P+AAAAAAf+",
+    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH//////8AAf//////+AAf///////AA////////AA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////gA////////AAf///////AAP//////+AAD//////4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwAACAAAAAf/gB/+AAAB//4H//gAAH//+f//4AAP//////8AAf//////+AA////////AB////////gD////////wD////////wH////////4H////////4P////////8P////////8P////////8P////////8P////////8P////////8P////////8P////////8P////////8P////////8P////////8P////////8P////////8H////////4H////////4D////////wD////////wB////////gA////////AAf//////+AAP//////8AAH//////4AAD//////wAAB//////gAAA//////AAAAf////+AAAAP////8AAAAH////4AAAAD////wAAAAB////gAAAAA////AAAAAAf//+AAAAAAP//8AAAAAAH//4AAAAAAD//wAAAAAAB//gAAAAAAA//AAAAAAAAf+AAAAAAAAP8AAAAAAAAH4AAAAAAAADwAAAAAAAABgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "AAAAH4AAAAAAAAf+AAAAAAAA//AAAAAAAA//AAAAAAAB//gAAAAAAB//gAAAAAAB//gAAAAD/D//w/wAAH/n//5/4AAP//////8AAf//////+AAf//////+AAf/8//P/+AAf/8P+P/+AAf/8H4P/+AAf/4AAH/+AAf/4AAH/+AAf/4AAH/+AAP/wAAD/8AAH/gAAB/4AAH/AAAA/4AAP4AAAAH8AAfAAAAAA+AD/AAAAAA/wP/gAAAAB/8f/wAAAAB/+f/wAAAAD/+//4AAAAH////4AAAAH////4AAAAH////4AAAAH////4AAAAH////4AAAAH//f/wAAAAD/+f/gAAAAB/+P/gAAAAB/8D/AAAAAA/wAfAAAAAA+AAP4AAAAH8AAH/AAAA/4AAH/gAAB/4AAP/wAAD/8AAf/4AAH/+AAf/4AAH/+AAf/4AAH/+AAf/8H4P/+AAf/8f8P/+AAf/8//P/+AAf//////+AAf//////8AAP//////8AAH/n//5/4AAD/D//w/gAAAAB//gAAAAAAB//gAAAAAAB//gAAAAAAA//AAAAAAAA//AAAAAAAAP8AAAAAAAAH4AAAA",
+    "AAAAAAAAAAAAAABgAAAAAAAAP8AAAAAAAAf+AAAAAAAA//AAAAAAAB//gAAAAAAB//gAAAAAAD//wAAAAAAD//wAAAAAAD//wAAAAAAH//4AAAAAAH//4AAAAAAH//4AAAAAAH//4AAAAAAH//4AAAAAAH//4AAAAAAH//4AAAAf8H//4P+AB//v/////gD////////wH////////4P////////8P////////8f////////+f////////+f////////+P////////8P////////8P////////8H////////4D////////wD////////wB////////gAf//////+AAP//////8AAD//////wAAAf////+AAAAH////4AAAAP////8AAAAf////+AAAAf////+AAAA//////AAAB//////gAAB//////gAAB//////gAAD//////wAAD//////wAAD//////wAAD//////wAAD//+f//wAAD//+f//wAAD//8P//wAAD//4H//wAAD//wD//wAAD//gB//wAAB//AA//gAAA/+AAf/AAAAf4AAH+AAAAAAAAAAAAAAAAAAAAAA",
+    "AAAAAAPgAAAAD8AB/gAAAAH/gD/wAAAAH/wP/4AAAAP/8P/4AAAAP/+P/8AAAAf//H/8AAAAf//j/8AAAAf//j/8AAAA///x/+AAAA///x/+AAAA///5/+AAAAD//5/+AAAAAf/5/+AAAAAH/9/+AAAP/h/8/8OAA//4/8H8fgD//wH8A8fwH//gB4AYf8P//AAwAI/+f/+AAAAA////+AAAAB////8AAAAD////8AAAAD//f/8AAAAD/+f/8AAAAD/+P/gAAAAD/8P+AAAAAD/8H8OAAAAH/4DweAAAAH/wBh+AAAAH/gAD/AAAAP/AAH/gAAAf+AAH/gAAAf4AAP/wAAA/gAAf/wAAAAAAAf/wAAAAPAA//mAAP//AA//nAAf//AA//HgA///gA//P4D///gB//P8H///gB//P/H///gB/+P/H///gB/+P/j///gA/+P/x///gA/+P/wf//gA//P/4P//AAf/P/8D/8AAD+H/+AHAAAAAH//gAAAAAAH//wAAAAAAD//wAAAAAAB//wAAAAAAB//gAAAAAAA//AAAAAAAAf+AAAAAAAAP8AAAAAAAAH4AAAAAAAABgAAAA",
+    "AAAA//AAAAAAAH//4AAAAAA////AAAAAD////wAAAAP////8AAAAf////+AAAB//////gAAD//////wAAH//////4AAP//////8AAf//////+AA////////AA///wD///AB//+AAf//gD//4AAH//wD//gAAB//wH//AAAA//4H/+AAAAf/4P/8AAAAP/8P/4AAAAH/8P/4AAAAH/8f/wAAAAD/+f/wAAAAD/+f/gAAAAB/+//gAAAAB////gAAAAB////AAAAAA////AAAAAA////AAAAAA////AAAAAA////AAAAAA////AAAAAA////AAAAAA////AAAAAA////gAAAAB////gAAAAB//f/gAAAAB/+f/wAAAAD/+f/wAAAAD/+P/4AAAAH/8P/4AAAAH/8P/8AAAAP/8H/+AAAAf/4H//AAAA//4D//gAAB//wD//4AAH//wB//+AAf//gA///wD///AA////////AAf//////+AAP//////8AAH//////4AAD//////wAAB//////gAAAf////+AAAAP////8AAAAD////wAAAAA////AAAAAAH//4AAAAAAA//AAAA",
+    "AAAAAAAAAAAAAAAAAAAAAAwAAAAEAAAB+AAAB+AAAD/gAAH/AAAD/4DAf/AAAD/8Hg//AAAD/+Px//AAAD/8f4//AAAD/8f8//AAAD/4/8f/AAAB/5/+f+AAAB/x/+P+AAAB/x/+P+AAAB/j//H+AAAAAB//AAAAAAAA//AAAAAAP4P/HwAAAD/+H/P/AAAH//D+P/gAAP//h+P/wAAP//wOf/wAAP//gAf/wAAH//AA//gAAH/+AA//gAAD/+AB//AAAB/wAA/+AAAY/gAA/8IAA8eAAB/48AB+MOAB/h+AD/AeAB/D/AH/g/AAAH/gP/x/gAAP/wf/z/gf+P/4//j/j//H/4//j/z//H/8//n/z//n/8f/n/z//n/4P/n/x//j/wA/H/5//j8AAAH/4//gAAAAH/4f/gAAAAH/wP/gAAAAH/AD/gAAAAH8Hg/gAAAADgf4HAAAAAAB/+AAAAAAAD//AAAAAAAD//AAAAAAAB/+AAAAAAAB/+AAAAAAAA/8AAAAAAAA/8AAAAAAAAf4AAAAAAAAf4AAAAAAAAPwAAAAAAAAHgAAAAAAAADAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "AAAAH4AAAAAAAAf+AAAAAAAA//AAAAAAAA//AAAAAAAB//gAAAAAAB//gAAAAAAB//gAAAAB+D//w/gAAH/j//x/wAAP//////4AAP//////8AAf//////+AAf//////+AAf//////+AAf//////+AAf//////+AAf//////+AAf//wD//8AAP/+AAf/8AAH/8AAP/4AAH/4AAH/4AAH/wAAD/4AAf/gAAB/+AD//AAAA//wP//AAAA//8f//AAAA//+f/+AAAAf/+//+AAAAf////+AAAAf////+AAAAf////+AAAAf////+AAAAf////+AAAAf//f/+AAAAf/+f//AAAA//+P//AAAA//8D//AAAA//wAf/gAAB/+AAH/wAAD/4AAH/4AAH/4AAH/8AAP/4AAP/+AAf/8AAf//wD//+AAf//////+AAf//////+AAf//////+AAf//////+AAf//////+AAf//////+AAP//////8AAP//////8AAH/j//x/4AAB/B//wfgAAAAB//wAAAAAAB//gAAAAAAB//gAAAAAAA//gAAAAAAAf/AAAAAAAAP+AAAAAAAAH4AAAA",
+    "AAB////gAAAAD////wAAAAH////4AAAAP////8AAAAf////+AAAA//////AAAB//////gAAD//////wAAH//////4AAP//////8AAf//////+AA////////AB////////gD////////wH////////4P////////8f////////+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////f////////+P////////8H////////4D////////wB////////gA////////AAf//////+AAP//////8AAH//////4AAD//////wAAB//////gAAA//////AAAAf////+AAAAP////8AAAAH////4AAAAD////wAAAAB////gAA",
+    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP8AAAAAAAD//4AAAAAAf//+AAAAAB////gAAAAD////4AAAAP////8AAAAf/////AAAA//////gAAB//////wAAD//////4AAH//////4AAP//////8AAP//////+AAf///////AA////////AA////////gB////////gB////////gB////////wD////////wD////////wD////////4D////////4H////////4H////////4H////////4H////////4H////////4H////////4H////////4H////////4D////////4D////////4D////////4D////////wB////////wB////////wB////////gA////////gA////////AAf///////AAf//////+AAP//////+AAH//////8AAH//////4AAD//////wAAB//////gAAA//////AAAAP////+AAAAH////8AAAAD////wAAAAA////AAAAAAH//8AAAAAAA//gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  ];
+  var SHAPE_SIZE = 60;
+  var MASTER_PALETTE = ["#fde98e", "#60c1ff", "#fcb08e", "#fb88ff", "#b4fed4", "#cbfaa9", "#78d6f8"];
+  var THUMB_PALETTE = ["#1f55c4", "#780592", "#2f6b00", "#910000", "#864401", "#675901", "#016e5c"];
+  var GRID = 40;
+  var SIZES = Array.from({ length: 19 }, (_, i) => i + 18);
+  var ANGLES = Array.from({ length: 120 }, (_, i) => i * 3).filter((a) => a >= 15 && a <= 75 || a >= 285 && a <= 345);
+  var CONFIDENT_MARGIN = 2.2;
+  var CHALLENGES_PER_ROUND = 5;
+  var ROUNDS = 3;
+  var TURNSTILE_SCRIPT = "challenges.cloudflare.com/turnstile";
+  var rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  var masterPalette = MASTER_PALETTE.map(rgb);
+  var thumbPalette = THUMB_PALETTE.map(rgb);
+  var dilate = (mask, w, h, r) => {
+    const out = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (!mask[y * w + x]) continue;
+        for (let dy = -r; dy <= r; dy++) {
+          const ny = y + dy;
+          if (ny < 0 || ny >= h) continue;
+          for (let dx = -r; dx <= r; dx++) {
+            const nx = x + dx;
+            if (nx >= 0 && nx < w) out[ny * w + nx] = 1;
+          }
+        }
+      }
+    }
+    return out;
+  };
+  var invert = (mask) => mask.map((v) => 1 - v);
+  var erode = (mask, w, h, r) => invert(dilate(invert(mask), w, h, r));
+  var neighbours = (mask, w, h) => {
+    const out = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        let n = 0;
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (!dy && !dx) continue;
+            const ny = y + dy, nx = x + dx;
+            if (ny >= 0 && ny < h && nx >= 0 && nx < w) n += mask[ny * w + nx];
+          }
+        }
+        out[y * w + x] = n;
+      }
+    }
+    return out;
+  };
+  var components = (mask, w, h) => {
+    const seen = new Uint8Array(w * h);
+    const out = [];
+    for (let start = 0; start < w * h; start++) {
+      if (!mask[start] || seen[start]) continue;
+      const stack = [start];
+      const pixels = [];
+      seen[start] = 1;
+      while (stack.length) {
+        const p = stack.pop();
+        pixels.push(p);
+        const x = p % w, y = (p - x) / w;
+        for (const [nx, ny] of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]) {
+          if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
+          const q = ny * w + nx;
+          if (mask[q] && !seen[q]) {
+            seen[q] = 1;
+            stack.push(q);
+          }
+        }
+      }
+      out.push(pixels);
+    }
+    return out;
+  };
+  var bounds = (pixels, w) => {
+    let minX = Infinity, maxX = -1, minY = Infinity, maxY = -1, sumX = 0, sumY = 0;
+    for (const p of pixels) {
+      const x = p % w, y = (p - x) / w;
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+      sumX += x;
+      sumY += y;
+    }
+    return { minX, maxX, minY, maxY, cx: sumX / pixels.length, cy: sumY / pixels.length };
+  };
+  var normalise = (pixels, w) => {
+    const b = bounds(pixels, w);
+    const bw = b.maxX - b.minX + 1, bh = b.maxY - b.minY + 1;
+    const src = new Uint8Array(bw * bh);
+    for (const p of pixels) {
+      const x = p % w, y = (p - x) / w;
+      src[(y - b.minY) * bw + (x - b.minX)] = 1;
+    }
+    const scale = Math.sqrt(pixels.length) / (GRID * 0.42);
+    const out = new Uint8Array(GRID * GRID);
+    for (let gy = 0; gy < GRID; gy++) {
+      const sy = Math.floor((gy - GRID / 2 + 0.5) * scale + b.cy - b.minY + 0.5);
+      if (sy < 0 || sy >= bh) continue;
+      for (let gx = 0; gx < GRID; gx++) {
+        const sx = Math.floor((gx - GRID / 2 + 0.5) * scale + b.cx - b.minX + 0.5);
+        if (sx >= 0 && sx < bw) out[gy * GRID + gx] = src[sy * bw + sx];
+      }
+    }
+    return out;
+  };
+  var shapeBitsCache = null;
+  var shapeBits = () => shapeBitsCache ?? (shapeBitsCache = SHAPES.map((encoded) => {
+    const bytes = base64ToBytes(encoded);
+    const bits = new Uint8Array(SHAPE_SIZE * SHAPE_SIZE);
+    for (let i = 0; i < bits.length; i++) bits[i] = bytes[i >> 3] >> 7 - (i & 7) & 1;
+    return bits;
+  }));
+  var resized = /* @__PURE__ */ new Map();
+  var resize = (shape, size) => {
+    const key = `${shape}/${size}`;
+    if (!resized.has(key)) {
+      const s = size + 10, f = SHAPE_SIZE / s, bits = shapeBits()[shape];
+      const out = new Uint8Array(s * s);
+      let area = 0;
+      for (let y = 0; y < s; y++) {
+        for (let x = 0; x < s; x++) {
+          let sum = 0;
+          for (let i = 0; i < 4; i++) {
+            for (let j = 0; j < 4; j++) {
+              sum += bits[Math.floor((y + (i + 0.5) / 4) * f) * SHAPE_SIZE + Math.floor((x + (j + 0.5) / 4) * f)];
+            }
+          }
+          if (sum > 8) {
+            out[y * s + x] = 1;
+            area++;
+          }
+        }
+      }
+      resized.set(key, { side: s, mask: out, area });
+    }
+    return resized.get(key);
+  };
+  var templates = /* @__PURE__ */ new Map();
+  var template = (shape, size, thumb) => {
+    const key = `${shape}/${size}/${thumb}`;
+    if (!templates.has(key)) {
+      const { side, mask } = resize(shape, size);
+      const pad = 3, out = side + 2 * pad + Math.ceil(side * 0.5);
+      const c = (side - 1) / 2, oc = (out - 1) / 2;
+      const rotations = ANGLES.map((angle) => {
+        const rad = angle * Math.PI / 180, cos = Math.cos(rad), sin = Math.sin(rad);
+        let rotated = new Uint8Array(out * out);
+        for (let y = 0; y < out; y++) {
+          for (let x = 0; x < out; x++) {
+            const dx = x - oc, dy = y - oc;
+            const sx = Math.round(cos * dx - sin * dy + c), sy = Math.round(sin * dx + cos * dy + c);
+            if (sx >= 0 && sx < side && sy >= 0 && sy < side) rotated[y * out + x] = mask[sy * side + sx];
+          }
+        }
+        if (thumb) rotated = thumbClean(rotated, out, out);
+        const pixels = [];
+        rotated.forEach((v, i) => {
+          if (v) pixels.push(i);
+        });
+        return normalise(pixels, out);
+      });
+      templates.set(key, rotations);
+    }
+    return templates.get(key);
+  };
+  var thumbClean = (mask, w, h) => {
+    const closed = erode(dilate(mask, w, h, 1), w, h, 1).map((v, i) => v | mask[i]);
+    const n = neighbours(closed, w, h);
+    return closed.map((v, i) => v && n[i] >= 4 ? 1 : 0);
+  };
+  var scores = (blob, thumb) => SHAPES.map((_, shape) => {
+    const size = SIZES.reduce((a, b) => Math.abs(resize(shape, b).area - blob.area) < Math.abs(resize(shape, a).area - blob.area) ? b : a);
+    let best = 0;
+    for (const t of template(shape, size, thumb)) {
+      let inter = 0, union = 0;
+      for (let i = 0; i < t.length; i++) {
+        inter += t[i] & blob.mask[i];
+        union += t[i] | blob.mask[i];
+      }
+      best = Math.max(best, inter / union);
+    }
+    return best;
+  });
+  var nearestColour = (data, palette) => {
+    const n = data.length / 4;
+    const nearest = new Uint8Array(n), distance = new Float32Array(n);
+    for (let p = 0; p < n; p++) {
+      let best = 0, bestD = Infinity;
+      for (let k = 0; k < palette.length; k++) {
+        const dr = data[p * 4] - palette[k][0], dg = data[p * 4 + 1] - palette[k][1], db = data[p * 4 + 2] - palette[k][2];
+        const d = dr * dr + dg * dg + db * db;
+        if (d < bestD) {
+          bestD = d;
+          best = k;
+        }
+      }
+      nearest[p] = best;
+      distance[p] = Math.sqrt(bestD);
+    }
+    return { nearest, distance };
+  };
+  var masterBlobs = ({ width: w, height: h, data }) => {
+    const { nearest, distance } = nearestColour(data, masterPalette);
+    const dark = new Uint8Array(w * h);
+    for (let p = 0; p < w * h; p++) dark[p] = data[p * 4] + data[p * 4 + 1] + data[p * 4 + 2] < 150 ? 1 : 0;
+    const blobs = [];
+    const tooBig = (pixels) => {
+      const b = bounds(pixels, w);
+      return pixels.length > 1400 || b.maxY - b.minY >= 60 || b.maxX - b.minX >= 60;
+    };
+    const pieces = (pixels, group, found) => {
+      const sub = new Uint8Array(w * h);
+      for (const p of pixels) sub[p] = 1;
+      for (const joined of components(group ? dilate(sub, w, h, group) : sub, w, h)) {
+        const own = joined.filter((p) => sub[p]);
+        if (!own.length) continue;
+        if (group && tooBig(own)) pieces(own, group - 1, found);
+        else found.push(own);
+      }
+      return found;
+    };
+    for (let k = 0; k < masterPalette.length; k++) {
+      const pixels = [];
+      for (let p = 0; p < w * h; p++) if (nearest[p] === k && distance[p] < 40) pixels.push(p);
+      for (const blob of pieces(pixels, 2, [])) {
+        const b = bounds(blob, w);
+        const bh = b.maxY - b.minY + 1, bw = b.maxX - b.minX + 1;
+        if (blob.length < 120 || blob.length > 1400 || bh < 14 || bh > 60 || bw < 14 || bw > 60) continue;
+        const own = new Uint8Array(w * h);
+        for (const p of blob) own[p] = 1;
+        const ring = dilate(own, w, h, 2);
+        let shadow = 0;
+        for (let p = 0; p < w * h; p++) if (ring[p] && !own[p] && dark[p]) shadow++;
+        const meanDistance = blob.reduce((s, p) => s + distance[p], 0) / blob.length;
+        if (shadow < 3 || meanDistance > 20) continue;
+        blobs.push({ x: Math.round(b.cx), y: Math.round(b.cy), area: blob.length, mask: normalise(blob, w) });
+      }
+    }
+    return blobs;
+  };
+  var thumbBlobs = ({ width: w, height: h, data }, count) => {
+    const { nearest, distance } = nearestColour(data, thumbPalette);
+    const found = [];
+    for (let k = 0; k < thumbPalette.length; k++) {
+      const mask = new Uint8Array(w * h);
+      for (let p = 0; p < w * h; p++) mask[p] = data[p * 4 + 3] > 128 && distance[p] < 60 && nearest[p] === k ? 1 : 0;
+      found.push(...components(thumbClean(mask, w, h), w, h));
+    }
+    found.sort((a, b) => b.length - a.length);
+    return found.slice(0, count).sort((a, b) => bounds(a, w).cx - bounds(b, w).cx).map((pixels) => {
+      const own = new Uint8Array(w * h);
+      for (const p of pixels) own[p] = 1;
+      const opened = dilate(erode(own, w, h, 1), w, h, 1);
+      const kept = pixels.filter((p) => opened[p]);
+      const shape = kept.length >= 0.6 * pixels.length ? kept : pixels;
+      return { area: shape.length, mask: normalise(shape, w) };
+    });
+  };
+  var softmax = (values) => {
+    const max = Math.max(...values);
+    const e = values.map((v) => Math.exp((v - max) / 0.01));
+    const sum = e.reduce((a, b) => a + b, 0);
+    return e.map((v) => v / sum);
+  };
+  var planRotate = (challenge) => {
+    const reference = decodeDataUrl(challenge.image_base64), piece = decodeDataUrl(challenge.thumb_base64);
+    const size = piece.width, offset = Math.floor((reference.width - size) / 2);
+    const rotated = piece.data;
+    const gray = (data, i) => (data[i * 4] + data[i * 4 + 1] + data[i * 4 + 2]) / 3;
+    const center = (size - 1) / 2, scale = size / 128;
+    let bestAngle = 0, bestScore = Infinity;
+    for (let degrees = 0; degrees < 360; degrees++) {
+      const rad = degrees * Math.PI / 180, cos = Math.cos(rad), sin = Math.sin(rad);
+      let sum = 0, valid = 0;
+      for (let i = 0; i < 128 * 128; i++) {
+        const gx = i % 128 * scale, gy = Math.floor(i / 128) * scale;
+        const vx = gx - center, vy = gy - center;
+        const x = center + vx * cos + vy * sin, y = center - vx * sin + vy * cos;
+        if (x < 0 || x >= size || y < 0 || y >= size) continue;
+        const index = Math.floor(y) * size + Math.floor(x);
+        if (rotated[index * 4 + 3] <= 128) continue;
+        const diff = gray(reference.data, (offset + Math.floor(gy)) * reference.width + offset + Math.floor(gx)) - gray(rotated, index);
+        sum += diff * diff;
+        valid++;
+      }
+      if (valid >= 100 && sum / valid < bestScore) {
+        bestScore = sum / valid;
+        bestAngle = degrees;
+      }
+    }
+    return { margin: Infinity, answer: { angle: bestAngle } };
+  };
+  var planClick = (challenge) => {
+    const count = challenge.count ?? 0;
+    const masters = masterBlobs(decodeDataUrl(challenge.image_base64));
+    const thumbs = thumbBlobs(decodeDataUrl(challenge.thumb_base64), count);
+    if (thumbs.length < count || masters.length < thumbs.length) return { margin: -Infinity };
+    const mp = masters.map((m) => softmax(scores(m, false)));
+    const tp = thumbs.map((t) => softmax(scores(t, true)));
+    const similarity = tp.map((t) => mp.map((m) => Math.log(t.reduce((s, v, i) => s + v * m[i], 0) + 1e-12)));
+    let best = { total: -Infinity }, second = -Infinity;
+    const search = (i, used, total, picks) => {
+      if (i === thumbs.length) {
+        if (total > best.total) {
+          second = best.total;
+          best = { total, picks: [...picks] };
+        } else if (total > second) second = total;
+        return;
+      }
+      for (let j = 0; j < masters.length; j++) {
+        if (used & 1 << j) continue;
+        picks.push(j);
+        search(i + 1, used | 1 << j, total + similarity[i][j], picks);
+        picks.pop();
+      }
+    };
+    search(0, 0, 0, []);
+    return {
+      margin: (best.total - second) / thumbs.length,
+      answer: { dots: best.picks.flatMap((j) => [masters[j].x, masters[j].y]).join(",") }
+    };
+  };
+  var WafSolveError = class extends Error {
+  };
+  var json = (response) => {
+    if (response.status < 200 || response.status >= 300) throw new Error(`HTTP error ${response.status}`);
+    return JSON.parse(response.data ?? "null");
+  };
+  var get = (requestManager, path, headers = {}) => requestManager.schedule(App.createRequest({ url: `${DOMAIN2}${path}`, method: "GET", headers }), 1);
+  var round = async (requestManager) => {
+    let best = null;
+    for (let i = 0; i < CHALLENGES_PER_ROUND; i++) {
+      const challenge = json(await get(requestManager, "/@waf/generate", { Accept: "application/json" }));
+      if (!challenge?.image_base64 || !challenge.thumb_base64) throw new WafSolveError("The site changed its captcha");
+      let plan;
+      if ((challenge.count ?? 0) > 0) plan = planClick;
+      else if ((challenge.thumb_size ?? 0) > 0) plan = planRotate;
+      else throw new WafSolveError("The site changed its captcha");
+      const attempt = { challenge, ...plan(challenge) };
+      if (!best || attempt.margin > best.margin) best = attempt;
+      if (best.margin >= CONFIDENT_MARGIN) break;
+    }
+    if (!best?.answer) return false;
+    const request = App.createRequest({
+      url: `${DOMAIN2}/@waf/verify`,
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      data: JSON.stringify({ captcha_id: best.challenge.captcha_id, ...best.answer })
+    });
+    const response = await requestManager.schedule(request, 1);
+    const ok = json(response)?.success === true;
+    if (ok) storeWafPass(requestManager, response);
+    return ok;
+  };
+  function storeWafPass(requestManager, response) {
+    try {
+      const headers = response.headers ?? {};
+      const raw = Object.keys(headers).filter((k) => k.toLowerCase() === "set-cookie").map((k) => String(headers[k])).join(", ");
+      const match = /(?:^|[,;\s])waf_pass=([^;,\s]+)/.exec(raw);
+      if (!match) return;
+      const value = match[1];
+      const fromValue = /^(\d{10})\./.exec(value);
+      const store = requestManager.cookieStore;
+      if (!store) return;
+      for (const c of store.getAllCookies()) {
+        if (c.name === "waf_pass" && c.domain.replace(/^\./, "").endsWith("comix.to") && c.value !== value) store.removeCookie(c);
+      }
+      if (store.getAllCookies().some((c) => c.name === "waf_pass" && c.value === value)) return;
+      store.addCookie(App.createCookie({
+        name: "waf_pass",
+        value,
+        domain: "comix.to",
+        path: "/",
+        expires: fromValue ? new Date(Number(fromValue[1]) * 1e3) : new Date(Date.now() + 5 * 60 * 1e3)
+      }));
+    } catch {
+    }
+  }
+  async function solveWafCaptcha(requestManager, challengePath = "/@waf/challenge") {
+    try {
+      const page = await get(requestManager, challengePath.startsWith("/") ? challengePath : "/@waf/challenge");
+      if (page.status >= 400 && page.status !== 403) throw new Error(`HTTP error ${page.status}`);
+      if ((page.data ?? "").includes(TURNSTILE_SCRIPT)) {
+        throw new WafSolveError("comix is showing a Cloudflare Turnstile check, which can't be solved automatically. Tap the cloud / globe button to pass it in the web view");
+      }
+      for (let i = 0; i < ROUNDS; i++) {
+        if (await round(requestManager)) return;
+      }
+      throw new WafSolveError("Couldn't solve the site's captcha. Tap the cloud / globe button to solve it in the web view");
+    } catch (error) {
+      if (error instanceof WafSolveError) throw error;
+      throw new WafSolveError(`Couldn't solve the site's captcha (${error?.message ?? String(error)}). Tap the cloud / globe button to solve it in the web view`);
+    }
+  }
+
   // src/ComixTo/ComixHash.ts
   var SIGNED_PATTERNS = [
     /^\/manga(?:\/|$)/,
@@ -1276,10 +2241,59 @@ var _Sources = (() => {
     return `${url}${sep}_=${token}`;
   }
   var comixQueue = Promise.resolve();
-  function scheduleComix(requestManager, request) {
-    const run = comixQueue.then(() => requestManager.schedule(request, 1));
+  function enqueueComix(task) {
+    const run = comixQueue.then(task);
     comixQueue = run.catch(() => void 0);
     return run;
+  }
+  var wafAutoSolveEnabled = async () => false;
+  function setWafAutoSolve(isEnabled) {
+    wafAutoSolveEnabled = isEnabled;
+  }
+  var SOLVE_RETRY_MS = 60 * 1e3;
+  var lastWafSolve = null;
+  function wafSolveStatus() {
+    if (!lastWafSolve) return "Not needed yet";
+    const mins = Math.round((Date.now() - lastWafSolve.at) / 6e4);
+    const when = mins < 1 ? "just now" : `${mins} min ago`;
+    return lastWafSolve.ok ? `Solved ${when}` : `Failed ${when}: ${lastWafSolve.message}`;
+  }
+  function isSecurityCheck(response) {
+    const data = response.data ?? "";
+    return response.status === 403 && (data.includes("captcha_required") || data.includes("/@waf/challenge"));
+  }
+  function challengePathOf(response) {
+    try {
+      const path = JSON.parse(response.data ?? "{}")?.challenge;
+      return typeof path === "string" ? path : void 0;
+    } catch {
+      return void 0;
+    }
+  }
+  async function solveWaf(requestManager, challengePath) {
+    try {
+      await solveWafCaptcha(requestManager, challengePath);
+      lastWafSolve = { at: Date.now(), ok: true, message: "" };
+    } catch (error) {
+      lastWafSolve = { at: Date.now(), ok: false, message: error?.message ?? String(error) };
+      throw error;
+    }
+  }
+  function scheduleComix(requestManager, request) {
+    return enqueueComix(async () => {
+      const response = await requestManager.schedule(request, 1);
+      if (!isSecurityCheck(response) || !await wafAutoSolveEnabled()) return response;
+      if (lastWafSolve && !lastWafSolve.ok && Date.now() - lastWafSolve.at < SOLVE_RETRY_MS) return response;
+      try {
+        await solveWaf(requestManager, challengePathOf(response));
+      } catch {
+        return response;
+      }
+      return requestManager.schedule(request, 1);
+    });
+  }
+  function solveSecurityCheckNow(requestManager) {
+    return enqueueComix(() => solveWaf(requestManager));
   }
   function wafPassExpiry(cookie) {
     const fromValue = /^(\d{10})\./.exec(cookie.value);
@@ -1288,9 +2302,7 @@ var _Sources = (() => {
     return isNaN(expires) ? null : expires;
   }
   function throwIfSecurityCheck(response, requestManager) {
-    if (response.status !== 403) return;
-    const data = response.data ?? "";
-    if (!data.includes("captcha_required") && !data.includes("/@waf/challenge")) return;
+    if (!isSecurityCheck(response)) return;
     const solve = `tap the cloud / globe button and complete the "Verify you're human" check it opens (or open any title in the web view), then retry`;
     let detail;
     let cookies = null;
@@ -1315,8 +2327,9 @@ var _Sources = (() => {
         detail = `A security pass was found${left} but comix rejected it. Passes only work with the User-Agent they were issued to: if you changed Settings > Custom User-Agent after passing the check, or the web view uses a different User-Agent, ${solve}.`;
       }
     }
+    const autoSolve = lastWafSolve && !lastWafSolve.ok && Date.now() - lastWafSolve.at < SOLVE_RETRY_MS ? ` Auto-solve failed: ${lastWafSolve.message}.` : "";
     const ua = response.request?.headers?.["User-Agent"];
-    throw new Error(`Comix security check required: comix.to is asking to verify you're human. ${detail}${ua ? ` [UA: ${ua}]` : ""}`);
+    throw new Error(`Comix security check required: comix.to is asking to verify you're human.${autoSolve} ${detail}${ua ? ` [UA: ${ua}]` : ""}`);
   }
   async function requestSignedUrl(requestManager, url) {
     return scheduleComix(requestManager, App.createRequest({
@@ -1347,18 +2360,18 @@ var _Sources = (() => {
   }
   function decodeComixResponse(apiPath, response, timing) {
     const parseStart = Date.now();
-    const json = JSON.parse(response.data ?? "{}");
+    const json2 = JSON.parse(response.data ?? "{}");
     if (timing) timing.parseMs = Date.now() - parseStart;
-    if (json && typeof json === "object" && "e" in json) {
+    if (json2 && typeof json2 === "object" && "e" in json2) {
       const decryptStart = Date.now();
-      const decrypted = fastDecryptComixPayload(apiPath, json, response.headers ?? {});
+      const decrypted = fastDecryptComixPayload(apiPath, json2, response.headers ?? {});
       if (timing) timing.decryptMs = Date.now() - decryptStart;
       return decrypted && typeof decrypted === "object" && "result" in decrypted && decrypted.status === "ok" ? decrypted.result : decrypted;
     }
-    if (json.status !== "ok") {
-      throw new Error(`Comix API ${json.status}: ${json.message ?? "no message"}`);
+    if (json2.status !== "ok") {
+      throw new Error(`Comix API ${json2.status}: ${json2.message ?? "no message"}`);
     }
-    return json.result;
+    return json2.result;
   }
   async function fetchSigned(requestManager, fullUrl) {
     const totalStart = Date.now();
@@ -1482,10 +2495,13 @@ var _Sources = (() => {
     await stateManager.store("user_agent_preset", id && id !== USER_AGENT_DEFAULT_ID ? [id] : null);
     userAgentOverrideCache = null;
   };
+  var getWafAutoSolve = async (stateManager) => {
+    return await stateManager.retrieve("waf_auto_solve") ?? true;
+  };
   var getSelectedUploaders = async (stateManager) => {
     return await stateManager.retrieve("uploaders_selected") ?? [];
   };
-  var contentSettings = (stateManager) => {
+  var contentSettings = (stateManager, requestManager) => {
     return keepAlive(App.createDUINavigationButton({
       id: "content_settings",
       label: "Extension Settings",
@@ -1571,6 +2587,33 @@ var _Sources = (() => {
                   await setCustomUserAgent(stateManager, null);
                   await setUserAgentPreset(stateManager, null);
                 }
+              })
+            ])
+          }),
+          // 4. Security check
+          App.createDUISection({
+            id: "security_check_settings",
+            header: "Security Check",
+            footer: `When comix answers with its "Verify you're human" captcha (rotate the picture, or tap the shapes), solve it automatically and retry. A Cloudflare Turnstile check can't be solved this way; use the cloud / globe button for that.`,
+            isHidden: false,
+            rows: async () => keepAlive([
+              App.createDUISwitch({
+                id: "waf_auto_solve",
+                label: "Auto-solve Security Check",
+                value: App.createDUIBinding({
+                  get: async () => await getWafAutoSolve(stateManager),
+                  set: async (newValue) => await stateManager.store("waf_auto_solve", newValue)
+                })
+              }),
+              App.createDUIButton({
+                id: "solve_waf_now",
+                label: "Solve Security Check Now",
+                onTap: async () => await solveSecurityCheckNow(requestManager)
+              }),
+              App.createDUILabel({
+                id: "waf_solve_status",
+                label: "Last Attempt",
+                value: wafSolveStatus()
               })
             ])
           })
@@ -1736,8 +2779,8 @@ var _Sources = (() => {
             });
             const res = await scheduleComix(requestManager, req);
             if (res.status !== 200) throw new Error(`tags/search ${type}: HTTP ${res.status}`);
-            const json = JSON.parse(res.data ?? "{}");
-            return Array.isArray(json.result) ? json.result : [];
+            const json2 = JSON.parse(res.data ?? "{}");
+            return Array.isArray(json2.result) ? json2.result : [];
           };
           const [genre, theme, format, demographic] = await Promise.all([
             fetchTerms("genre"),
@@ -1892,10 +2935,10 @@ var _Sources = (() => {
   // src/ComixTo/ComixAlgo2.ts
   var TAPS = 4112961;
   var PACKED = "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";
-  var B64_CHARS3 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  var B64_CHARS4 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   function b64ToBytes(s) {
     const lookup = new Int16Array(128).fill(-1);
-    for (let i = 0; i < 64; i++) lookup[B64_CHARS3.charCodeAt(i)] = i;
+    for (let i = 0; i < 64; i++) lookup[B64_CHARS4.charCodeAt(i)] = i;
     const out = [];
     let buf = 0, bits = 0;
     for (let i = 0; i < s.length; i++) {
@@ -2202,6 +3245,9 @@ var _Sources = (() => {
           }
         }
       });
+      // comix requests that hit the WAF captcha solve it in-source and retry when
+      // Settings > Security Check > Auto-solve is on (scheduleComix in ComixHash).
+      this.wafAutoSolveHook = setWafAutoSolve(() => getWafAutoSolve(this.stateManager));
     }
     // -- Capabilities --
     async supportsTagExclusion() {
@@ -2214,7 +3260,7 @@ var _Sources = (() => {
         header: "Source Settings",
         isHidden: false,
         rows: async () => keepAlive([
-          contentSettings(this.stateManager),
+          contentSettings(this.stateManager, this.requestManager),
           groupSettings(this.stateManager),
           tagFilterSettings(this.stateManager, this.requestManager),
           resetSettings(this.stateManager)
