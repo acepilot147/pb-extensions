@@ -6,7 +6,7 @@ import {
 } from '@paperback/types'
 
 import { API_BASE, APIResponse, APIGenreItem, APIGenreResult, CONTENT_TYPES, CONTENT_RATINGS } from './Common'
-import { scheduleComix, signUrl } from './ComixHash'
+import { scheduleComix, signUrl, solveSecurityCheckNow, wafSolveStatus } from './ComixHash'
 
 interface TagCache {
     genre: APIGenreItem[];
@@ -140,13 +140,18 @@ const setUserAgentPreset = async (stateManager: SourceStateManager, value: strin
     userAgentOverrideCache = null;
 }
 
+// Solve comix's own captcha in-source when it walls a request (WafSolver.ts). On by default.
+export const getWafAutoSolve = async (stateManager: SourceStateManager): Promise<boolean> => {
+    return (await stateManager.retrieve('waf_auto_solve') as boolean | null) ?? true;
+}
+
 export const getSelectedUploaders = async (stateManager: SourceStateManager): Promise<string[]> => {
     return (await stateManager.retrieve('uploaders_selected') as string[]) ??[];
 }
 
 // --- MENUS ---
 
-export const contentSettings = (stateManager: SourceStateManager): DUINavigationButton => {
+export const contentSettings = (stateManager: SourceStateManager, requestManager: RequestManager): DUINavigationButton => {
     return keepAlive(App.createDUINavigationButton({
         id: 'content_settings',
         label: 'Extension Settings',
@@ -232,6 +237,33 @@ export const contentSettings = (stateManager: SourceStateManager): DUINavigation
                                 await setCustomUserAgent(stateManager, null);
                                 await setUserAgentPreset(stateManager, null);
                             }
+                        })
+                    ])
+                }),
+                // 4. Security check
+                App.createDUISection({
+                    id: 'security_check_settings',
+                    header: 'Security Check',
+                    footer: "When comix answers with its \"Verify you're human\" captcha (rotate the picture, or tap the shapes), solve it automatically and retry. A Cloudflare Turnstile check can't be solved this way; use the cloud / globe button for that.",
+                    isHidden: false,
+                    rows: async () => keepAlive([
+                        App.createDUISwitch({
+                            id: 'waf_auto_solve',
+                            label: 'Auto-solve Security Check',
+                            value: App.createDUIBinding({
+                                get: async () => await getWafAutoSolve(stateManager),
+                                set: async (newValue: boolean) => await stateManager.store('waf_auto_solve', newValue)
+                            })
+                        }),
+                        App.createDUIButton({
+                            id: 'solve_waf_now',
+                            label: 'Solve Security Check Now',
+                            onTap: async () => await solveSecurityCheckNow(requestManager)
+                        }),
+                        App.createDUILabel({
+                            id: 'waf_solve_status',
+                            label: 'Last Attempt',
+                            value: wafSolveStatus()
                         })
                     ])
                 })

@@ -22,7 +22,7 @@ import {
 } from "@paperback/types";
 
 import { Parser } from "./Parser";
-import { fetchSigned, signUrl, decodeComixResponse, scheduleComix, throwIfSecurityCheck } from "./ComixHash";
+import { fetchSigned, signUrl, decodeComixResponse, scheduleComix, throwIfSecurityCheck, setWafAutoSolve } from "./ComixHash";
 import { emit } from "./Telemetry";
 import { debugLog, DEBUG } from "./DebugLog";
 import {
@@ -56,6 +56,7 @@ import {
     getTypeFilter,
     getCachedTags,
     getUserAgentOverride,
+    getWafAutoSolve,
 } from "./Settings";
 
 import { readEncHeaders, decryptComixImageByParams, readScrambleHeaders, computeDescrambleLookup } from './ComixDescramble';
@@ -212,6 +213,10 @@ requestManager = App.createRequestManager({
   },
 });
 
+  // comix requests that hit the WAF captcha solve it in-source and retry when
+  // Settings > Security Check > Auto-solve is on (scheduleComix in ComixHash).
+  private readonly wafAutoSolveHook = setWafAutoSolve(() => getWafAutoSolve(this.stateManager));
+
   // -- Capabilities --
 
   async supportsTagExclusion(): Promise<boolean> {
@@ -225,7 +230,7 @@ requestManager = App.createRequestManager({
       header: "Source Settings",
       isHidden: false,
       rows: async () => keepAlive([
-        contentSettings(this.stateManager),
+        contentSettings(this.stateManager, this.requestManager),
         groupSettings(this.stateManager),
         tagFilterSettings(this.stateManager, this.requestManager),
         resetSettings(this.stateManager)

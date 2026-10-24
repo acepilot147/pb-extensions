@@ -14,6 +14,7 @@ import { Cookie, Request, RequestManager, Response } from "@paperback/types";
 import { fastGenerateHash } from "./ComixFastSigner";
 import { fastDecryptComixPayload } from "./ComixFastDecrypt";
 import { emit } from "./Telemetry";
+import { solveWafCaptcha } from "./WafSolver";
 
 // Paths the live bundle's request interceptor signs — verified by probing the
 // booted bundle (experiment/crypto-pipeline). As of bundle 6ffb/625d… (2026-06)
@@ -66,10 +67,73 @@ export function signUrl(url: string): string {
 // Images are on other hosts and don't go through here.
 let comixQueue: Promise<unknown> = Promise.resolve();
 
-export function scheduleComix(requestManager: RequestManager, request: Request): Promise<Response> {
-    const run = comixQueue.then(() => requestManager.schedule(request, 1));
+function enqueueComix<T>(task: () => Promise<T>): Promise<T> {
+    const run = comixQueue.then(task);
     comixQueue = run.catch(() => undefined);
     return run;
+}
+
+// Settings > Network > "Auto-solve security check". ComixTo registers the getter
+// so this module needn't import Settings (which imports this one).
+let wafAutoSolveEnabled: () => Promise<boolean> = async () => false;
+export function setWafAutoSolve(isEnabled: () => Promise<boolean>): void {
+    wafAutoSolveEnabled = isEnabled;
+}
+
+// Last solver outcome, for error messages and the settings status row. After a
+// failure (e.g. comix is showing Turnstile, which only the web view can pass)
+// auto-solve stands down for a minute instead of re-trying on every request.
+const SOLVE_RETRY_MS = 60 * 1000;
+let lastWafSolve: { at: number; ok: boolean; message: string } | null = null;
+
+export function wafSolveStatus(): string {
+    if (!lastWafSolve) return "Not needed yet";
+    const mins = Math.round((Date.now() - lastWafSolve.at) / 60000);
+    const when = mins < 1 ? "just now" : `${mins} min ago`;
+    return lastWafSolve.ok ? `Solved ${when}` : `Failed ${when}: ${lastWafSolve.message}`;
+}
+
+function isSecurityCheck(response: Response): boolean {
+    const data = response.data ?? "";
+    return response.status === 403 && (data.includes("captcha_required") || data.includes("/@waf/challenge"));
+}
+
+function challengePathOf(response: Response): string | undefined {
+    try {
+        const path = JSON.parse(response.data ?? "{}")?.challenge;
+        return typeof path === "string" ? path : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+async function solveWaf(requestManager: RequestManager, challengePath?: string): Promise<void> {
+    try {
+        await solveWafCaptcha(requestManager, challengePath);
+        lastWafSolve = { at: Date.now(), ok: true, message: "" };
+    } catch (error: any) {
+        lastWafSolve = { at: Date.now(), ok: false, message: error?.message ?? String(error) };
+        throw error;
+    }
+}
+
+export function scheduleComix(requestManager: RequestManager, request: Request): Promise<Response> {
+    return enqueueComix(async () => {
+        const response = await requestManager.schedule(request, 1);
+        if (!isSecurityCheck(response) || !(await wafAutoSolveEnabled())) return response;
+        if (lastWafSolve && !lastWafSolve.ok && Date.now() - lastWafSolve.at < SOLVE_RETRY_MS) return response;
+        try {
+            await solveWaf(requestManager, challengePathOf(response));
+        } catch {
+            return response; // throwIfSecurityCheck reports why
+        }
+        return requestManager.schedule(request, 1);
+    });
+}
+
+/** Settings button: solve the security check now, queued behind any in-flight comix call. */
+export function solveSecurityCheckNow(requestManager: RequestManager): Promise<void> {
+    return enqueueComix(() => solveWaf(requestManager));
 }
 
 // Passing the check (POST /@waf/verify) sets an HttpOnly `waf_pass` cookie that
@@ -85,11 +149,9 @@ function wafPassExpiry(cookie: Cookie): number | null {
 // Turn the WAF's captcha wall into an actionable error instead of a bare 403,
 // saying what state the user's waf_pass is in (from Paperback's cookie store).
 export function throwIfSecurityCheck(response: Response, requestManager?: RequestManager): void {
-    if (response.status !== 403) return;
-    const data = response.data ?? "";
-    if (!data.includes("captcha_required") && !data.includes("/@waf/challenge")) return;
+    if (!isSecurityCheck(response)) return;
 
-    const solve = "tap the cloud / globe button and complete the \"Verify you're human\" check it opens (or open any title in the web view), then retry";
+    const solve ="tap the cloud / globe button and complete the \"Verify you're human\" check it opens (or open any title in the web view), then retry";
     let detail: string;
     let cookies: Cookie[] | null = null;
     try { cookies = requestManager?.cookieStore?.getAllCookies() ?? null; } catch { cookies = null; }
@@ -109,8 +171,11 @@ export function throwIfSecurityCheck(response: Response, requestManager?: Reques
             detail = `A security pass was found${left} but comix rejected it. Passes only work with the User-Agent they were issued to: if you changed Settings > Custom User-Agent after passing the check, or the web view uses a different User-Agent, ${solve}.`;
         }
     }
+    const autoSolve = lastWafSolve && !lastWafSolve.ok && Date.now() - lastWafSolve.at < SOLVE_RETRY_MS
+        ? ` Auto-solve failed: ${lastWafSolve.message}.`
+        : "";
     const ua = (response as any).request?.headers?.["User-Agent"] as string | undefined;
-    throw new Error(`Comix security check required: comix.to is asking to verify you're human. ${detail}${ua ? ` [UA: ${ua}]` : ""}`);
+    throw new Error(`Comix security check required: comix.to is asking to verify you're human.${autoSolve} ${detail}${ua ? ` [UA: ${ua}]` : ""}`);
 }
 
 async function requestSignedUrl(requestManager: RequestManager, url: string): Promise<Response> {
