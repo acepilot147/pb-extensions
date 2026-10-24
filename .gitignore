@@ -137,3 +137,7 @@ dist
 .pnp.*
 
 package-lock.json
+
+experiment/live/assets/
+experiment/live/capture.json
+experiment/live/samples.json

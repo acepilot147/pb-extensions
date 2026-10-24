@@ -1,5 +1,29 @@
 # Comix crypto pipeline
 
+> **Current workflow (since build `tnd60v`, 2026-10-23): use the live tools.**
+> comix moved signing/decryption out of `secure-*.js` into a new `apicore-*.js`
+> (javascript-obfuscator, not the bytecode VM), so the bundle-booting extractor
+> below no longer applies. The algorithms are unchanged (same families as in
+> "The algorithm"); only key storage moved — `apicore` assembles one
+> `Uint8Array` at runtime: `[inner midstate 32 B][outer midstate 32 B][XOR table 1024 B]`.
+>
+> ```bash
+> npm run comix:capture   # build id, key ID, WAF state (real Chrome, ~1 min)
+> npm run comix:keys      # extract keys from the live site + regenerate src/ComixTo/ComixFast*.ts
+> npm run comix:e2e       # verify the generated files against production (8 endpoint shapes)
+> ```
+>
+> `experiment/live/extract-keys.mjs` hooks `Uint8Array` before any site script
+> runs, loads a chapter page, and accepts only the buffer whose midstates
+> reproduce the site's own tokens and whose table decrypts its own responses —
+> it throws instead of writing if nothing verifies (storage or family changed).
+> It also stops if the token alphabet stops being standard base64url. The site
+> now sends `v=0&w=0` on API calls; as of 2026-10-23 the server does not require
+> them. Keep live runs rare: comix's WAF captcha-walls IPs that send too much.
+>
+> comix's `apicore` header says it will keep changing this to block third-party
+> apps. Expect key rotations roughly daily and periodic structural changes.
+
 Automated extraction of comix.to's request **signer** and response **decrypt**
 into native, Paperback-safe TypeScript — the modern replacement for the old
 `legacy-static-port/` (`BuildComixFastSigner.ts` / `BuildComixFastDecrypt.ts`).
