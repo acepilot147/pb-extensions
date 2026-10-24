@@ -3146,7 +3146,7 @@ var _Sources = (() => {
     return /^https?:\/\/([^/]+\.)?comix\.to(\/|$|\?|#)/i.test(url ?? "");
   }
   var ComixToInfo = {
-    version: "1.9.30",
+    version: "1.9.31",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
