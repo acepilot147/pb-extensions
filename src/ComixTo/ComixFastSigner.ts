@@ -13,6 +13,39 @@ const MAC_BYTES = 12;
 const ISTATE: number[] = [0x14efe126, 0x7f0a6a29, 0xf7ab8fcf, 0xc0b4563b, 0x85593c4d, 0x7cf3a0f0, 0x0885de85, 0x0587e713];
 const OSTATE: number[] = [0x3a057e13, 0xef282d1d, 0xf6c28ba2, 0x63dea8ff, 0x1324d971, 0x6fd23521, 0x9b78ae1a, 0xd3956a98];
 
+export interface SignerKeys {
+    prefix: string;
+    macBytes: number;
+    istate: number[];
+    ostate: number[];
+}
+
+const BAKED_SIGNER_KEYS: SignerKeys = { prefix: TOKEN_PREFIX, macBytes: MAC_BYTES, istate: ISTATE, ostate: OSTATE };
+
+/** A caller-owned copy; mutating it never changes the baked defaults. */
+export function getBakedSignerKeys(): SignerKeys {
+    return { prefix: TOKEN_PREFIX, macBytes: MAC_BYTES, istate: ISTATE.slice(), ostate: OSTATE.slice() };
+}
+
+function validState(state: number[]): boolean {
+    if (!Array.isArray(state) || state.length !== 8) return false;
+    for (let i = 0; i < state.length; i++) {
+        const word = state[i]!;
+        if (!Object.prototype.hasOwnProperty.call(state, i) || !Number.isInteger(word) || word < 0 || word > 0xffffffff) return false;
+    }
+    return true;
+}
+
+function validateSignerKeys(keys: SignerKeys): void {
+    // Prefixes are nonempty URL-unreserved text, never query delimiters or escapes.
+    if (!keys || typeof keys !== "object" || Array.isArray(keys) ||
+        typeof keys.prefix !== "string" || !keys.prefix || /[^A-Za-z0-9._~-]/.test(keys.prefix) ||
+        !Number.isInteger(keys.macBytes) || keys.macBytes < 1 || keys.macBytes > 32 ||
+        !validState(keys.istate) || !validState(keys.ostate)) {
+        throw new Error("Invalid Comix signer keys");
+    }
+}
+
 const SHA256_K: number[] = [
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
@@ -87,6 +120,8 @@ function utf8Encode(s: string): number[] {
             const lo = s.charCodeAt(i + 1);
             if (lo >= 0xdc00 && lo <= 0xdfff) { cp = 0x10000 + ((cp - 0xd800) << 10) + (lo - 0xdc00); i++; }
         }
+        // TextEncoder/UTF-8 replaces unpaired UTF-16 surrogates with U+FFFD.
+        if (cp >= 0xd800 && cp <= 0xdfff) cp = 0xfffd;
         if (cp < 0x80) { out.push(cp); }
         else if (cp < 0x800) { out.push(0xc0 | (cp >> 6), 0x80 | (cp & 0x3f)); }
         else if (cp < 0x10000) { out.push(0xe0 | (cp >> 12), 0x80 | ((cp >> 6) & 0x3f), 0x80 | (cp & 0x3f)); }
@@ -110,8 +145,9 @@ function decodeComponent(s: string): string {
 // ("order[number]") are kept verbatim; values are RAW (URL-decoded), never re-encoded.
 function canonicalizeQuery(rawQuery: string): string {
     if (!rawQuery) { return ""; }
-    const groups: Record<string, string[]> = {};
-    const arrayCounts: Record<string, number> = {};
+    // Query keys are untrusted data, including names inherited by plain objects.
+    const groups: Record<string, string[]> = Object.create(null);
+    const arrayCounts: Record<string, number> = Object.create(null);
     const parts = rawQuery.split("&");
     for (let p = 0; p < parts.length; p++) {
         const part = parts[p]!;
@@ -137,22 +173,24 @@ function canonicalizeQuery(rawQuery: string): string {
     return Object.keys(groups).sort().map((b) => groups[b]!.join("&")).join("&");
 }
 
-function signString(s: string): string {
-    const inner = sha256FromMidstate(ISTATE, utf8Encode(s));
-    const outer = sha256FromMidstate(OSTATE, inner);
-    return TOKEN_PREFIX + b64UrlEncode(outer.slice(0, MAC_BYTES));
+function signString(s: string, keys: SignerKeys): string {
+    const inner = sha256FromMidstate(keys.istate, utf8Encode(s));
+    const outer = sha256FromMidstate(keys.ostate, inner);
+    return keys.prefix + b64UrlEncode(outer.slice(0, keys.macBytes));
 }
 
 /**
  * Produce the comix.to "_" signing token for an API request: an HMAC over the
  * path plus the canonicalized query params. Accepts a full URL or a bare path,
  * with or without a query string.
+ * Optional keys apply only to this request; omitted keys use the baked defaults.
  */
-export function fastGenerateHash(rawPath: string): string {
+export function fastGenerateHash(rawPath: string, keys: SignerKeys = BAKED_SIGNER_KEYS): string {
+    validateSignerKeys(keys);
     const stripped = rawPath.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "");
     const qIdx = stripped.indexOf("?");
-    if (qIdx < 0) { return signString(stripped); }
+    if (qIdx < 0) { return signString(stripped, keys); }
     const path = stripped.slice(0, qIdx);
     const canonical = canonicalizeQuery(stripped.slice(qIdx + 1));
-    return signString(canonical ? path + "?" + canonical : path);
+    return signString(canonical ? path + "?" + canonical : path, keys);
 }

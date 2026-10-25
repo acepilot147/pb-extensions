@@ -22,8 +22,7 @@ import {
 } from "@paperback/types";
 
 import { Parser } from "./Parser";
-import { fetchSigned, signUrl, decodeComixResponse, scheduleComix, throwIfSecurityCheck, setWafAutoSolve } from "./ComixHash";
-import { emit } from "./Telemetry";
+import { fetchSigned, throwIfSecurityCheck, setWafAutoSolve } from "./ComixHash";
 import { debugLog, DEBUG } from "./DebugLog";
 import {
   API_BASE,
@@ -76,7 +75,7 @@ function isComixUrl(url: string): boolean {
 }
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.9.31",
+  version: "1.9.32",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -281,21 +280,7 @@ requestManager = App.createRequestManager({
    * comix flips encryption on per-endpoint, so no caller may assume plaintext.
    */
   private async fetchTimed<T>(label: string, url: string): Promise<T> {
-    const t0 = Date.now();
-    const signedUrl = signUrl(url);
-    const signMs = Date.now() - t0;
-    const apiPath = signedUrl.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "");
-    const path = apiPath.split("?")[0]!;
-    const request = App.createRequest({ url: signedUrl, method: "GET" });
-    const fetchStart = Date.now();
-    const response = await scheduleComix(this.requestManager, request);
-    const fetchMs = Date.now() - fetchStart;
-    this.checkResponseError(response);
-
-    const timing = { parseMs: 0, decryptMs: 0 };
-    const result = decodeComixResponse<T>(apiPath, response, timing);
-    emit({ label, path, status: response.status, bytes: (response.data ?? "").length, signMs, fetchMs, parseMs: timing.parseMs, decryptMs: timing.decryptMs, totalMs: Date.now() - t0 });
-    return result;
+    return fetchSigned<T>(this.requestManager, url, label);
   }
 
   async getMangaDetails(mangaId: string): Promise<SourceManga> {

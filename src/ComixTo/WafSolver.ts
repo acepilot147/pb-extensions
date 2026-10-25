@@ -193,7 +193,7 @@ const template = (shape: number, size: number, thumb: boolean): Mask[] => {
         const c = (side - 1) / 2, oc = (out - 1) / 2;
         const rotations = ANGLES.map((angle) => {
             const rad = (angle * Math.PI) / 180, cos = Math.cos(rad), sin = Math.sin(rad);
-            let rotated = new Uint8Array(out * out);
+            let rotated: Mask = new Uint8Array(out * out);
             for (let y = 0; y < out; y++) {
                 for (let x = 0; x < out; x++) {
                     const dx = x - oc, dy = y - oc;

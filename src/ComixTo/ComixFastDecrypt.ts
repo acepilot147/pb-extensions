@@ -30,6 +30,21 @@ const X_ENC = "2";
 const KEY_B64 = "fPTG+vfrcwU4E6TEtFywSHHJOhhYdOqJP1XYBBPU4YtfuZZiwELLACiB7hkPMOGRoWdDPDS1QehUyMom0QgfTl8tuLUm/9W4KdzZcyg2CMJVcI1OY+Fi3R7QApctB4Q6zI1juEQyXWShMULgY+PIZY419NaBGlu0nSapWXMrmu4cqKGfUuEUIuq/CBiZjRB1YQxtqAsJ7UKKgqfz5xLp4jhEKoH5ZDkbpb/KYr+mCCu7u8Yx81jELdU8JiuChxB8j+Ro8Kq8qfQBbP+45R2u5DjFxUIs7T5IOGU38mKxcl+TimPu8ufdtQ2NZcl0ecKeKU2HCSbY0LntmL69yJtkSxd04LEhLvemUvRfvpQzv+eX3puKA22dOWB+mEx7TSqWpM/0goMxD2orCrEpN8dTWBcrswJ65Ue2la/Z+oVDjTikZ+hv+ygdoNhuUmImJDi8tu/Q03iEY3Hl5kov+9FIPLcwpCaEFhZBOqzacYzvb5IRvaSq2gWpzSXEcyORWDLdhNqHbkH2CETrMyghK7YLJKnJvZIAq458MA88xUP+0UOs3WX3/RvZafryoTPanv1ik0zJ2lxOxjlRTdCyzBaZJ660aPsfoJnCx1yhdCFc3QP+ZFpOw6NgxXHE79/wFPlm6HIp0ZreKKldVG5RJzO9JqiwkP08aZ+/5N3rBQQElr4Z1x2p31dCbdQYLuLaj4oH9gTPfHanUuho0rm+pLr60TuuEqlCaq/1O1E9m7jXdVvSjatSJ0bQIZZUHITGiwsoLc3yZQ5fvDqzv8X3YK1+tO44ToOTHVuHAhiXMwfmhrpzFS27P2fAuXYaCaRzvIz+VK9/kv+uPCLnaXM+X+qc+GzUinWW+O9NMyPE6vbCGtqQh9woGMYmPllouM92WhY/0RR2fU09T2zeKyB4Ac7hxWvBzb7c3YKPlVsGwU1wQqCXVjSOoaiM7VFVYC9zulhNvXP4JirlYgiG3GJZItk+j069e9wVsEZjImXl6LhaoJV1L6xNC2BlRuLQvzUSZvXSfNiPSXxmHeO8nfZAOM+6QFp/J2cmptydXlmbKanxPWmWS3vvtoOCiGiPiUD/mEJd7jzALSD92SwpRJIDR6X9oYS2ojTczap15YjdNnfVj6IPYYTms3NYlzOFEFAuaEQ5XCeJxBBOTrQtpEvI8UktVVP1vJHgO+wgBPlLVt3ux0jBcpm8+B1b3y7X4PWo2vf98gAS/tBDyCMc/Nqma2XX4ReM/HCHZYU54eqkCCv6f9btj46Cz7mRevXY3d2jCXRpVTnlyAbUEjeVJ9dZn+BDG9Jd/0eQznaDkDssLUgGx2jPrd//Kl22K52ys5HN22dICgT9ZuH6Jazu0rLizwDr4Q==";
 let KEY: number[] | null = null;
 
+/** A caller-owned copy; mutating it never changes the baked defaults. */
+export function getBakedDecryptTable(): number[] {
+    return (KEY ?? (KEY = b64Decode(KEY_B64))).slice();
+}
+
+function validateDecryptTable(table: number[]): void {
+    if (!Array.isArray(table) || table.length !== 1024) throw new Error("Invalid Comix decrypt table");
+    for (let i = 0; i < table.length; i++) {
+        const byte = table[i]!;
+        if (!Object.prototype.hasOwnProperty.call(table, i) || !Number.isInteger(byte) || byte < 0 || byte > 255) {
+            throw new Error("Invalid Comix decrypt table");
+        }
+    }
+}
+
 // Manual UTF-8 decode (JavaScriptCore-safe; no TextDecoder dependency).
 function utf8Decode(bytes: number[]): string {
     let out = "";
@@ -66,16 +81,18 @@ function normalizeHeaders(headers: Record<string, string>): Record<string, strin
  * response interceptor, including the { status: "ok", result } unwrap.
  * Throws on an x-enc version this build doesn't know, so a cipher rotation
  * surfaces as a clear error instead of a silently-undecoded {e}.
+ * Optional table applies only to this response; omitted tables use the baked key.
  */
-export function fastDecryptComixPayload(rawPath: string, payload: any, headers: Record<string, string> = {}): any {
+export function fastDecryptComixPayload(rawPath: string, payload: any, headers: Record<string, string> = {}, table?: number[]): any {
     void rawPath;
+    if (table !== undefined) validateDecryptTable(table);
     if (!(payload && typeof payload === "object" && typeof payload.e === "string")) return payload;
     const h = normalizeHeaders(headers);
     if (h["x-enc"] && h["x-enc"] !== X_ENC) {
         throw new Error("Comix x-enc " + h["x-enc"] + " is not supported (expected " + X_ENC + ") - the response cipher rotated; rerun the crypto pipeline");
     }
 
-    const key = KEY ?? (KEY = b64Decode(KEY_B64));
+    const key = table === undefined ? (KEY ?? (KEY = b64Decode(KEY_B64))) : table;
     const ct = b64Decode(payload.e);
     const n = key.length;
     let k = ct.length >= 2 ? (((ct[0]! << 8) | ct[1]!) % n) : 0;

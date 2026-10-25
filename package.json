@@ -12,6 +12,10 @@
     "validate:comix": "node experiment/crypto-pipeline/validate.mjs",
     "crypto:pipeline": "node experiment/crypto-pipeline/run.mjs",
     "test": "paperback test",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test:keys": "node --test experiment/live/test-polyfills.mjs experiment/live/test-crypto-keys.mjs experiment/live/test-key-manager.mjs experiment/live/test-key-retry.mjs experiment/live/test-apicore-guards.mjs",
+    "test:keys:e2e": "node experiment/live/test-live-keys.mjs",
+    "verify:keys": "node experiment/live/verify-keys.mjs",
     "comix:capture": "node experiment/live/capture.mjs",
     "comix:keys": "node experiment/live/extract-keys.mjs && node experiment/crypto-pipeline/generate.mjs",
     "comix:e2e": "node experiment/live/e2e.mjs"
@@ -22,7 +26,7 @@
     "@typescript-eslint/eslint-plugin": "^4.25.0",
     "@typescript-eslint/parser": "^4.25.0",
     "eslint": "^7.27.0",
-    "typescript": "^4.3.2"
+    "typescript": "^5.9.3"
   },
   "dependencies": {
     "@paperback/types": "^0.8.0-alpha.47",

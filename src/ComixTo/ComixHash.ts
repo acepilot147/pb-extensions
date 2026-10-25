@@ -1,7 +1,9 @@
 /**
  * Comix API signing and encrypted-response decoding — the central interface for
  * ComixTo. Signing and decryption are delegated to the native, generated modules
- * (ComixFastSigner / ComixFastDecrypt); the live-VM bundle is no longer used.
+ * (ComixFastSigner / ComixFastDecrypt). Retired signing keys or a stale XOR
+ * table trigger one verified in-app refresh; confirmed numeric keys persist
+ * across restarts. ComixKeyManager owns discovery/cache policy.
  *
  * Regenerate those modules when comix.to rotates secure-*.js:
  *   npm run crypto:pipeline        (offline, from the embedded bundle)
@@ -11,7 +13,8 @@
  */
 
 import { Cookie, Request, RequestManager, Response } from "@paperback/types";
-import { fastGenerateHash } from "./ComixFastSigner";
+import { fastGenerateHash, SignerKeys } from "./ComixFastSigner";
+import { ComixKeyManager, KeyRecord } from "./ComixKeyManager";
 import { fastDecryptComixPayload } from "./ComixFastDecrypt";
 import { emit } from "./Telemetry";
 import { solveWafCaptcha } from "./WafSolver";
@@ -23,7 +26,7 @@ import { solveWafCaptcha } from "./WafSolver";
 // /chapters/{id}. Unsigned /manga* now returns 403 "Missing token.". Only
 // /tags/search (and non-/manga, non-/chapters paths) stay unsigned — the bundle
 // does not sign those. Patterns are segment-exact (so /mangas is NOT matched),
-// and tokens are pathname-only (the query string is not part of the signature).
+// and tokens include the canonical query string (see generateHash below).
 const SIGNED_PATTERNS: RegExp[] = [
     /^\/manga(?:\/|$)/,
     /^\/chapters\/[^/]+/,
@@ -38,8 +41,8 @@ function isSignedPath(path: string): boolean {
  * the signature covers the path AND its query params; `fastGenerateHash`
  * canonicalizes the query internally, so pass the full URL (or path+query).
  */
-export function generateHash(rawPath: string): string {
-    return fastGenerateHash(rawPath);
+export function generateHash(rawPath: string, keys?: SignerKeys): string {
+    return fastGenerateHash(rawPath, keys);
 }
 
 /**
@@ -48,10 +51,18 @@ export function generateHash(rawPath: string): string {
  * canonicalized query (handled in fastGenerateHash); the wire URL is unchanged
  * because the server re-canonicalizes whatever we send.
  */
-export function signUrl(url: string): string {
+export function signUrl(url: string, keys?: SignerKeys): string {
     const path = url.replace("https://comix.to/api/v1", "").split("?")[0]!;
     if (!isSignedPath(path)) return url;
-    const token = generateHash(url);
+    const q = url.indexOf("?");
+    if (q >= 0) {
+        const params = url.slice(q + 1).split("&").filter(part => {
+            try { return decodeURIComponent(part.split("=")[0]!.replace(/\+/g, " ")) !== "_"; }
+            catch { return true; }
+        }).filter(Boolean).join("&");
+        url = url.slice(0, q) + (params ? "?" + params : "");
+    }
+    const token = generateHash(url, keys);
     if (!token) return url;
     const sep = url.includes("?") ? "&" : "?";
     return `${url}${sep}_=${token}`;
@@ -117,18 +128,20 @@ async function solveWaf(requestManager: RequestManager, challengePath?: string):
     }
 }
 
+async function performComix(requestManager: RequestManager, request: Request): Promise<Response> {
+    const response = await requestManager.schedule(request, 1);
+    if (!isSecurityCheck(response) || !(await wafAutoSolveEnabled())) return response;
+    if (lastWafSolve && !lastWafSolve.ok && Date.now() - lastWafSolve.at < SOLVE_RETRY_MS) return response;
+    try {
+        await solveWaf(requestManager, challengePathOf(response));
+    } catch {
+        return response; // throwIfSecurityCheck reports why
+    }
+    return requestManager.schedule(request, 1);
+}
+
 export function scheduleComix(requestManager: RequestManager, request: Request): Promise<Response> {
-    return enqueueComix(async () => {
-        const response = await requestManager.schedule(request, 1);
-        if (!isSecurityCheck(response) || !(await wafAutoSolveEnabled())) return response;
-        if (lastWafSolve && !lastWafSolve.ok && Date.now() - lastWafSolve.at < SOLVE_RETRY_MS) return response;
-        try {
-            await solveWaf(requestManager, challengePathOf(response));
-        } catch {
-            return response; // throwIfSecurityCheck reports why
-        }
-        return requestManager.schedule(request, 1);
-    });
+    return enqueueComix(() => performComix(requestManager, request));
 }
 
 /** Settings button: solve the security check now, queued behind any in-flight comix call. */
@@ -179,7 +192,7 @@ export function throwIfSecurityCheck(response: Response, requestManager?: Reques
 }
 
 async function requestSignedUrl(requestManager: RequestManager, url: string): Promise<Response> {
-    return scheduleComix(requestManager, App.createRequest({
+    return performComix(requestManager, App.createRequest({
         url,
         method: "GET",
         headers: {
@@ -219,18 +232,27 @@ function checkSignedResponseError(response: Response, requestManager: RequestMan
  *
  * `timing`, if supplied, receives the parse/decrypt split for telemetry.
  */
+class ComixDecryptError extends Error {}
+
 export function decodeComixResponse<T>(
     apiPath: string,
     response: Response,
     timing?: { parseMs: number; decryptMs: number },
+    table?: number[],
 ): T {
     const parseStart = Date.now();
     const json = JSON.parse(response.data ?? "{}");
     if (timing) timing.parseMs = Date.now() - parseStart;
 
     if (json && typeof json === "object" && "e" in json) {
+        if (typeof json.e !== "string" || !json.e) throw new Error("Invalid Comix encrypted envelope");
         const decryptStart = Date.now();
-        const decrypted = fastDecryptComixPayload(apiPath, json, response.headers ?? {}) as any;
+        let decrypted: any;
+        try { decrypted = fastDecryptComixPayload(apiPath, json, response.headers ?? {}, table); }
+        catch (error: any) { throw new ComixDecryptError(error?.message ?? String(error)); }
+        if (decrypted && typeof decrypted === "object" && (decrypted.status === "error" || decrypted.status === "fail" || decrypted.status === "failed")) {
+            throw new Error(`Comix API ${decrypted.status}: ${decrypted.message ?? "no message"}`);
+        }
         if (timing) timing.decryptMs = Date.now() - decryptStart;
         // The interceptor unwraps `{ status: "ok", result: ... }` for us and
         // returns `result` directly; some payloads may not be wrapped.
@@ -245,37 +267,78 @@ export function decodeComixResponse<T>(
     return json.result as T;
 }
 
-export async function fetchSigned<T>(
+let keyManager: ComixKeyManager | undefined;
+function getKeyManager(): ComixKeyManager {
+    return keyManager ?? (keyManager = new ComixKeyManager(App.createSourceStateManager()));
+}
+
+function isRetiredKey(response: Response): boolean {
+    if (response.status !== 403 || isSecurityCheck(response)) return false;
+    try {
+        const json = JSON.parse(response.data ?? "{}");
+        return json.code === "key_retired" || json.error?.code === "key_retired";
+    } catch { return false; }
+}
+
+export function fetchSigned<T>(
     requestManager: RequestManager,
     fullUrl: string,
+    labelOverride?: string,
 ): Promise<T> {
-    const totalStart = Date.now();
-
-    const apiPath = fullUrl.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "");
-    const telPath = apiPath.split("?")[0]!;
-    const label = /^\/manga\/[^/]+\/chapters/.test(telPath) ? "chapters"
-        : /^\/chapters\//.test(telPath) ? "chapter_images"
-        : "signed_fetch";
-
-    const signStart = Date.now();
-    const signedUrl = signUrl(fullUrl);
-    const signMs = Date.now() - signStart;
-
-    const fetchStart = Date.now();
-    const response = await requestSignedUrl(requestManager, signedUrl);
-    const fetchMs = Date.now() - fetchStart;
-    const status = response.status;
-    const bytes = (response.data ?? "").length;
-
-    try {
-        checkSignedResponseError(response, requestManager);
-    } catch (err) {
-        emit({ label, path: telPath, status, bytes, signMs, fetchMs, parseMs: 0, decryptMs: 0, totalMs: Date.now() - totalStart });
-        throw err;
-    }
-
-    const timing = { parseMs: 0, decryptMs: 0 };
-    const result = decodeComixResponse<T>(apiPath, response, timing);
-    emit({ label, path: telPath, status, bytes, signMs, fetchMs, parseMs: timing.parseMs, decryptMs: timing.decryptMs, totalMs: Date.now() - totalStart });
-    return result;
+    // Signing, fetching, rotation and decoding stay in one queue item. A queued
+    // request uses the latest keys, and a response always uses its own snapshot.
+    return enqueueComix(async () => {
+        const totalStart = Date.now();
+        const apiPath = fullUrl.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "");
+        const path = apiPath.split("?")[0]!;
+        const label = labelOverride ?? (/^\/manga\/[^/]+\/chapters/.test(path) ? "chapters"
+            : /^\/chapters\//.test(path) ? "chapter_images" : "signed_fetch");
+        const manager = getKeyManager();
+        let record = await manager.current();
+        let candidate: KeyRecord | undefined;
+        let signMs = 0, fetchMs = 0, status = 0, bytes = 0;
+        const timing = { parseMs: 0, decryptMs: 0 };
+        try {
+            for (let attempt = 0; attempt < 2; attempt++) {
+                const signStart = Date.now();
+                const signedUrl = signUrl(fullUrl, record?.keys);
+                signMs += Date.now() - signStart;
+                const fetchStart = Date.now();
+                const response = await requestSignedUrl(requestManager, signedUrl);
+                fetchMs += Date.now() - fetchStart;
+                status = response.status;
+                bytes = (response.data ?? "").length;
+                if (!isRetiredKey(response) || attempt > 0) {
+                    checkSignedResponseError(response, requestManager);
+                    try {
+                        const result = decodeComixResponse<T>(apiPath, response, timing, record?.keys.table);
+                        if (candidate) await manager.activate(candidate);
+                        return result;
+                    } catch (error) {
+                        if (!(error instanceof ComixDecryptError)) throw error;
+                        // Refresh only the known encrypted envelope, not plain
+                        // API errors or unsupported cipher families.
+                        const headers = response.headers ?? {};
+                        const enc = Object.keys(headers).find(k => k.toLowerCase() === "x-enc");
+                        let encrypted = false;
+                        try { encrypted = typeof JSON.parse(response.data ?? "{}").e === "string"; } catch { /* malformed JSON */ }
+                        if (attempt > 0 || !encrypted || (enc && String(headers[enc]) !== "2")) throw error;
+                    }
+                }
+                candidate = await manager.discover(async (url) => {
+                    // Already inside the queue: don't recursively scheduleComix.
+                    const response = await performComix(requestManager, App.createRequest({
+                        url, method: "GET", headers: { "Referer": "https://comix.to/", "Cache-Control": "no-cache" },
+                    }));
+                    throwIfSecurityCheck(response, requestManager);
+                    if (response.status < 200 || response.status >= 300) throw new Error(`Comix key discovery HTTP ${response.status}`);
+                    return response.data ?? "";
+                });
+                record = candidate;
+            }
+            throw new Error("Comix key refresh retry exhausted");
+        } finally {
+            emit({ label, path, status, bytes, signMs, fetchMs, ...timing, totalMs: Date.now() - totalStart });
+        }
+    });
 }

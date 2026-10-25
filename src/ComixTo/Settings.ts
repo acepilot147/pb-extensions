@@ -5,8 +5,8 @@ import {
     SourceStateManager
 } from '@paperback/types'
 
-import { API_BASE, APIResponse, APIGenreItem, APIGenreResult, CONTENT_TYPES, CONTENT_RATINGS } from './Common'
-import { scheduleComix, signUrl, solveSecurityCheckNow, wafSolveStatus } from './ComixHash'
+import { API_BASE, APIGenreItem, APIGenreResult, CONTENT_TYPES, CONTENT_RATINGS } from './Common'
+import { fetchSigned, solveSecurityCheckNow, wafSolveStatus } from './ComixHash'
 
 interface TagCache {
     genre: APIGenreItem[];
@@ -441,16 +441,12 @@ const warmUpTagCache = (stateManager: SourceStateManager, requestManager: Reques
 
             try {
                 const fetchTerms = async (type: string): Promise<APIGenreItem[]> => {
-                    const req = App.createRequest({
-                        // /tags/search caps at limit=50 in v1; >50 returns 422.
-                        url: signUrl(`${API_BASE}/tags/search?type=${type}&limit=50`),
-                        method: 'GET',
-                    });
-                    const res = await scheduleComix(requestManager, req);
-                    // A 403 (e.g. the WAF security check) must not be cached as an empty tag list.
-                    if (res.status !== 200) throw new Error(`tags/search ${type}: HTTP ${res.status}`);
-                    const json = JSON.parse(res.data ?? '{}') as APIResponse<APIGenreResult>;
-                    return Array.isArray(json.result) ? json.result : [];
+                    // This endpoint can be encrypted too. Use the same key
+                    // snapshot/retry path as search; errors must not become an
+                    // apparently successful empty tag cache.
+                    const result = await fetchSigned<APIGenreResult>(requestManager, `${API_BASE}/tags/search?type=${type}&limit=50`);
+                    if (!Array.isArray(result)) throw new Error(`tags/search ${type}: invalid result`);
+                    return result;
                 };
 
                 // v1 renamed type=theme → type=tag.

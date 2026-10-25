@@ -1,5 +1,14 @@
 ### Local Build and Deployment Guide
 
+## Auto-key rotation verification
+
+The working source can refresh Comix signing/decryption keys in-app and reuse
+confirmed keys after restart. Run `npm run verify:keys` to type-check, test, build,
+and exercise the built bundle offline with saved genuine assets. See
+[behavior, trust boundary, and test instructions](experiment/live/AUTO_KEY_ROTATION.md).
+This gate does not publish a release.
+
+
 This guide outlines the steps to compile the TypeScript extension into standard JavaScript, fix the generated deep-links, and push the updates to the GitHub Pages environment. (For Windows and mostly as notes to self)
 
 # 1. Compile the Source Code
@@ -115,7 +124,7 @@ npm run bundle
 ```
 - The `--` is required. A plain `git checkout 0.8` fails ("could be both a local file and a tracking branch") because a `0.8/` folder also exists.
 - The bundler won't create `bundles\0.8` itself and fails with `ENOENT … mkdir` if it's missing.
-- To type-check, use `npx tsc --noEmit -p tsconfig.json` and filter the output to `src`. The `@types/node` errors from `node_modules` are pre-existing noise.
+- To type-check, use `npm run typecheck`. TypeScript was updated to parse the installed Node declarations; errors must not be filtered out.
 
 ### 4d. Commit source
 
