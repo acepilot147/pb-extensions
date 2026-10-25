@@ -1893,7 +1893,10 @@ var _Sources = (() => {
     if (/[\\\s?#%]/.test(ref) || ref.startsWith("//")) throw new Error("Comix key asset URL is not allowed");
     let path;
     if (/^https?:/i.test(ref)) {
-      if (!ref.startsWith(ORIGIN + "/")) throw new Error("Comix key asset origin is not allowed");
+      if (!ref.startsWith(ORIGIN + "/")) {
+        const host = /^https?:\/\/(?:[^/]*@)?([^/]+)/i.exec(ref)?.[1] ?? "unknown";
+        throw new Error(`Comix key asset origin is not allowed: ${host.slice(0, 128)}`);
+      }
       path = ref.slice(ORIGIN.length);
     } else if (ref.startsWith("/")) path = ref;
     else path = base.slice(ORIGIN.length).replace(/[^/]*$/, "") + ref;
@@ -1944,10 +1947,6 @@ var _Sources = (() => {
     }
     async discover(fetchText) {
       if (this.flight) return this.flight;
-      if (this.lastAttempt !== void 0 && this.now() - this.lastAttempt < 6e4) {
-        throw new Error("Comix key refresh was recently attempted; retry in one minute or update the extension");
-      }
-      this.lastAttempt = this.now();
       this.flight = this.discoverOnce(async (url) => {
         const text = await fetchText(url);
         if (typeof text !== "string" || text.length > 3 * 1024 * 1024) throw new Error("Comix key asset is too large");
@@ -1964,9 +1963,17 @@ var _Sources = (() => {
       const scripts = /<script\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>/gi;
       let match;
       const mains = [];
+      let rejectedScript;
       while (match = scripts.exec(html)) {
-        if (/\btype\s*=\s*["']module["']/i.test(match[0]) || /(?:main|index)[.-]/.test(match[1])) mains.push(assetUrl(match[1], ORIGIN + "/"));
+        if (!(/\btype\s*=\s*["']module["']/i.test(match[0]) || /(?:main|index)[.-]/.test(match[1]))) continue;
+        try {
+          const url = assetUrl(match[1], ORIGIN + "/");
+          if (!mains.includes(url)) mains.push(url);
+        } catch (error) {
+          rejectedScript = error;
+        }
       }
+      if (!mains.length && rejectedScript) throw rejectedScript;
       if (!mains.length || mains.length > 4) throw new Error("Comix key discovery: expected a site module script");
       let apicore;
       for (const main of mains) {
@@ -4092,7 +4099,7 @@ var _Sources = (() => {
     return /^https?:\/\/([^/]+\.)?comix\.to(\/|$|\?|#)/i.test(url ?? "");
   }
   var ComixToInfo = {
-    version: "1.9.32",
+    version: "1.9.33",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
