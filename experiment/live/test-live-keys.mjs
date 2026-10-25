@@ -69,7 +69,7 @@ function boot({ state = new Map(), mode = 'normal' } = {}) {
         const u = new URL(request.url);
         log.push(request.url);
         const response = (status, data, headers = {}) => ({ status, data, headers, request });
-        if (request.url in pages) return response(200, pages[request.url], { 'content-type': request.url.endsWith('.js') ? 'application/javascript' : 'text/html' });
+        if (request.url in pages) return response(200, (mode === 'extraScripts' && request.url === 'https://comix.to/' ? '<script type="module" src="https://analytics.invalid/main-analytics.js"></script>' : '') + pages[request.url], { 'content-type': request.url.endsWith('.js') ? 'application/javascript' : 'text/html' });
         assert.equal(u.origin, 'https://comix.to', 'unexpected outbound origin');
         assert.ok(u.pathname.startsWith('/api/v1/'), 'unexpected request path');
         if (mode === 'waf') return response(403, '{"error":"captcha_required"}');
@@ -105,7 +105,7 @@ function boot({ state = new Map(), mode = 'normal' } = {}) {
     vm.runInContext(sourceCode, realm, { filename: sourcePath, timeout: 15000 });
     const extension = new realm.Sources.ComixTo();
     const before = snapshot(realm);
-    return { extension, state, log, telemetry, realm, checkIntegrity: () => assertUnchanged(before, snapshot(realm)), counts: () => ({ accepted, rejected }) };
+    return { extension, state, log, telemetry, realm, setMode: value => { mode = value; }, checkIntegrity: () => assertUnchanged(before, snapshot(realm)), counts: () => ({ accepted, rejected }) };
 }
 const cases = [];
 async function check(name, fn) { await fn(); cases.push(name); console.log('PASS ' + name); }
@@ -148,6 +148,13 @@ await check('tag-filter settings decrypt API results rather than caching empty l
     assert.equal(cache.genre[0]?.label, title);
     assert.equal(x.log.filter(u => !u.includes('/api/v1/')).length, 0);
 });
+await check('unrelated external module scripts never block or leave the allowed discovery chain', async () => {
+    const x = boot({ mode: 'extraScripts' });
+    assert.equal((await x.extension.getMangaDetails('fixture')).mangaInfo.titles[0], title);
+    assert.equal(x.log.filter(u => !u.includes('/api/v1/')).length, 4);
+    assert.ok(x.log.every(u => u.startsWith('https://comix.to/')));
+    x.checkIntegrity();
+});
 await check('fresh VM restart reuses persisted keys with zero asset fetches', async () => {
     const x = boot({ state: new Map(confirmed) });
     assert.equal((await x.extension.getMangaDetails('fixture')).mangaInfo.titles[0], title);
@@ -180,7 +187,12 @@ for (const mode of ['retired','corrupt']) await check(`${mode} response is retri
     assert.equal(x.log.filter(u => u.includes('/api/v1/')).length, 2);
     assert.equal(x.log.filter(u => !u.includes('/api/v1/')).length, 4);
     assert.equal(x.state.has('comix_live_keys_v1'), false);
-    await assert.rejects(x.extension.getMangaDetails('fixture'), /recently attempted/);
-    assert.equal(x.log.filter(u => !u.includes('/api/v1/')).length, 4);
+    await assert.rejects(x.extension.getMangaDetails('fixture'));
+    assert.equal(x.log.filter(u => u.includes('/api/v1/')).length, 4);
+    assert.equal(x.log.filter(u => !u.includes('/api/v1/')).length, 8);
+    assert.equal(x.state.has('comix_live_keys_v1'), false);
+    x.setMode('normal');
+    assert.equal((await x.extension.getMangaDetails('fixture')).mangaInfo.titles[0], title);
+    assert.equal(x.log.filter(u => !u.includes('/api/v1/')).length, 12);
 });
 console.log(`\n${cases.length}/${cases.length} offline built-bundle scenarios passed; key=${keys.prefix}; bytes=${Buffer.byteLength(sourceCode)}; live requests=0`);

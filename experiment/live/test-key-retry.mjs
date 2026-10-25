@@ -55,7 +55,7 @@ function setup({ state = new Map(), mode = 'rotate' } = {}) {
         vm.runInContext(`(function(exports,require){${code}\n})`, realm)(exports, load);
         return exports;
     }
-    return { hash: load('./ComixHash'), sourceClass: load('./ComixTo').ComixTo, manager, calls, state, telemetry };
+    return { hash: load('./ComixHash'), sourceClass: load('./ComixTo').ComixTo, manager, calls, state, telemetry, setMode: value => { mode = value; } };
 }
 
 test('key_retired rotates once, re-signs queued requests, decrypts and persists', async () => {
@@ -103,8 +103,13 @@ test('an unsuccessful key retry is bounded and never persists the candidate', as
     await assert.rejects(x.hash.fetchSigned(x.manager, 'https://comix.to/api/v1/manga/one'), /HTTP 403/);
     assert.equal(x.calls.filter(u => u.includes('/api/v1/')).length, 2);
     assert.equal(x.state.size, 0);
-    await assert.rejects(x.hash.fetchSigned(x.manager, 'https://comix.to/api/v1/manga/one'), /recently attempted/);
-    assert.equal(x.calls.filter(u => u === 'https://comix.to/').length, 1);
+    await assert.rejects(x.hash.fetchSigned(x.manager, 'https://comix.to/api/v1/manga/one'), /HTTP 403/);
+    assert.equal(x.calls.filter(u => u === 'https://comix.to/').length, 2);
+    assert.equal(x.calls.filter(u => u.includes('/api/v1/')).length, 4);
+    assert.equal(x.state.size, 0);
+    x.setMode('rotate');
+    assert.equal((await x.hash.fetchSigned(x.manager, 'https://comix.to/api/v1/manga/one')).recovered, true);
+    assert.equal(x.calls.filter(u => u === 'https://comix.to/').length, 3);
 });
 
 test('re-signing replaces every old token without changing other query values', () => {

@@ -32,7 +32,7 @@ function setup({ stored, extraction = keys, storeError = false } = {}) {
         [`${root}helpers-xyz.js`]: 'const a=1;export{a};',
     };
     const fetch = async url => { urls.push(url); assert.ok(url in pages, `unexpected URL ${url}`); return pages[url]; };
-    return { manager, state, fetch, pages, urls, exports, advance: ms => { now += ms; }, counts: () => ({ extracts, reads, writes }), stored: () => value };
+    return { manager, state, fetch, pages, urls, exports, counts: () => ({ extracts, reads, writes }), stored: () => value };
 }
 
 test('discover, validate, activate atomically, then reuse persisted keys after restart', async () => {
@@ -52,22 +52,22 @@ test('discover, validate, activate atomically, then reuse persisted keys after r
     assert.equal(restart.counts().extracts, 0);
 });
 
-test('concurrent refreshes share one discovery and attempts are rate limited', async () => {
+test('concurrent refreshes share one discovery and later requests can refresh immediately', async () => {
     const x = setup();
     const [a, b] = await Promise.all([x.manager.discover(x.fetch), x.manager.discover(x.fetch)]);
     assert.equal(a, b);
     assert.equal(x.urls.length, 4);
-    await assert.rejects(x.manager.discover(x.fetch), /recently attempted/);
-    x.advance(60001);
-    await x.manager.discover(x.fetch);
+    const next = await x.manager.discover(x.fetch);
+    assert.equal(next.fetchedAt, a.fetchedAt, 'no clock advance or cooldown required');
     assert.equal(x.urls.length, 8);
 });
 
-test('failed discovery is rate limited and oversized assets are rejected', async () => {
+test('failed discovery can recover immediately once an oversized asset is repaired', async () => {
     const x = setup();
     x.pages[`${root}main-xyz.js`] = 'x'.repeat(3 * 1024 * 1024 + 1);
     await assert.rejects(x.manager.discover(x.fetch), /too large/);
-    await assert.rejects(x.manager.discover(x.fetch), /recently attempted/);
+    x.pages[`${root}main-xyz.js`] = 'import {a} from "./apicore-test-xyz.js";';
+    assert.equal((await x.manager.discover(x.fetch)).keys.prefix, 'new.');
     assert.equal(x.counts().writes, 0);
 });
 
@@ -88,6 +88,26 @@ for (const url of ['https://evil.invalid/main-x.js', '//evil.invalid/main-x.js',
         assert.equal(x.counts().extracts, 0);
     });
 }
+
+test('ignores unrelated external module tags before or after the real main', async () => {
+    for (const first of [true, false]) {
+        const x = setup();
+        const real = x.pages['https://comix.to/'];
+        const external = '<script type="module" src="https://cdn.example.invalid/main-analytics.js"></script>';
+        x.pages['https://comix.to/'] = first ? external + real : real + external;
+        const record = await x.manager.discover(x.fetch);
+        assert.equal(record.keys.prefix, 'new.');
+        assert.deepEqual(x.urls, ['https://comix.to/', `${root}main-xyz.js`, `${root}apicore-test-xyz.js`, `${root}helpers-xyz.js`]);
+    }
+});
+
+for (const kind of ['main', 'helper']) test(`rejects off-origin ${kind} dependencies and identifies the rejected host`, async () => {
+    const x = setup();
+    if (kind === 'main') x.pages[`${root}main-xyz.js`] = 'import{a}from"https://cdn.example.invalid/assets/apicore-test-x.js";';
+    else x.pages[`${root}apicore-test-xyz.js`] = 'import{a}from"https://cdn.example.invalid/assets/helper-x.js";export{a};';
+    await assert.rejects(x.manager.discover(x.fetch), /origin is not allowed.*cdn\.example\.invalid/);
+    assert.ok(x.urls.every(u => u.startsWith('https://comix.to/')));
+});
 
 test('failed extraction leaves the good persisted record untouched', async () => {
     const initial = setup();

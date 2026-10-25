@@ -18,13 +18,18 @@ signing, fetching, retrying, and decoding inside that queue item.
   response activates/persists it. Failed extraction/retries leave the previous
   record intact. In-memory keys survive a persistent-store write failure.
 - A queue prevents concurrent homepage calls from racing key changes. Discovery
-  is also single-flight, and attempts are limited to once per minute per runtime.
+  is also single-flight, with no time-based cooldown: the next request may refresh
+  immediately after success or failure. Each request still retries its API call
+  only once; repeated failing requests can therefore repeat the asset downloads.
 - A restart reads the numeric key cache; it does not refetch assets unless an API
   response signals stale keys. There is deliberately no periodic TTL refresh.
 
 Discovery accepts only HTTPS `comix.to/assets/…/*.js` URLs. It rejects external
 origins, encoded/traversal-to-non-asset paths, query/fragment references, oversized
-bodies, and unexpected module layouts. Downloaded JavaScript is not persisted.
+bodies, and unexpected module layouts. Unrelated external module/main script
+tags on the homepage are skipped; apicore/helper dependencies still must pass
+strict origin checks. Rejected dependency errors identify the hostname, not
+credentials or URL query values. Downloaded JavaScript is not persisted.
 The on-device state contains the key prefix, two SHA-256 midstates, XOR table,
 schema version, source asset URL, and extraction timestamp.
 

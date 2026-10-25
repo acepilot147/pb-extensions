@@ -75,7 +75,7 @@ function isComixUrl(url: string): boolean {
 }
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.9.32",
+  version: "1.9.33",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
