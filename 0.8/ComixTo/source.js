@@ -31,353 +31,353 @@ var _Sources = (() => {
   ));
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUIBinding.js
+  // node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUIBinding.js
   var require_DUIBinding = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUIBinding.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUIBinding.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUIForm.js
+  // node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUIForm.js
   var require_DUIForm = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUIForm.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUIForm.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUIFormRow.js
+  // node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUIFormRow.js
   var require_DUIFormRow = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUIFormRow.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUIFormRow.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUISection.js
+  // node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUISection.js
   var require_DUISection = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUISection.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/DynamicUI/Exports/DUISection.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIButton.js
+  // node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIButton.js
   var require_DUIButton = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIButton.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIButton.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIHeader.js
+  // node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIHeader.js
   var require_DUIHeader = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIHeader.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIHeader.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIInputField.js
+  // node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIInputField.js
   var require_DUIInputField = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIInputField.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIInputField.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUILabel.js
+  // node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUILabel.js
   var require_DUILabel = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUILabel.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUILabel.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUILink.js
+  // node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUILink.js
   var require_DUILink = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUILink.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUILink.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIMultilineLabel.js
+  // node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIMultilineLabel.js
   var require_DUIMultilineLabel = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIMultilineLabel.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIMultilineLabel.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUINavigationButton.js
+  // node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUINavigationButton.js
   var require_DUINavigationButton = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUINavigationButton.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUINavigationButton.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIOAuthButton.js
+  // node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIOAuthButton.js
   var require_DUIOAuthButton = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIOAuthButton.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIOAuthButton.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUISecureInputField.js
+  // node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUISecureInputField.js
   var require_DUISecureInputField = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUISecureInputField.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUISecureInputField.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUISelect.js
+  // node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUISelect.js
   var require_DUISelect = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUISelect.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUISelect.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIStepper.js
+  // node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIStepper.js
   var require_DUIStepper = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIStepper.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUIStepper.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUISwitch.js
+  // node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUISwitch.js
   var require_DUISwitch = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUISwitch.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/DynamicUI/Rows/Exports/DUISwitch.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/ChapterDetails.js
+  // node_modules/@paperback/types/lib/generated/Exports/ChapterDetails.js
   var require_ChapterDetails = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/ChapterDetails.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/ChapterDetails.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/Chapter.js
+  // node_modules/@paperback/types/lib/generated/Exports/Chapter.js
   var require_Chapter = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/Chapter.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/Chapter.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/Cookie.js
+  // node_modules/@paperback/types/lib/generated/Exports/Cookie.js
   var require_Cookie = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/Cookie.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/Cookie.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/HomeSection.js
+  // node_modules/@paperback/types/lib/generated/Exports/HomeSection.js
   var require_HomeSection = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/HomeSection.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/HomeSection.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/IconText.js
+  // node_modules/@paperback/types/lib/generated/Exports/IconText.js
   var require_IconText = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/IconText.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/IconText.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/MangaInfo.js
+  // node_modules/@paperback/types/lib/generated/Exports/MangaInfo.js
   var require_MangaInfo = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/MangaInfo.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/MangaInfo.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/MangaProgress.js
+  // node_modules/@paperback/types/lib/generated/Exports/MangaProgress.js
   var require_MangaProgress = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/MangaProgress.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/MangaProgress.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/PartialSourceManga.js
+  // node_modules/@paperback/types/lib/generated/Exports/PartialSourceManga.js
   var require_PartialSourceManga = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/PartialSourceManga.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/PartialSourceManga.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/MangaUpdates.js
+  // node_modules/@paperback/types/lib/generated/Exports/MangaUpdates.js
   var require_MangaUpdates = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/MangaUpdates.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/MangaUpdates.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/PBCanvas.js
+  // node_modules/@paperback/types/lib/generated/Exports/PBCanvas.js
   var require_PBCanvas = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/PBCanvas.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/PBCanvas.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/PBImage.js
+  // node_modules/@paperback/types/lib/generated/Exports/PBImage.js
   var require_PBImage = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/PBImage.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/PBImage.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/PagedResults.js
+  // node_modules/@paperback/types/lib/generated/Exports/PagedResults.js
   var require_PagedResults = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/PagedResults.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/PagedResults.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/RawData.js
+  // node_modules/@paperback/types/lib/generated/Exports/RawData.js
   var require_RawData = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/RawData.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/RawData.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/Request.js
+  // node_modules/@paperback/types/lib/generated/Exports/Request.js
   var require_Request = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/Request.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/Request.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SourceInterceptor.js
+  // node_modules/@paperback/types/lib/generated/Exports/SourceInterceptor.js
   var require_SourceInterceptor = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SourceInterceptor.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/SourceInterceptor.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/RequestManager.js
+  // node_modules/@paperback/types/lib/generated/Exports/RequestManager.js
   var require_RequestManager = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/RequestManager.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/RequestManager.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/Response.js
+  // node_modules/@paperback/types/lib/generated/Exports/Response.js
   var require_Response = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/Response.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/Response.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SearchField.js
+  // node_modules/@paperback/types/lib/generated/Exports/SearchField.js
   var require_SearchField = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SearchField.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/SearchField.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SearchRequest.js
+  // node_modules/@paperback/types/lib/generated/Exports/SearchRequest.js
   var require_SearchRequest = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SearchRequest.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/SearchRequest.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SourceCookieStore.js
+  // node_modules/@paperback/types/lib/generated/Exports/SourceCookieStore.js
   var require_SourceCookieStore = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SourceCookieStore.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/SourceCookieStore.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SourceManga.js
+  // node_modules/@paperback/types/lib/generated/Exports/SourceManga.js
   var require_SourceManga = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SourceManga.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/SourceManga.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SecureStateManager.js
+  // node_modules/@paperback/types/lib/generated/Exports/SecureStateManager.js
   var require_SecureStateManager = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SecureStateManager.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/SecureStateManager.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SourceStateManager.js
+  // node_modules/@paperback/types/lib/generated/Exports/SourceStateManager.js
   var require_SourceStateManager = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/SourceStateManager.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/SourceStateManager.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/Tag.js
+  // node_modules/@paperback/types/lib/generated/Exports/Tag.js
   var require_Tag = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/Tag.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/Tag.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/TagSection.js
+  // node_modules/@paperback/types/lib/generated/Exports/TagSection.js
   var require_TagSection = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/TagSection.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/TagSection.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/TrackedMangaChapterReadAction.js
+  // node_modules/@paperback/types/lib/generated/Exports/TrackedMangaChapterReadAction.js
   var require_TrackedMangaChapterReadAction = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/TrackedMangaChapterReadAction.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/TrackedMangaChapterReadAction.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/TrackerActionQueue.js
+  // node_modules/@paperback/types/lib/generated/Exports/TrackerActionQueue.js
   var require_TrackerActionQueue = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/Exports/TrackerActionQueue.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/Exports/TrackerActionQueue.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/_exports.js
+  // node_modules/@paperback/types/lib/generated/_exports.js
   var require_exports = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/generated/_exports.js"(exports) {
+    "node_modules/@paperback/types/lib/generated/_exports.js"(exports) {
       "use strict";
       var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
         if (k2 === void 0) k2 = k;
@@ -442,9 +442,9 @@ var _Sources = (() => {
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/Source.js
+  // node_modules/@paperback/types/lib/base/Source.js
   var require_Source = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/Source.js"(exports) {
+    "node_modules/@paperback/types/lib/base/Source.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
       exports.urlEncodeObject = exports.convertTime = exports.Source = void 0;
@@ -495,17 +495,17 @@ var _Sources = (() => {
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/ByteArray.js
+  // node_modules/@paperback/types/lib/base/ByteArray.js
   var require_ByteArray = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/ByteArray.js"(exports) {
+    "node_modules/@paperback/types/lib/base/ByteArray.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/Badge.js
+  // node_modules/@paperback/types/lib/base/Badge.js
   var require_Badge = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/Badge.js"(exports) {
+    "node_modules/@paperback/types/lib/base/Badge.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
       exports.BadgeColor = void 0;
@@ -520,65 +520,65 @@ var _Sources = (() => {
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/ChapterProviding.js
+  // node_modules/@paperback/types/lib/base/interfaces/ChapterProviding.js
   var require_ChapterProviding = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/ChapterProviding.js"(exports) {
+    "node_modules/@paperback/types/lib/base/interfaces/ChapterProviding.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/CloudflareBypassRequestProviding.js
+  // node_modules/@paperback/types/lib/base/interfaces/CloudflareBypassRequestProviding.js
   var require_CloudflareBypassRequestProviding = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/CloudflareBypassRequestProviding.js"(exports) {
+    "node_modules/@paperback/types/lib/base/interfaces/CloudflareBypassRequestProviding.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/HomePageSectionsProviding.js
+  // node_modules/@paperback/types/lib/base/interfaces/HomePageSectionsProviding.js
   var require_HomePageSectionsProviding = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/HomePageSectionsProviding.js"(exports) {
+    "node_modules/@paperback/types/lib/base/interfaces/HomePageSectionsProviding.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/MangaProgressProviding.js
+  // node_modules/@paperback/types/lib/base/interfaces/MangaProgressProviding.js
   var require_MangaProgressProviding = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/MangaProgressProviding.js"(exports) {
+    "node_modules/@paperback/types/lib/base/interfaces/MangaProgressProviding.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/MangaProviding.js
+  // node_modules/@paperback/types/lib/base/interfaces/MangaProviding.js
   var require_MangaProviding = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/MangaProviding.js"(exports) {
+    "node_modules/@paperback/types/lib/base/interfaces/MangaProviding.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/RequestManagerProviding.js
+  // node_modules/@paperback/types/lib/base/interfaces/RequestManagerProviding.js
   var require_RequestManagerProviding = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/RequestManagerProviding.js"(exports) {
+    "node_modules/@paperback/types/lib/base/interfaces/RequestManagerProviding.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/SearchResultsProviding.js
+  // node_modules/@paperback/types/lib/base/interfaces/SearchResultsProviding.js
   var require_SearchResultsProviding = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/SearchResultsProviding.js"(exports) {
+    "node_modules/@paperback/types/lib/base/interfaces/SearchResultsProviding.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/index.js
+  // node_modules/@paperback/types/lib/base/interfaces/index.js
   var require_interfaces = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/interfaces/index.js"(exports) {
+    "node_modules/@paperback/types/lib/base/interfaces/index.js"(exports) {
       "use strict";
       var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
         if (k2 === void 0) k2 = k;
@@ -607,9 +607,9 @@ var _Sources = (() => {
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/SourceInfo.js
+  // node_modules/@paperback/types/lib/base/SourceInfo.js
   var require_SourceInfo = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/SourceInfo.js"(exports) {
+    "node_modules/@paperback/types/lib/base/SourceInfo.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
       exports.ContentRating = exports.SourceIntents = void 0;
@@ -631,9 +631,9 @@ var _Sources = (() => {
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/HomeSectionType.js
+  // node_modules/@paperback/types/lib/base/HomeSectionType.js
   var require_HomeSectionType = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/HomeSectionType.js"(exports) {
+    "node_modules/@paperback/types/lib/base/HomeSectionType.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
       exports.HomeSectionType = void 0;
@@ -647,17 +647,17 @@ var _Sources = (() => {
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/PaperbackExtensionBase.js
+  // node_modules/@paperback/types/lib/base/PaperbackExtensionBase.js
   var require_PaperbackExtensionBase = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/PaperbackExtensionBase.js"(exports) {
+    "node_modules/@paperback/types/lib/base/PaperbackExtensionBase.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/index.js
+  // node_modules/@paperback/types/lib/base/index.js
   var require_base = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/base/index.js"(exports) {
+    "node_modules/@paperback/types/lib/base/index.js"(exports) {
       "use strict";
       var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
         if (k2 === void 0) k2 = k;
@@ -686,17 +686,17 @@ var _Sources = (() => {
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/compat/DyamicUI.js
+  // node_modules/@paperback/types/lib/compat/DyamicUI.js
   var require_DyamicUI = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/compat/DyamicUI.js"(exports) {
+    "node_modules/@paperback/types/lib/compat/DyamicUI.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
     }
   });
 
-  // ../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/index.js
+  // node_modules/@paperback/types/lib/index.js
   var require_lib = __commonJS({
-    "../../../../../../../../Documents/GitHub/pb-extensions/node_modules/@paperback/types/lib/index.js"(exports) {
+    "node_modules/@paperback/types/lib/index.js"(exports) {
       "use strict";
       var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
         if (k2 === void 0) k2 = k;
@@ -914,6 +914,20 @@ var _Sources = (() => {
   var MAC_BYTES = 12;
   var ISTATE = [351265062, 2131388969, 4155215823, 3233044027, 2237217869, 2096341232, 142990981, 92792595];
   var OSTATE = [973438483, 4012387613, 4139944866, 1675536639, 321182065, 1876047137, 2608377370, 3549784728];
+  var BAKED_SIGNER_KEYS = { prefix: TOKEN_PREFIX, macBytes: MAC_BYTES, istate: ISTATE, ostate: OSTATE };
+  function validState(state) {
+    if (!Array.isArray(state) || state.length !== 8) return false;
+    for (let i = 0; i < state.length; i++) {
+      const word = state[i];
+      if (!Object.prototype.hasOwnProperty.call(state, i) || !Number.isInteger(word) || word < 0 || word > 4294967295) return false;
+    }
+    return true;
+  }
+  function validateSignerKeys(keys) {
+    if (!keys || typeof keys !== "object" || Array.isArray(keys) || typeof keys.prefix !== "string" || !keys.prefix || /[^A-Za-z0-9._~-]/.test(keys.prefix) || !Number.isInteger(keys.macBytes) || keys.macBytes < 1 || keys.macBytes > 32 || !validState(keys.istate) || !validState(keys.ostate)) {
+      throw new Error("Invalid Comix signer keys");
+    }
+  }
   var SHA256_K = [
     1116352408,
     1899447441,
@@ -1053,6 +1067,7 @@ var _Sources = (() => {
           i++;
         }
       }
+      if (cp >= 55296 && cp <= 57343) cp = 65533;
       if (cp < 128) {
         out.push(cp);
       } else if (cp < 2048) {
@@ -1076,8 +1091,8 @@ var _Sources = (() => {
     if (!rawQuery) {
       return "";
     }
-    const groups = {};
-    const arrayCounts = {};
+    const groups = /* @__PURE__ */ Object.create(null);
+    const arrayCounts = /* @__PURE__ */ Object.create(null);
     const parts = rawQuery.split("&");
     for (let p = 0; p < parts.length; p++) {
       const part = parts[p];
@@ -1107,21 +1122,882 @@ var _Sources = (() => {
     }
     return Object.keys(groups).sort().map((b) => groups[b].join("&")).join("&");
   }
-  function signString(s) {
-    const inner = sha256FromMidstate(ISTATE, utf8Encode(s));
-    const outer = sha256FromMidstate(OSTATE, inner);
-    return TOKEN_PREFIX + b64UrlEncode(outer.slice(0, MAC_BYTES));
+  function signString(s, keys) {
+    const inner = sha256FromMidstate(keys.istate, utf8Encode(s));
+    const outer = sha256FromMidstate(keys.ostate, inner);
+    return keys.prefix + b64UrlEncode(outer.slice(0, keys.macBytes));
   }
-  function fastGenerateHash(rawPath) {
+  function fastGenerateHash(rawPath, keys = BAKED_SIGNER_KEYS) {
+    validateSignerKeys(keys);
     const stripped = rawPath.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "");
     const qIdx = stripped.indexOf("?");
     if (qIdx < 0) {
-      return signString(stripped);
+      return signString(stripped, keys);
     }
     const path = stripped.slice(0, qIdx);
     const canonical = canonicalizeQuery(stripped.slice(qIdx + 1));
-    return signString(canonical ? path + "?" + canonical : path);
+    return signString(canonical ? path + "?" + canonical : path, keys);
   }
+
+  // src/ComixTo/ComixPolyfills.ts
+  function scalarString(value) {
+    return String(value).replace(
+      /[\uD800-\uDBFF][\uDC00-\uDFFF]|[\uD800-\uDFFF]/g,
+      (part) => part.length === 2 ? part : "\uFFFD"
+    );
+  }
+  var TextEncoderShim = class {
+    get encoding() {
+      return "utf-8";
+    }
+    encode(input = "") {
+      const bytes = [];
+      for (const char of scalarString(input)) {
+        const cp = char.codePointAt(0);
+        if (cp < 128) bytes.push(cp);
+        else if (cp < 2048) bytes.push(192 | cp >> 6, 128 | cp & 63);
+        else if (cp < 65536) bytes.push(224 | cp >> 12, 128 | cp >> 6 & 63, 128 | cp & 63);
+        else bytes.push(240 | cp >> 18, 128 | cp >> 12 & 63, 128 | cp >> 6 & 63, 128 | cp & 63);
+      }
+      return new Uint8Array(bytes);
+    }
+    encodeInto(input, destination) {
+      let read = 0, written = 0;
+      for (const char of String(input)) {
+        const bytes = this.encode(char);
+        if (written + bytes.length > destination.length) break;
+        destination.set(bytes, written);
+        written += bytes.length;
+        read += char.length;
+      }
+      return { read, written };
+    }
+  };
+  function byteView(input) {
+    if (ArrayBuffer.isView(input)) return new Uint8Array(input.buffer, input.byteOffset, input.byteLength);
+    if (input instanceof ArrayBuffer) return new Uint8Array(input);
+    throw new TypeError("Expected an ArrayBuffer or ArrayBufferView");
+  }
+  var TextDecoderShim = class {
+    constructor(label = "utf-8", options = {}) {
+      this.encoding = "utf-8";
+      if (!["utf-8", "utf8", "unicode-1-1-utf-8"].includes(String(label).trim().toLowerCase())) {
+        throw new RangeError("TextDecoderShim only supports UTF-8");
+      }
+      this.fatal = !!options.fatal;
+      this.ignoreBOM = !!options.ignoreBOM;
+    }
+    decode(input, options = {}) {
+      if (options.stream) throw new TypeError("TextDecoderShim does not support streaming");
+      const bytes = input === void 0 ? new Uint8Array(0) : byteView(input);
+      let out = "", i = 0;
+      const invalid = () => {
+        if (this.fatal) throw new TypeError("Invalid UTF-8");
+        return "\uFFFD";
+      };
+      while (i < bytes.length) {
+        const first = bytes[i++];
+        if (first < 128) {
+          out += String.fromCharCode(first);
+          continue;
+        }
+        let needed, cp;
+        if (first >= 194 && first <= 223) {
+          needed = 1;
+          cp = first & 31;
+        } else if (first >= 224 && first <= 239) {
+          needed = 2;
+          cp = first & 15;
+        } else if (first >= 240 && first <= 244) {
+          needed = 3;
+          cp = first & 7;
+        } else {
+          out += invalid();
+          continue;
+        }
+        let consumed = 0;
+        while (consumed < needed && i < bytes.length) {
+          const next = bytes[i];
+          const low = consumed === 0 && first === 224 ? 160 : consumed === 0 && first === 240 ? 144 : 128;
+          const high = consumed === 0 && first === 237 ? 159 : consumed === 0 && first === 244 ? 143 : 191;
+          if (next < low || next > high) break;
+          cp = cp << 6 | next & 63;
+          consumed++;
+          i++;
+        }
+        out += consumed === needed ? String.fromCodePoint(cp) : invalid();
+      }
+      return !this.ignoreBOM && out.charCodeAt(0) === 65279 ? out.slice(1) : out;
+    }
+  };
+  var BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  function formDecode(value) {
+    const input = scalarString(value).replace(/\+/g, " ");
+    const bytes = [];
+    for (let i = 0; i < input.length; ) {
+      if (input[i] === "%" && /^[\da-f]{2}$/i.test(input.slice(i + 1, i + 3))) {
+        bytes.push(parseInt(input.slice(i + 1, i + 3), 16));
+        i += 3;
+      } else {
+        const char = String.fromCodePoint(input.codePointAt(i));
+        for (const byte of new TextEncoderShim().encode(char)) bytes.push(byte);
+        i += char.length;
+      }
+    }
+    return new TextDecoderShim("utf-8", { ignoreBOM: true }).decode(new Uint8Array(bytes));
+  }
+  function formEncode(value) {
+    return encodeURIComponent(value).replace(/[!'()~]/g, (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase()).replace(/%20/g, "+");
+  }
+  var REPLACE_QUERY = Symbol("replace URL query");
+  var URLSearchParamsShim = class _URLSearchParamsShim {
+    constructor(init = "", changed) {
+      this.changed = changed;
+      this.pairs = [];
+      if (init == null) return;
+      if (typeof init === "object" && Symbol.iterator in init) {
+        for (const entry of init) {
+          if (!entry || typeof entry !== "object" || !(Symbol.iterator in entry)) throw new TypeError("Expected query pairs");
+          const pair = Array.from(entry);
+          if (pair.length !== 2) throw new TypeError("Expected exactly two items in query pair");
+          this.pairs.push([scalarString(pair[0]), scalarString(pair[1])]);
+        }
+      } else if (typeof init === "object") {
+        for (const key of Object.keys(init)) this.pairs.push([scalarString(key), scalarString(init[key])]);
+      } else {
+        for (const part of String(init).replace(/^\?/, "").split("&")) {
+          if (!part) continue;
+          const eq = part.indexOf("=");
+          this.pairs.push([formDecode(eq < 0 ? part : part.slice(0, eq)), formDecode(eq < 0 ? "" : part.slice(eq + 1))]);
+        }
+      }
+    }
+    get [Symbol.toStringTag]() {
+      return "URLSearchParams";
+    }
+    get size() {
+      return this.pairs.length;
+    }
+    get(name) {
+      return this.pairs.find(([key]) => key === scalarString(name))?.[1] ?? null;
+    }
+    getAll(name) {
+      return this.pairs.filter(([key]) => key === scalarString(name)).map(([, value]) => value);
+    }
+    has(name, value) {
+      const key = scalarString(name), val = value === void 0 ? void 0 : scalarString(value);
+      return this.pairs.some(([k, v]) => k === key && (val === void 0 || val === v));
+    }
+    append(name, value) {
+      this.pairs.push([scalarString(name), scalarString(value)]);
+      this.changed?.();
+    }
+    set(name, value) {
+      const key = scalarString(name), val = scalarString(value);
+      const first = this.pairs.findIndex(([k]) => k === key);
+      if (first < 0) this.pairs.push([key, val]);
+      else {
+        this.pairs[first][1] = val;
+        for (let i = this.pairs.length - 1; i > first; i--) if (this.pairs[i][0] === key) this.pairs.splice(i, 1);
+      }
+      this.changed?.();
+    }
+    delete(name, value) {
+      const key = scalarString(name), val = value === void 0 ? void 0 : scalarString(value);
+      for (let i = this.pairs.length - 1; i >= 0; i--) {
+        const pair = this.pairs[i];
+        if (pair[0] === key && (val === void 0 || pair[1] === val)) this.pairs.splice(i, 1);
+      }
+      this.changed?.();
+    }
+    sort() {
+      this.pairs.sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
+      this.changed?.();
+    }
+    [REPLACE_QUERY](query) {
+      this.pairs.length = 0;
+      for (const pair of new _URLSearchParamsShim("?" + query)) this.pairs.push(pair);
+    }
+    forEach(callback, thisArg) {
+      for (const [key, value] of this) callback.call(thisArg, value, key, this);
+    }
+    *entries() {
+      for (const [key, value] of this.pairs) yield [key, value];
+    }
+    *keys() {
+      for (const [key] of this) yield key;
+    }
+    *values() {
+      for (const [, value] of this) yield value;
+    }
+    [Symbol.iterator]() {
+      return this.entries();
+    }
+    toString() {
+      return this.pairs.map(([key, value]) => `${formEncode(key)}=${formEncode(value)}`).join("&");
+    }
+  };
+  function urlEncode(value, extra) {
+    let out = "";
+    for (const char of scalarString(value)) {
+      const cp = char.codePointAt(0);
+      if (cp <= 32 || cp > 126 || extra.includes(char)) {
+        for (const byte of new TextEncoderShim().encode(char)) out += "%" + byte.toString(16).toUpperCase().padStart(2, "0");
+      } else out += char;
+    }
+    return out;
+  }
+  function normalizePath(path) {
+    const segments = path.split("/"), out = [];
+    for (let i = 1; i < segments.length; i++) {
+      const part = segments[i], dot = part.replace(/%2e/ig, ".");
+      if (dot === "..") out.pop();
+      else if (dot !== ".") out.push(part);
+      if ((dot === "." || dot === "..") && i === segments.length - 1) out.push("");
+    }
+    return urlEncode("/" + out.join("/"), '"#<>?`{}');
+  }
+  function parseURL(input, base) {
+    const parent = base === void 0 ? void 0 : parseURL(base);
+    let text = scalarString(input).replace(/^[\x00-\x20]+|[\x00-\x20]+$/g, "").replace(/[\t\r\n]/g, "");
+    text = text.replace(/^[^?#]*/, (path) => path.replace(/\\/g, "/"));
+    let fragment = null, query = null;
+    const hash = text.indexOf("#");
+    if (hash >= 0) {
+      fragment = urlEncode(text.slice(hash + 1), '"<>`');
+      text = text.slice(0, hash);
+    }
+    const question = text.indexOf("?");
+    if (question >= 0) {
+      query = urlEncode(text.slice(question + 1), `"#<>'`);
+      text = text.slice(0, question);
+    }
+    const scheme = /^([a-z][a-z\d+.-]*:)/i.exec(text);
+    let protocol = scheme ? scheme[1].toLowerCase() : parent?.protocol;
+    if (!protocol || !/^https?:$/.test(protocol)) throw new TypeError("URLShim supports only absolute HTTP(S) URLs or a valid HTTP(S) base");
+    if (scheme) text = text.slice(scheme[0].length);
+    if (!text.startsWith("//")) {
+      if (scheme || !parent) throw new TypeError("Invalid HTTP(S) URL");
+      return {
+        ...parent,
+        pathname: text ? normalizePath(text.startsWith("/") ? text : parent.pathname.slice(0, parent.pathname.lastIndexOf("/") + 1) + text) : parent.pathname,
+        query: query === null && !text ? parent.query : query,
+        fragment
+      };
+    }
+    const authorityEnd = text.indexOf("/", 2);
+    let authority = authorityEnd < 0 ? text.slice(2) : text.slice(2, authorityEnd);
+    const pathname = normalizePath(authorityEnd < 0 ? "/" : text.slice(authorityEnd));
+    let username = "", password = "";
+    const at = authority.lastIndexOf("@");
+    if (at >= 0) {
+      const auth = authority.slice(0, at), colon = auth.indexOf(":");
+      const extra = '"#<>?`{}/:;=@[\\]^|';
+      username = urlEncode(colon < 0 ? auth : auth.slice(0, colon), extra);
+      password = colon < 0 ? "" : urlEncode(auth.slice(colon + 1), extra);
+      authority = authority.slice(at + 1);
+    }
+    if (/[^\x00-\x7f]/.test(authority)) throw new TypeError("URLShim requires an ASCII hostname (no IDNA conversion)");
+    const host = /^([a-z\d._-]+)(?::(\d*))?$/i.exec(authority);
+    if (!host) throw new TypeError("Invalid or unsupported HTTP(S) hostname");
+    const hostname = host[1].toLowerCase();
+    const labels = hostname.replace(/\.$/, "").split(".");
+    if (/^(?:\d+|0x[\da-f]*)$/i.test(labels[labels.length - 1])) {
+      if (labels.length !== 4 || labels.some((part) => !/^(?:0|[1-9]\d*)$/.test(part) || Number(part) > 255) || hostname.endsWith(".")) {
+        throw new TypeError("URLShim requires canonical dotted-decimal IPv4");
+      }
+    }
+    let port = host[2] ? String(Number(host[2])) : "";
+    if (Number(port) > 65535) throw new TypeError("Invalid URL port");
+    if (protocol === "http:" && port === "80" || protocol === "https:" && port === "443") port = "";
+    return { protocol, hostname, port, username, password, pathname, query, fragment };
+  }
+  var URLShim = class {
+    constructor(input, base) {
+      this.parts = parseURL(String(input), base === void 0 ? void 0 : String(base));
+      this.searchParams = new URLSearchParamsShim("?" + (this.parts.query ?? ""), () => {
+        this.parts.query = this.searchParams.toString() || null;
+      });
+    }
+    get protocol() {
+      return this.parts.protocol;
+    }
+    get hostname() {
+      return this.parts.hostname;
+    }
+    get port() {
+      return this.parts.port;
+    }
+    get username() {
+      return this.parts.username;
+    }
+    get password() {
+      return this.parts.password;
+    }
+    get host() {
+      return this.hostname + (this.port ? ":" + this.port : "");
+    }
+    get origin() {
+      return this.protocol + "//" + this.host;
+    }
+    get pathname() {
+      return this.parts.pathname;
+    }
+    set pathname(value) {
+      const path = scalarString(value).replace(/[\t\r\n]/g, "").replace(/\\/g, "/");
+      this.parts.pathname = normalizePath(path.startsWith("/") ? path : "/" + path);
+    }
+    get search() {
+      return this.parts.query ? "?" + this.parts.query : "";
+    }
+    set search(value) {
+      const text = scalarString(value).replace(/[\t\r\n]/g, "");
+      this.parts.query = text === "" ? null : urlEncode(text.replace(/^\?/, ""), `"#<>'`);
+      this.searchParams[REPLACE_QUERY](this.parts.query ?? "");
+    }
+    get hash() {
+      return this.parts.fragment ? "#" + this.parts.fragment : "";
+    }
+    set hash(value) {
+      const text = scalarString(value).replace(/[\t\r\n]/g, "");
+      this.parts.fragment = text === "" ? null : urlEncode(text.replace(/^#/, ""), '"<>`');
+    }
+    get href() {
+      const auth = this.username || this.password ? this.username + (this.password ? ":" + this.password : "") + "@" : "";
+      return this.protocol + "//" + auth + this.host + this.pathname + (this.parts.query === null ? "" : "?" + this.parts.query) + (this.parts.fragment === null ? "" : "#" + this.parts.fragment);
+    }
+    set href(value) {
+      this.parts = parseURL(String(value));
+      this.searchParams[REPLACE_QUERY](this.parts.query ?? "");
+    }
+    toString() {
+      return this.href;
+    }
+    toJSON() {
+      return this.href;
+    }
+  };
+  function blobType(value) {
+    const type = String(value);
+    return /[^\x20-\x7e]/.test(type) ? "" : type.toLowerCase();
+  }
+  var BlobShim = class _BlobShim {
+    constructor(parts = [], options = {}) {
+      if (options.endings !== void 0 && options.endings !== "transparent") throw new TypeError("BlobShim supports only transparent endings");
+      if (!parts || typeof parts !== "object" || !(Symbol.iterator in parts)) throw new TypeError("Blob parts must be a sequence");
+      const chunks = [];
+      let size = 0;
+      for (const part of parts) {
+        const bytes = part instanceof _BlobShim ? part.data : part instanceof ArrayBuffer || ArrayBuffer.isView(part) ? byteView(part) : new TextEncoderShim().encode(String(part));
+        chunks.push(bytes.slice());
+        size += bytes.length;
+      }
+      this.data = new Uint8Array(size);
+      let offset = 0;
+      for (const chunk of chunks) {
+        this.data.set(chunk, offset);
+        offset += chunk.length;
+      }
+      this.type = blobType(options.type === void 0 ? "" : options.type);
+    }
+    get size() {
+      return this.data.length;
+    }
+    get [Symbol.toStringTag]() {
+      return "Blob";
+    }
+    async arrayBuffer() {
+      return this.data.slice().buffer;
+    }
+    async text() {
+      return new TextDecoderShim().decode(this.data);
+    }
+    slice(start = 0, end = this.size, contentType = "") {
+      const offset = (n) => {
+        n = Number(n);
+        n = Number.isFinite(n) ? Math.trunc(n) : 0;
+        return n < 0 ? Math.max(this.size + n, 0) : Math.min(n, this.size);
+      };
+      const from = offset(start), to = Math.max(from, offset(end));
+      return new _BlobShim([this.data.subarray(from, to)], { type: contentType });
+    }
+    stream() {
+      throw new TypeError("BlobShim does not support streams");
+    }
+  };
+  function invalidCharacter() {
+    const error = new Error("Invalid character in base64 input");
+    error.name = "InvalidCharacterError";
+    throw error;
+  }
+  function btoaShim(input) {
+    if (!arguments.length) throw new TypeError("btoa requires an argument");
+    const s = String(input);
+    let out = "";
+    for (let i = 0; i < s.length; i += 3) {
+      const a = s.charCodeAt(i), b = s.charCodeAt(i + 1), c = s.charCodeAt(i + 2);
+      if (a > 255 || b > 255 || c > 255) invalidCharacter();
+      const n = a << 16 | (b || 0) << 8 | (c || 0);
+      out += BASE64[n >>> 18 & 63] + BASE64[n >>> 12 & 63];
+      out += i + 1 < s.length ? BASE64[n >>> 6 & 63] : "=";
+      out += i + 2 < s.length ? BASE64[n & 63] : "=";
+    }
+    return out;
+  }
+  function atobShim(input) {
+    if (!arguments.length) throw new TypeError("atob requires an argument");
+    let s = String(input).replace(/[\t\n\f\r ]/g, "");
+    if (s.length % 4 === 0) s = s.replace(/==?$/, "");
+    if (s.length % 4 === 1 || /[^A-Za-z0-9+/]/.test(s)) invalidCharacter();
+    let out = "", bits = 0, value = 0;
+    for (const char of s) {
+      value = value << 6 | BASE64.indexOf(char);
+      bits += 6;
+      if (bits >= 8) {
+        bits -= 8;
+        out += String.fromCharCode(value >>> bits & 255);
+      }
+    }
+    return out;
+  }
+
+  // src/ComixTo/ComixApicore.ts
+  var UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
+  var OK = { status: 200, headers: { "content-type": "application/json" }, body: '{"status":"ok","result":{}}' };
+  var GLOBALS = [
+    "App",
+    "window",
+    "self",
+    "globalThis",
+    "document",
+    "navigator",
+    "location",
+    "history",
+    "screen",
+    "fetch",
+    "XMLHttpRequest",
+    "Request",
+    "Response",
+    "Headers",
+    "ReadableStream",
+    "FormData",
+    "Blob",
+    "AbortController",
+    "localStorage",
+    "sessionStorage",
+    "setTimeout",
+    "clearTimeout",
+    "setInterval",
+    "clearInterval",
+    "setImmediate",
+    "queueMicrotask",
+    "addEventListener",
+    "removeEventListener",
+    "dispatchEvent",
+    "postMessage",
+    "reportError",
+    "WorkerGlobalScope",
+    "process",
+    "Function",
+    "Uint8Array",
+    "TextEncoder",
+    "TextDecoder",
+    "URL",
+    "URLSearchParams",
+    "atob",
+    "btoa",
+    "Proxy",
+    "_wb_wombat",
+    "_WBWombat",
+    "crypto"
+  ];
+  function moduleBody(src, importVar = "__chunk") {
+    const m = /export\{([^}]*)\};?\s*$/.exec(src);
+    if (!m) throw new Error("apicore: no trailing export");
+    const ret = m[1].split(",").map((p) => {
+      const [local, exported] = p.trim().split(/\s+as\s+/);
+      return `${JSON.stringify(exported ?? local)}:${local}`;
+    }).join(",");
+    const body = (src.slice(0, m.index) + `;return {${ret}};`).replace(/import\{([^}]*)\}from"[^"]*";/g, (_, names) => "const {" + names.split(",").map((p) => {
+      const [imported, local] = p.trim().split(/\s+as\s+/);
+      return `${imported}:${local ?? imported}`;
+    }).join(",") + `}=${importVar};`);
+    if (/\bimport(?:\s|[{(*"']|\.meta)/.test(body)) throw new Error("apicore: unexpected extra imports");
+    return body;
+  }
+  function apicoreImport(src) {
+    return /import\{[^}]*\}from"([^"]+)"/.exec(src)?.[1] ?? null;
+  }
+  var noop = () => void 0;
+  function boot(apicoreSrc, chunkSrc, net, onBuffer) {
+    const apis = [];
+    const RealProxy = Proxy;
+    const ProxyWatch = new RealProxy(RealProxy, {
+      construct(target, args, newTarget) {
+        const t = args[0];
+        if (t && typeof t === "object" && Object.keys(t).some((k) => typeof t[k] === "function")) {
+          if (apis.length >= 128) throw new Error("apicore resource limit: API tables");
+          apis.push(t);
+        }
+        return Reflect.construct(target, args, newTarget);
+      }
+    });
+    const U8 = new RealProxy(Uint8Array, {
+      construct(target, args, newTarget) {
+        const r = Reflect.construct(target, args, newTarget);
+        if (r.length >= 1024 && r.length <= 8192) onBuffer(r);
+        return r;
+      }
+    });
+    const storage = () => {
+      const m = {};
+      return { getItem: (k) => k in m ? m[k] : null, setItem: (k, v) => {
+        m[k] = String(v);
+      }, removeItem: (k) => {
+        delete m[k];
+      }, clear: noop, key: () => null, length: 0 };
+    };
+    const element = () => ({ style: {}, setAttribute: noop, appendChild: noop, removeChild: noop, addEventListener: noop, removeEventListener: noop, remove: noop, contentWindow: null });
+    class XHR {
+      constructor() {
+        this.readyState = 0;
+        this.status = 0;
+        this.statusText = "";
+        this.responseText = "";
+        this.response = "";
+        this.responseURL = "";
+        this.onloadend = null;
+        this.onerror = null;
+        this.onabort = null;
+        this.ontimeout = null;
+        this.onreadystatechange = null;
+        this.onload = null;
+        this.upload = { addEventListener: noop };
+        this.method = "GET";
+        this.url = "";
+        this.headers = {};
+      }
+      open(method, url) {
+        this.method = method;
+        this.url = String(url);
+        this.readyState = 1;
+      }
+      setRequestHeader() {
+      }
+      getAllResponseHeaders() {
+        return Object.keys(this.headers).map((k) => `${k}: ${this.headers[k]}`).join("\r\n");
+      }
+      getResponseHeader(k) {
+        return this.headers[k.toLowerCase()] ?? null;
+      }
+      addEventListener(type, fn) {
+        this["on" + type] = fn;
+      }
+      removeEventListener() {
+      }
+      abort() {
+      }
+      send() {
+        Promise.resolve().then(() => {
+          const url = /^https?:/.test(this.url) ? this.url : "https://comix.to" + (this.url.startsWith("/") ? "" : "/") + this.url;
+          const r = net(url, this.method.toUpperCase()) ?? OK;
+          this.status = r.status;
+          this.statusText = "OK";
+          this.headers = {};
+          for (const k of Object.keys(r.headers)) this.headers[k.toLowerCase()] = r.headers[k];
+          this.responseText = this.response = r.body;
+          this.responseURL = url;
+          this.readyState = 4;
+          this.onreadystatechange?.();
+          this.onload?.();
+          this.onloadend?.();
+        });
+      }
+    }
+    const win = {
+      document: {
+        cookie: "",
+        readyState: "complete",
+        visibilityState: "visible",
+        hidden: false,
+        referrer: "",
+        title: "Comix",
+        body: element(),
+        head: element(),
+        documentElement: element(),
+        createElement: element,
+        getElementById: () => null,
+        querySelector: () => null,
+        querySelectorAll: () => [],
+        getElementsByTagName: () => [],
+        addEventListener: noop,
+        removeEventListener: noop
+      },
+      navigator: { userAgent: UA, language: "en-US", languages: ["en-US"], cookieEnabled: true, webdriver: false, product: "Gecko", platform: "iPhone", onLine: true },
+      location: { href: "https://comix.to/", origin: "https://comix.to", protocol: "https:", host: "comix.to", hostname: "comix.to", port: "", pathname: "/", search: "", hash: "", reload: noop, assign: noop, replace: noop },
+      history: { pushState: noop, replaceState: noop, back: noop },
+      screen: { width: 390, height: 844 },
+      XMLHttpRequest: XHR,
+      localStorage: storage(),
+      sessionStorage: storage(),
+      // No timers: apicore's delayed work (WAF reload checks, retries) never runs.
+      setTimeout: () => 0,
+      clearTimeout: noop,
+      setInterval: () => 0,
+      clearInterval: noop,
+      queueMicrotask: (f) => {
+        Promise.resolve().then(f);
+      },
+      addEventListener: noop,
+      removeEventListener: noop,
+      dispatchEvent: () => true,
+      postMessage: noop,
+      reportError: noop,
+      Blob: BlobShim,
+      Uint8Array: U8,
+      Proxy: ProxyWatch,
+      TextEncoder: TextEncoderShim,
+      TextDecoder: TextDecoderShim,
+      URL: URLShim,
+      URLSearchParams: URLSearchParamsShim,
+      atob: atobShim,
+      btoa: btoaShim,
+      crypto: { getRandomValues: (b) => {
+        for (let i = 0; i < b.length; i++) b[i] = Math.random() * 256 | 0;
+        return b;
+      } },
+      // `Function("return this")()` must find the fake window, not the source's global.
+      Function: new RealProxy(Function, {
+        apply(target, thisArg, args) {
+          return /return this/.test(String(args[args.length - 1])) ? () => win : Reflect.apply(target, thisArg, args);
+        },
+        construct(target, args) {
+          return /return this/.test(String(args[args.length - 1])) ? () => win : Reflect.construct(target, args);
+        }
+      })
+    };
+    win.window = win.self = win.globalThis = win;
+    const chunk = new Function(...GLOBALS, `"use strict";${moduleBody(chunkSrc)}`)(...GLOBALS.map((g) => win[g]));
+    const factory = new Function("__chunk", ...GLOBALS, `"use strict";${moduleBody(apicoreSrc)}`);
+    factory(chunk, ...GLOBALS.map((g) => win[g]));
+    return { apis };
+  }
+  async function settle(p, turns = 5e3) {
+    const state = { done: false };
+    p.then((v) => {
+      state.done = true;
+      state.value = v;
+    }, () => {
+      state.done = true;
+    });
+    for (let i = 0; i < turns && !state.done; i++) await Promise.resolve();
+    return state;
+  }
+  var B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  function bytesToB64(bytes) {
+    let out = "";
+    for (let i = 0; i < bytes.length; i += 3) {
+      const n = bytes[i] << 16 | (bytes[i + 1] ?? 0) << 8 | (bytes[i + 2] ?? 0);
+      out += B64[n >> 18 & 63] + B64[n >> 12 & 63] + (i + 1 < bytes.length ? B64[n >> 6 & 63] : "=") + (i + 2 < bytes.length ? B64[n & 63] : "=");
+    }
+    return out;
+  }
+  var words = (b, off) => {
+    const out = [];
+    for (let i = 0; i < 8; i++) out.push((b[off + 4 * i] << 24 | b[off + 4 * i + 1] << 16 | b[off + 4 * i + 2] << 8 | b[off + 4 * i + 3]) >>> 0);
+    return out;
+  };
+  async function extractApicoreKeys(apicoreSrc, chunkSrc) {
+    const candidates = [];
+    const requests = [];
+    let respond = null;
+    const { apis } = boot(apicoreSrc, chunkSrc, (url, method) => {
+      requests.push({ url, method });
+      return respond?.(url);
+    }, (u) => {
+      if (candidates.length >= 256) throw new Error("apicore resource limit: key buffers");
+      candidates.push(u);
+    });
+    const probe = "/manga/__probe__";
+    let get2 = null;
+    let attempts = 0;
+    for (const table of apis) {
+      for (const key of Object.keys(table)) {
+        const f = table[key];
+        if (get2 || typeof f !== "function") continue;
+        if (++attempts > 256) throw new Error("apicore resource limit: client probes");
+        requests.length = 0;
+        try {
+          await settle(Promise.resolve().then(() => f(probe)));
+        } catch {
+        }
+        const r2 = requests[0];
+        if (r2 && r2.method === "GET" && r2.url.split("?")[0] === "https://comix.to/api/v1" + probe && /[?&]_=/.test(r2.url)) get2 = f;
+      }
+      if (get2) break;
+    }
+    if (!get2) throw new Error("apicore layout changed (no signing client found)");
+    const probes = [
+      ["/manga/abc12"],
+      ["/manga/abc12/chapters", { page: 1, limit: 20, order: { number: "desc" } }],
+      ["/chapters/12345678"],
+      ["/manga", { keyword: "caf\xE9", genres_ex: [8, 9], page: 2 }]
+    ];
+    const signed = [];
+    for (const [path, params] of probes) {
+      requests.length = 0;
+      const r2 = await settle(get2(path, params ? { params } : void 0));
+      if (!r2.done || !requests[0]) throw new Error("apicore did not issue its request");
+      signed.push(requests[0].url);
+    }
+    const tokenOf = (url) => /[?&]_=([^&]*)/.exec(url)?.[1] ?? "";
+    const first = tokenOf(signed[0]);
+    const dot = first.indexOf(".");
+    if (dot < 1) throw new Error("apicore token has an unexpected shape");
+    const prefix = first.slice(0, dot + 1);
+    const macBytes = Math.floor((first.length - prefix.length) * 6 / 8);
+    let keys = null;
+    for (const buf of candidates) {
+      if (buf.length < 64 + 1024) continue;
+      const k = { prefix, macBytes, istate: words(buf, 0), ostate: words(buf, 32), table: Array.from(buf.subarray(64, 64 + 1024)) };
+      if (signed.every((u) => fastGenerateHash(u.replace(/[?&]_=[^&]*/, ""), k) === tokenOf(u))) {
+        keys = k;
+        break;
+      }
+    }
+    if (!keys) throw new Error(`no buffer reproduces apicore's tokens (${candidates.length} candidates) - storage or algorithm changed`);
+    const marker = "probe-" + Math.floor(Math.random() * 1e9).toString(36);
+    const plain = JSON.stringify({ status: "ok", result: { probe: marker, text: "h\xE9llo \u2713" } });
+    const pt = Array.from(new TextEncoderShim().encode(plain));
+    const h0 = Math.random() * 256 | 0, h1 = Math.random() * 256 | 0;
+    const K = keys.table;
+    let off = (h0 << 8 | h1) % K.length;
+    const ct = [h0, h1];
+    for (let i = 0; i < pt.length; i++) {
+      ct.push(pt[i] ^ K[off]);
+      if (++off === K.length) off = 0;
+    }
+    respond = () => ({ status: 200, headers: { "content-type": "application/json", "x-enc": "2" }, body: JSON.stringify({ e: bytesToB64(ct) }) });
+    const r = await settle(get2("/manga/abc12"));
+    respond = null;
+    const got = r.value?.data ?? r.value;
+    const result = got?.result ?? got;
+    if (!r.done || result?.probe !== marker || result?.text !== "h\xE9llo \u2713") throw new Error("apicore did not decrypt our test body with the extracted table");
+    return keys;
+  }
+
+  // src/ComixTo/ComixKeyManager.ts
+  var COMIX_KEYS_CACHE = "comix_live_keys_v1";
+  var ORIGIN = "https://comix.to";
+  function assetUrl(ref, base) {
+    if (/[\\\s?#%]/.test(ref) || ref.startsWith("//")) throw new Error("Comix key asset URL is not allowed");
+    let path;
+    if (/^https?:/i.test(ref)) {
+      if (!ref.startsWith(ORIGIN + "/")) throw new Error("Comix key asset origin is not allowed");
+      path = ref.slice(ORIGIN.length);
+    } else if (ref.startsWith("/")) path = ref;
+    else path = base.slice(ORIGIN.length).replace(/[^/]*$/, "") + ref;
+    const parts = [];
+    for (const p of path.split("/")) {
+      if (!p || p === ".") continue;
+      if (p === "..") parts.pop();
+      else parts.push(p);
+    }
+    path = "/" + parts.join("/");
+    if (!/^\/assets\/[A-Za-z0-9_./-]+\.js$/.test(path)) throw new Error("Comix key asset path is not allowed");
+    return ORIGIN + path;
+  }
+  function validApicoreKeys(k) {
+    const dense = (v, length, max) => {
+      if (!Array.isArray(v) || v.length !== length) return false;
+      for (let i = 0; i < length; i++) {
+        if (!Object.prototype.hasOwnProperty.call(v, i) || !Number.isInteger(v[i]) || v[i] < 0 || v[i] > max) return false;
+      }
+      return true;
+    };
+    return !!k && typeof k.prefix === "string" && /^[A-Za-z0-9_-]{1,32}\.$/.test(k.prefix) && Number.isInteger(k.macBytes) && k.macBytes >= 1 && k.macBytes <= 32 && dense(k.istate, 8, 4294967295) && dense(k.ostate, 8, 4294967295) && dense(k.table, 1024, 255);
+  }
+  function validRecord(r) {
+    if (!r || r.schema !== 1 || !Number.isFinite(r.fetchedAt) || r.fetchedAt < 0 || !validApicoreKeys(r.keys) || typeof r.assetUrl !== "string") return false;
+    try {
+      return assetUrl(r.assetUrl, ORIGIN + "/") === r.assetUrl;
+    } catch {
+      return false;
+    }
+  }
+  var ComixKeyManager = class {
+    constructor(state, now = () => Date.now()) {
+      this.state = state;
+      this.now = now;
+    }
+    async current() {
+      if (!this.loaded) this.loaded = (async () => {
+        try {
+          const raw = await this.state.retrieve(COMIX_KEYS_CACHE);
+          const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+          if (validRecord(parsed)) this.active = parsed;
+        } catch {
+        }
+      })();
+      await this.loaded;
+      return this.active;
+    }
+    async discover(fetchText) {
+      if (this.flight) return this.flight;
+      if (this.lastAttempt !== void 0 && this.now() - this.lastAttempt < 6e4) {
+        throw new Error("Comix key refresh was recently attempted; retry in one minute or update the extension");
+      }
+      this.lastAttempt = this.now();
+      this.flight = this.discoverOnce(async (url) => {
+        const text = await fetchText(url);
+        if (typeof text !== "string" || text.length > 3 * 1024 * 1024) throw new Error("Comix key asset is too large");
+        return text;
+      });
+      try {
+        return await this.flight;
+      } finally {
+        this.flight = void 0;
+      }
+    }
+    async discoverOnce(fetchText) {
+      const html = await fetchText(ORIGIN + "/");
+      const scripts = /<script\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>/gi;
+      let match;
+      const mains = [];
+      while (match = scripts.exec(html)) {
+        if (/\btype\s*=\s*["']module["']/i.test(match[0]) || /(?:main|index)[.-]/.test(match[1])) mains.push(assetUrl(match[1], ORIGIN + "/"));
+      }
+      if (!mains.length || mains.length > 4) throw new Error("Comix key discovery: expected a site module script");
+      let apicore;
+      for (const main of mains) {
+        const text = await fetchText(main);
+        const ref = /["']([^"'\s]*apicore-[A-Za-z0-9_-]+\.js)["']/.exec(text)?.[1];
+        if (ref) {
+          apicore = assetUrl(ref, main);
+          break;
+        }
+      }
+      if (!apicore) throw new Error("Comix key discovery: apicore module not found; update the extension");
+      const source = await fetchText(apicore);
+      const helper = apicoreImport(source);
+      if (!helper) throw new Error("Comix key discovery: apicore helper import not found");
+      const chunk = await fetchText(assetUrl(helper, apicore));
+      const keys = await extractApicoreKeys(source, chunk);
+      if (!validApicoreKeys(keys)) throw new Error("Comix key extraction returned invalid key material");
+      return { schema: 1, assetUrl: apicore, fetchedAt: this.now(), keys };
+    }
+    // The caller must first obtain and decode a successful API response using
+    // this candidate. A retired/invalid key must never replace the last good one.
+    async activate(record) {
+      if (!validRecord(record)) throw new Error("Invalid Comix key cache record");
+      await this.current();
+      this.active = record;
+      try {
+        await this.state.store(COMIX_KEYS_CACHE, JSON.stringify(record));
+      } catch {
+      }
+    }
+  };
 
   // src/ComixTo/ComixFastDecrypt.ts
   var B64_CHARS2 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -1148,6 +2024,15 @@ var _Sources = (() => {
   var X_ENC = "2";
   var KEY_B64 = "fPTG+vfrcwU4E6TEtFywSHHJOhhYdOqJP1XYBBPU4YtfuZZiwELLACiB7hkPMOGRoWdDPDS1QehUyMom0QgfTl8tuLUm/9W4KdzZcyg2CMJVcI1OY+Fi3R7QApctB4Q6zI1juEQyXWShMULgY+PIZY419NaBGlu0nSapWXMrmu4cqKGfUuEUIuq/CBiZjRB1YQxtqAsJ7UKKgqfz5xLp4jhEKoH5ZDkbpb/KYr+mCCu7u8Yx81jELdU8JiuChxB8j+Ro8Kq8qfQBbP+45R2u5DjFxUIs7T5IOGU38mKxcl+TimPu8ufdtQ2NZcl0ecKeKU2HCSbY0LntmL69yJtkSxd04LEhLvemUvRfvpQzv+eX3puKA22dOWB+mEx7TSqWpM/0goMxD2orCrEpN8dTWBcrswJ65Ue2la/Z+oVDjTikZ+hv+ygdoNhuUmImJDi8tu/Q03iEY3Hl5kov+9FIPLcwpCaEFhZBOqzacYzvb5IRvaSq2gWpzSXEcyORWDLdhNqHbkH2CETrMyghK7YLJKnJvZIAq458MA88xUP+0UOs3WX3/RvZafryoTPanv1ik0zJ2lxOxjlRTdCyzBaZJ660aPsfoJnCx1yhdCFc3QP+ZFpOw6NgxXHE79/wFPlm6HIp0ZreKKldVG5RJzO9JqiwkP08aZ+/5N3rBQQElr4Z1x2p31dCbdQYLuLaj4oH9gTPfHanUuho0rm+pLr60TuuEqlCaq/1O1E9m7jXdVvSjatSJ0bQIZZUHITGiwsoLc3yZQ5fvDqzv8X3YK1+tO44ToOTHVuHAhiXMwfmhrpzFS27P2fAuXYaCaRzvIz+VK9/kv+uPCLnaXM+X+qc+GzUinWW+O9NMyPE6vbCGtqQh9woGMYmPllouM92WhY/0RR2fU09T2zeKyB4Ac7hxWvBzb7c3YKPlVsGwU1wQqCXVjSOoaiM7VFVYC9zulhNvXP4JirlYgiG3GJZItk+j069e9wVsEZjImXl6LhaoJV1L6xNC2BlRuLQvzUSZvXSfNiPSXxmHeO8nfZAOM+6QFp/J2cmptydXlmbKanxPWmWS3vvtoOCiGiPiUD/mEJd7jzALSD92SwpRJIDR6X9oYS2ojTczap15YjdNnfVj6IPYYTms3NYlzOFEFAuaEQ5XCeJxBBOTrQtpEvI8UktVVP1vJHgO+wgBPlLVt3ux0jBcpm8+B1b3y7X4PWo2vf98gAS/tBDyCMc/Nqma2XX4ReM/HCHZYU54eqkCCv6f9btj46Cz7mRevXY3d2jCXRpVTnlyAbUEjeVJ9dZn+BDG9Jd/0eQznaDkDssLUgGx2jPrd//Kl22K52ys5HN22dICgT9ZuH6Jazu0rLizwDr4Q==";
   var KEY = null;
+  function validateDecryptTable(table) {
+    if (!Array.isArray(table) || table.length !== 1024) throw new Error("Invalid Comix decrypt table");
+    for (let i = 0; i < table.length; i++) {
+      const byte = table[i];
+      if (!Object.prototype.hasOwnProperty.call(table, i) || !Number.isInteger(byte) || byte < 0 || byte > 255) {
+        throw new Error("Invalid Comix decrypt table");
+      }
+    }
+  }
   function utf8Decode(bytes) {
     let out = "";
     let i = 0;
@@ -1175,13 +2060,14 @@ var _Sources = (() => {
     for (const key of Object.keys(headers ?? {})) out[key.toLowerCase()] = String(headers[key]);
     return out;
   }
-  function fastDecryptComixPayload(rawPath, payload, headers = {}) {
+  function fastDecryptComixPayload(rawPath, payload, headers = {}, table) {
+    if (table !== void 0) validateDecryptTable(table);
     if (!(payload && typeof payload === "object" && typeof payload.e === "string")) return payload;
     const h = normalizeHeaders(headers);
     if (h["x-enc"] && h["x-enc"] !== X_ENC) {
       throw new Error("Comix x-enc " + h["x-enc"] + " is not supported (expected " + X_ENC + ") - the response cipher rotated; rerun the crypto pipeline");
     }
-    const key = KEY ?? (KEY = b64Decode(KEY_B64));
+    const key = table === void 0 ? KEY ?? (KEY = b64Decode(KEY_B64)) : table;
     const ct = b64Decode(payload.e);
     const n = key.length;
     let k = ct.length >= 2 ? (ct[0] << 8 | ct[1]) % n : 0;
@@ -2229,13 +3115,24 @@ var _Sources = (() => {
   function isSignedPath(path) {
     return SIGNED_PATTERNS.some((re) => re.test(path));
   }
-  function generateHash(rawPath) {
-    return fastGenerateHash(rawPath);
+  function generateHash(rawPath, keys) {
+    return fastGenerateHash(rawPath, keys);
   }
-  function signUrl(url) {
+  function signUrl(url, keys) {
     const path = url.replace("https://comix.to/api/v1", "").split("?")[0];
     if (!isSignedPath(path)) return url;
-    const token = generateHash(url);
+    const q = url.indexOf("?");
+    if (q >= 0) {
+      const params = url.slice(q + 1).split("&").filter((part) => {
+        try {
+          return decodeURIComponent(part.split("=")[0].replace(/\+/g, " ")) !== "_";
+        } catch {
+          return true;
+        }
+      }).filter(Boolean).join("&");
+      url = url.slice(0, q) + (params ? "?" + params : "");
+    }
+    const token = generateHash(url, keys);
     if (!token) return url;
     const sep = url.includes("?") ? "&" : "?";
     return `${url}${sep}_=${token}`;
@@ -2279,18 +3176,16 @@ var _Sources = (() => {
       throw error;
     }
   }
-  function scheduleComix(requestManager, request) {
-    return enqueueComix(async () => {
-      const response = await requestManager.schedule(request, 1);
-      if (!isSecurityCheck(response) || !await wafAutoSolveEnabled()) return response;
-      if (lastWafSolve && !lastWafSolve.ok && Date.now() - lastWafSolve.at < SOLVE_RETRY_MS) return response;
-      try {
-        await solveWaf(requestManager, challengePathOf(response));
-      } catch {
-        return response;
-      }
-      return requestManager.schedule(request, 1);
-    });
+  async function performComix(requestManager, request) {
+    const response = await requestManager.schedule(request, 1);
+    if (!isSecurityCheck(response) || !await wafAutoSolveEnabled()) return response;
+    if (lastWafSolve && !lastWafSolve.ok && Date.now() - lastWafSolve.at < SOLVE_RETRY_MS) return response;
+    try {
+      await solveWaf(requestManager, challengePathOf(response));
+    } catch {
+      return response;
+    }
+    return requestManager.schedule(request, 1);
   }
   function solveSecurityCheckNow(requestManager) {
     return enqueueComix(() => solveWaf(requestManager));
@@ -2332,7 +3227,7 @@ var _Sources = (() => {
     throw new Error(`Comix security check required: comix.to is asking to verify you're human.${autoSolve} ${detail}${ua ? ` [UA: ${ua}]` : ""}`);
   }
   async function requestSignedUrl(requestManager, url) {
-    return scheduleComix(requestManager, App.createRequest({
+    return performComix(requestManager, App.createRequest({
       url,
       method: "GET",
       headers: {
@@ -2358,13 +3253,24 @@ var _Sources = (() => {
       throw new Error(`Cloudflare challenge page returned [${ctx}]`);
     }
   }
-  function decodeComixResponse(apiPath, response, timing) {
+  var ComixDecryptError = class extends Error {
+  };
+  function decodeComixResponse(apiPath, response, timing, table) {
     const parseStart = Date.now();
     const json2 = JSON.parse(response.data ?? "{}");
     if (timing) timing.parseMs = Date.now() - parseStart;
     if (json2 && typeof json2 === "object" && "e" in json2) {
+      if (typeof json2.e !== "string" || !json2.e) throw new Error("Invalid Comix encrypted envelope");
       const decryptStart = Date.now();
-      const decrypted = fastDecryptComixPayload(apiPath, json2, response.headers ?? {});
+      let decrypted;
+      try {
+        decrypted = fastDecryptComixPayload(apiPath, json2, response.headers ?? {}, table);
+      } catch (error) {
+        throw new ComixDecryptError(error?.message ?? String(error));
+      }
+      if (decrypted && typeof decrypted === "object" && (decrypted.status === "error" || decrypted.status === "fail" || decrypted.status === "failed")) {
+        throw new Error(`Comix API ${decrypted.status}: ${decrypted.message ?? "no message"}`);
+      }
       if (timing) timing.decryptMs = Date.now() - decryptStart;
       return decrypted && typeof decrypted === "object" && "result" in decrypted && decrypted.status === "ok" ? decrypted.result : decrypted;
     }
@@ -2373,29 +3279,75 @@ var _Sources = (() => {
     }
     return json2.result;
   }
-  async function fetchSigned(requestManager, fullUrl) {
-    const totalStart = Date.now();
-    const apiPath = fullUrl.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "");
-    const telPath = apiPath.split("?")[0];
-    const label = /^\/manga\/[^/]+\/chapters/.test(telPath) ? "chapters" : /^\/chapters\//.test(telPath) ? "chapter_images" : "signed_fetch";
-    const signStart = Date.now();
-    const signedUrl = signUrl(fullUrl);
-    const signMs = Date.now() - signStart;
-    const fetchStart = Date.now();
-    const response = await requestSignedUrl(requestManager, signedUrl);
-    const fetchMs = Date.now() - fetchStart;
-    const status = response.status;
-    const bytes = (response.data ?? "").length;
+  var keyManager;
+  function getKeyManager() {
+    return keyManager ?? (keyManager = new ComixKeyManager(App.createSourceStateManager()));
+  }
+  function isRetiredKey(response) {
+    if (response.status !== 403 || isSecurityCheck(response)) return false;
     try {
-      checkSignedResponseError(response, requestManager);
-    } catch (err) {
-      emit({ label, path: telPath, status, bytes, signMs, fetchMs, parseMs: 0, decryptMs: 0, totalMs: Date.now() - totalStart });
-      throw err;
+      const json2 = JSON.parse(response.data ?? "{}");
+      return json2.code === "key_retired" || json2.error?.code === "key_retired";
+    } catch {
+      return false;
     }
-    const timing = { parseMs: 0, decryptMs: 0 };
-    const result = decodeComixResponse(apiPath, response, timing);
-    emit({ label, path: telPath, status, bytes, signMs, fetchMs, parseMs: timing.parseMs, decryptMs: timing.decryptMs, totalMs: Date.now() - totalStart });
-    return result;
+  }
+  function fetchSigned(requestManager, fullUrl, labelOverride) {
+    return enqueueComix(async () => {
+      const totalStart = Date.now();
+      const apiPath = fullUrl.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "");
+      const path = apiPath.split("?")[0];
+      const label = labelOverride ?? (/^\/manga\/[^/]+\/chapters/.test(path) ? "chapters" : /^\/chapters\//.test(path) ? "chapter_images" : "signed_fetch");
+      const manager = getKeyManager();
+      let record = await manager.current();
+      let candidate;
+      let signMs = 0, fetchMs = 0, status = 0, bytes = 0;
+      const timing = { parseMs: 0, decryptMs: 0 };
+      try {
+        for (let attempt = 0; attempt < 2; attempt++) {
+          const signStart = Date.now();
+          const signedUrl = signUrl(fullUrl, record?.keys);
+          signMs += Date.now() - signStart;
+          const fetchStart = Date.now();
+          const response = await requestSignedUrl(requestManager, signedUrl);
+          fetchMs += Date.now() - fetchStart;
+          status = response.status;
+          bytes = (response.data ?? "").length;
+          if (!isRetiredKey(response) || attempt > 0) {
+            checkSignedResponseError(response, requestManager);
+            try {
+              const result = decodeComixResponse(apiPath, response, timing, record?.keys.table);
+              if (candidate) await manager.activate(candidate);
+              return result;
+            } catch (error) {
+              if (!(error instanceof ComixDecryptError)) throw error;
+              const headers = response.headers ?? {};
+              const enc = Object.keys(headers).find((k) => k.toLowerCase() === "x-enc");
+              let encrypted = false;
+              try {
+                encrypted = typeof JSON.parse(response.data ?? "{}").e === "string";
+              } catch {
+              }
+              if (attempt > 0 || !encrypted || enc && String(headers[enc]) !== "2") throw error;
+            }
+          }
+          candidate = await manager.discover(async (url) => {
+            const response2 = await performComix(requestManager, App.createRequest({
+              url,
+              method: "GET",
+              headers: { "Referer": "https://comix.to/", "Cache-Control": "no-cache" }
+            }));
+            throwIfSecurityCheck(response2, requestManager);
+            if (response2.status < 200 || response2.status >= 300) throw new Error(`Comix key discovery HTTP ${response2.status}`);
+            return response2.data ?? "";
+          });
+          record = candidate;
+        }
+        throw new Error("Comix key refresh retry exhausted");
+      } finally {
+        emit({ label, path, status, bytes, signMs, fetchMs, ...timing, totalMs: Date.now() - totalStart });
+      }
+    });
   }
 
   // src/ComixTo/Settings.ts
@@ -2772,15 +3724,9 @@ var _Sources = (() => {
         if (existing) return existing;
         try {
           const fetchTerms = async (type) => {
-            const req = App.createRequest({
-              // /tags/search caps at limit=50 in v1; >50 returns 422.
-              url: signUrl(`${API_BASE}/tags/search?type=${type}&limit=50`),
-              method: "GET"
-            });
-            const res = await scheduleComix(requestManager, req);
-            if (res.status !== 200) throw new Error(`tags/search ${type}: HTTP ${res.status}`);
-            const json2 = JSON.parse(res.data ?? "{}");
-            return Array.isArray(json2.result) ? json2.result : [];
+            const result = await fetchSigned(requestManager, `${API_BASE}/tags/search?type=${type}&limit=50`);
+            if (!Array.isArray(result)) throw new Error(`tags/search ${type}: invalid result`);
+            return result;
           };
           const [genre, theme, format, demographic] = await Promise.all([
             fetchTerms("genre"),
@@ -3146,7 +4092,7 @@ var _Sources = (() => {
     return /^https?:\/\/([^/]+\.)?comix\.to(\/|$|\?|#)/i.test(url ?? "");
   }
   var ComixToInfo = {
-    version: "1.9.31",
+    version: "1.9.32",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
@@ -3304,20 +4250,7 @@ var _Sources = (() => {
      * comix flips encryption on per-endpoint, so no caller may assume plaintext.
      */
     async fetchTimed(label, url) {
-      const t0 = Date.now();
-      const signedUrl = signUrl(url);
-      const signMs = Date.now() - t0;
-      const apiPath = signedUrl.replace(/^https?:\/\/[^/]+/, "").replace(/^\/api\/v1/, "");
-      const path = apiPath.split("?")[0];
-      const request = App.createRequest({ url: signedUrl, method: "GET" });
-      const fetchStart = Date.now();
-      const response = await scheduleComix(this.requestManager, request);
-      const fetchMs = Date.now() - fetchStart;
-      this.checkResponseError(response);
-      const timing = { parseMs: 0, decryptMs: 0 };
-      const result = decodeComixResponse(apiPath, response, timing);
-      emit({ label, path, status: response.status, bytes: (response.data ?? "").length, signMs, fetchMs, parseMs: timing.parseMs, decryptMs: timing.decryptMs, totalMs: Date.now() - t0 });
-      return result;
+      return fetchSigned(this.requestManager, url, label);
     }
     async getMangaDetails(mangaId) {
       const result = await this.fetchTimed(
