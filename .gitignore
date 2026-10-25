@@ -141,3 +141,4 @@ package-lock.json
 experiment/live/assets/
 experiment/live/capture.json
 experiment/live/samples.json
+experiment/live/monitor.log

@@ -8,7 +8,7 @@ Ensure you are checked out to your main working branch (e.g., 0.8) and your term
 
 Run the following commands in the Windows Command Prompt (CMD) to set the repository path and build the bundle:
 ```
-mkdir \bundles\0.8
+mkdir bundles\0.8
 npm install
 set GITHUB_REPOSITORY=acepilot147/pb-extensions/0.8
 npm run bundle
@@ -80,6 +80,64 @@ git add 0.8/
 git commit -m "Deploy updated extension bundle to 0.8"
 git push origin gh-pages
 ```
+
+# 4. Publishing a ComixTo Release
+
+The full sequence for shipping a ComixTo update (key rotation, fix, or feature), in PowerShell from the repo root.
+
+### 4a. Fix keys (only if comix rotated them)
+
+Symptom: requests fail with 403 `key_retired`, or "API undefined: no message" (an endpoint just became encrypted). These scripts drive a real Chrome; keep runs rare, since comix's WAF captcha-walls IPs that send too much.
+```
+npm run comix:capture    # build id, key ID in the site's own tokens, WAF status
+npm run comix:keys       # extract keys live + regenerate src/ComixTo/ComixFast*.ts
+npm run comix:e2e        # verify the generated files against production
+```
+Usually no hand-written code changes are needed. If `comix:keys` throws, comix changed how the keys are stored. See `experiment/crypto-pipeline/README.md`. The older `crypto:pipeline` / `validate:comix` scripts don't work on apicore builds (2026-10-23 and later).
+
+To watch how often comix rotates keys (writes `experiment/live/monitor.log`, which git ignores):
+```
+node experiment/live/monitor.mjs [intervalMin=60] [hours=26]
+```
+
+### 4b. Bump the version
+
+Bump `version` in `ComixToInfo` in `src/ComixTo/ComixTo.ts`. Paperback only reads that string. `package.json`'s version is unrelated; leave it alone.
+
+### 4c. Build
+
+```
+git checkout --no-guess 0.8 --
+New-Item -ItemType Directory -Force bundles\0.8
+npm install
+$env:GITHUB_REPOSITORY = "acepilot147/pb-extensions/0.8"
+npm run bundle
+```
+- The `--` is required. A plain `git checkout 0.8` fails ("could be both a local file and a tracking branch") because a `0.8/` folder also exists.
+- The bundler won't create `bundles\0.8` itself and fails with `ENOENT … mkdir` if it's missing.
+- To type-check, use `npx tsc --noEmit -p tsconfig.json` and filter the output to `src`. The `@types/node` errors from `node_modules` are pre-existing noise.
+
+### 4d. Commit source
+
+```
+git add src/
+git commit -m "vX.Y.Z: <what changed>"
+git push origin 0.8
+```
+
+### 4e. Deploy to gh-pages
+
+```
+git checkout gh-pages
+Copy-Item -Recurse -Force bundles\0.8\* 0.8\
+git add 0.8/
+git commit -m "vX.Y.Z: <what changed>"
+git push origin gh-pages
+git checkout --no-guess 0.8 --
+```
+- **Stage `0.8/` only.** gh-pages has no `.gitignore`, so `node_modules/`, `bundles/` and `package-lock.json` show up as untracked there. Never commit them.
+- `index.html` may show as modified with no real diff (CRLF vs LF only). That's harmless.
+- GitHub Pages takes about a minute to serve the new `0.8/versioning.json`. Then refresh the repo in Paperback and check that the new version appears.
 
 # Troubleshooting
 
