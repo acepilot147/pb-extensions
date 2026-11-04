@@ -13,9 +13,19 @@ import {
   normalizeString,
   parseRelativeTime,
   isRatingAllowed,
+  resolveSiteUrl,
 } from "./Common";
 
-const NO_POSTER = "https://comix.to/images/no-poster.png";
+// comix removed /images/no-poster.png (404 since 2026-11) and now draws an
+// inline placeholder; an empty image URL makes Paperback show its own.
+const NO_POSTER = "";
+
+// Poster paths are site-relative since 2026-11 ("/images/covers/…"); older
+// builds returned absolute URLs. Prefer the full-size image, then the 280px one.
+const posterUrl = (poster?: { medium?: string; large?: string }): string => {
+  const path = poster?.large || poster?.medium;
+  return path ? resolveSiteUrl(path) : NO_POSTER;
+};
 const isNsfw = (rating?: string) => rating != null && rating !== "safe";
 
 export class Parser {
@@ -46,7 +56,7 @@ export class Parser {
       id: mangaId,
       mangaInfo: App.createMangaInfo({
         titles: [data.title, ...(data.altTitles ?? [])],
-        image: data.poster?.large || data.poster?.medium || NO_POSTER,
+        image: posterUrl(data.poster),
         status: data.status,
         desc: data.synopsis,
         author: data.authors?.map((a) => a.title).join(", ") ?? "",
@@ -139,7 +149,7 @@ export class Parser {
       mangaList.push(
         App.createPartialSourceManga({
           mangaId: item.hid,
-          image: item.poster?.large || item.poster?.medium || NO_POSTER,
+          image: posterUrl(item.poster),
           title: item.title,
           subtitle: item.latestChapter ? `Ch. ${item.latestChapter}` : undefined,
         }),

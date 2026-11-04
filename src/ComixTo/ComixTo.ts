@@ -22,7 +22,7 @@ import {
 } from "@paperback/types";
 
 import { Parser } from "./Parser";
-import { fetchSigned, throwIfSecurityCheck, setWafAutoSolve } from "./ComixHash";
+import { fetchSigned, checkComixResponse, setWafAutoSolve } from "./ComixHash";
 import { debugLog, DEBUG } from "./DebugLog";
 import {
   API_BASE,
@@ -75,7 +75,7 @@ function isComixUrl(url: string): boolean {
 }
 
 export const ComixToInfo: SourceInfo = {
-  version: "1.9.33",
+  version: "1.9.34",
   name: "ComixTo",
   icon: "icon.png",
   author: "acepilot147",
@@ -682,24 +682,9 @@ requestManager = App.createRequestManager({
     return (await getUserAgentOverride(this.stateManager)) || (await this.requestManager.getDefaultUserAgent());
   }
 
+  // Plain-words errors for a security check, a non-2xx status or an HTML body;
+  // the technical context goes to the log (UserErrors.diag), not the alert.
   checkResponseError(response: Response): void {
-    const data = response.data ?? "";
-    // Diagnostic context is folded into thrown errors so users can include it in bug reports.
-    const preview = data.substring(0, 200).replace(/\s+/g, " ");
-    const headers = response.headers ?? {};
-    const ct = (headers["Content-Type"] ?? headers["content-type"] ?? "?") as string;
-    const server = (headers["Server"] ?? headers["server"] ?? "?") as string;
-    const cfRay = (headers["Cf-Ray"] ?? headers["cf-ray"] ?? "?") as string;
-    const reqUrl = (response as any).request?.url ?? "?";
-    const ctx = `status=${response.status} ct=${ct} server=${server} cf-ray=${cfRay} url=${reqUrl} preview="${preview}"`;
-
-    throwIfSecurityCheck(response, this.requestManager);
-    if (response.status < 200 || response.status >= 300) {
-      throw new Error(`HTTP ${response.status}: Unexpected response from server [${ctx}]`);
-    }
-    // Warn if server returned HTML instead of JSON (e.g. Cloudflare challenge slipped through)
-    if (data.trimStart().startsWith("<")) {
-      throw new Error(`Cloudflare challenge page returned [${ctx}]`);
-    }
+    checkComixResponse(response, this.requestManager);
   }
 }

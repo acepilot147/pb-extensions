@@ -96,7 +96,7 @@ The full sequence for shipping a ComixTo update (key rotation, fix, or feature),
 
 ### 4a. Fix keys (only if comix rotated them)
 
-Symptom: requests fail with 403 `key_retired`, or "API undefined: no message" (an endpoint just became encrypted). These scripts drive a real Chrome; keep runs rare, since comix's WAF captcha-walls IPs that send too much.
+Symptom: the app shows "Comix changed its access keys and this version couldn't pick up the new ones" (a 403 `key_retired` that the in-app refresh couldn't follow) or "Comix changed how it protects its data" (the response cipher rotated). The technical detail is in Paperback's log, prefixed `[ComixTo]`. These scripts drive a real Chrome; keep runs rare, since comix's WAF captcha-walls IPs that send too much.
 ```
 npm run comix:capture    # build id, key ID in the site's own tokens, WAF status
 npm run comix:keys       # extract keys live + regenerate src/ComixTo/ComixFast*.ts

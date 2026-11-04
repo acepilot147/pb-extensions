@@ -18,6 +18,7 @@ import { ComixKeyManager, KeyRecord } from "./ComixKeyManager";
 import { fastDecryptComixPayload } from "./ComixFastDecrypt";
 import { emit } from "./Telemetry";
 import { solveWafCaptcha } from "./WafSolver";
+import { CANT_READ_DATA, CHECK_FOR_UPDATE, GOT_WEB_PAGE, SOLVE_SECURITY_CHECK, UserFacingError, diag, httpErrorMessage, keysChangedMessage } from "./UserErrors";
 
 // Paths the live bundle's request interceptor signs — verified by probing the
 // booted bundle (experiment/crypto-pipeline). As of bundle 6ffb/625d… (2026-06)
@@ -95,13 +96,13 @@ export function setWafAutoSolve(isEnabled: () => Promise<boolean>): void {
 // failure (e.g. comix is showing Turnstile, which only the web view can pass)
 // auto-solve stands down for a minute instead of re-trying on every request.
 const SOLVE_RETRY_MS = 60 * 1000;
-let lastWafSolve: { at: number; ok: boolean; message: string } | null = null;
+let lastWafSolve: { at: number; ok: boolean; reason: string } | null = null;
 
 export function wafSolveStatus(): string {
     if (!lastWafSolve) return "Not needed yet";
     const mins = Math.round((Date.now() - lastWafSolve.at) / 60000);
     const when = mins < 1 ? "just now" : `${mins} min ago`;
-    return lastWafSolve.ok ? `Solved ${when}` : `Failed ${when}: ${lastWafSolve.message}`;
+    return lastWafSolve.ok ? `Solved ${when}` : `Failed ${when}: ${lastWafSolve.reason}`;
 }
 
 function isSecurityCheck(response: Response): boolean {
@@ -121,9 +122,10 @@ function challengePathOf(response: Response): string | undefined {
 async function solveWaf(requestManager: RequestManager, challengePath?: string): Promise<void> {
     try {
         await solveWafCaptcha(requestManager, challengePath);
-        lastWafSolve = { at: Date.now(), ok: true, message: "" };
+        lastWafSolve = { at: Date.now(), ok: true, reason: "" };
     } catch (error: any) {
-        lastWafSolve = { at: Date.now(), ok: false, message: error?.message ?? String(error) };
+        // WafSolveError carries a short `reason`; anything else is a raw failure.
+        lastWafSolve = { at: Date.now(), ok: false, reason: typeof error?.reason === "string" ? error.reason : (error?.message ?? String(error)) };
         throw error;
     }
 }
@@ -159,36 +161,38 @@ function wafPassExpiry(cookie: Cookie): number | null {
     return isNaN(expires) ? null : expires;
 }
 
-// Turn the WAF's captcha wall into an actionable error instead of a bare 403,
-// saying what state the user's waf_pass is in (from Paperback's cookie store).
+// Turn the WAF's captcha wall into a plain-words instruction instead of a bare
+// 403. The state of the reader's waf_pass (from Paperback's cookie store) picks
+// the opening sentence; the technical detail goes to the log, not the alert.
 export function throwIfSecurityCheck(response: Response, requestManager?: RequestManager): void {
     if (!isSecurityCheck(response)) return;
 
-    const solve ="tap the cloud / globe button and complete the \"Verify you're human\" check it opens (or open any title in the web view), then retry";
-    let detail: string;
     let cookies: Cookie[] | null = null;
     try { cookies = requestManager?.cookieStore?.getAllCookies() ?? null; } catch { cookies = null; }
     const pass = cookies?.find((c) => c.name === "waf_pass" && c.domain.replace(/^\./, "").endsWith("comix.to"));
-    if (!cookies) {
-        detail = `Please ${solve} within 5 minutes.`;
+    const expiry = pass ? wafPassExpiry(pass) : null;
+    const now = Date.now();
+    const autoSolveFailure = lastWafSolve && !lastWafSolve.ok && now - lastWafSolve.at < SOLVE_RETRY_MS ? lastWafSolve.reason : null;
+
+    let what: string;
+    if (autoSolveFailure) {
+        what = `Comix wants to check that you're human, and auto-solve couldn't pass it (${autoSolveFailure}).`;
     } else if (!pass) {
-        detail = `No security pass (waf_pass) found. Please ${solve}. If you just did, Paperback may not be sharing the web view's cookies with this source.`;
+        what = "Comix wants to check that you're human.";
+    } else if (expiry !== null && expiry <= now) {
+        what = "Your Comix security pass expired (they last about 5 minutes).";
     } else {
-        const expiry = wafPassExpiry(pass);
-        const now = Date.now();
-        if (expiry !== null && expiry <= now) {
-            const mins = Math.max(1, Math.round((now - expiry) / 60000));
-            detail = `Your security pass expired ${mins} min ago (passes last about 5 minutes). Please ${solve}.`;
-        } else {
-            const left = expiry !== null ? ` (valid ~${Math.max(0, Math.round((expiry - now) / 1000))}s more)` : "";
-            detail = `A security pass was found${left} but comix rejected it. Passes only work with the User-Agent they were issued to: if you changed Settings > Custom User-Agent after passing the check, or the web view uses a different User-Agent, ${solve}.`;
-        }
+        what = "Comix rejected your security pass, usually because the User-Agent setting changed after you passed the check.";
     }
-    const autoSolve = lastWafSolve && !lastWafSolve.ok && Date.now() - lastWafSolve.at < SOLVE_RETRY_MS
-        ? ` Auto-solve failed: ${lastWafSolve.message}.`
-        : "";
-    const ua = (response as any).request?.headers?.["User-Agent"] as string | undefined;
-    throw new Error(`Comix security check required: comix.to is asking to verify you're human.${autoSolve} ${detail}${ua ? ` [UA: ${ua}]` : ""}`);
+
+    const passState = !cookies ? "cookie store unavailable"
+        : !pass ? "no waf_pass cookie"
+        : expiry === null ? "waf_pass without expiry"
+        : expiry <= now ? `waf_pass expired ${Math.max(1, Math.round((now - expiry) / 60000))} min ago`
+        : `waf_pass valid ${Math.max(0, Math.round((expiry - now) / 1000))}s more`;
+    const request = (response as any).request;
+    diag(`security check: ${passState}; auto-solve=${autoSolveFailure ?? "not attempted"}; ua=${request?.headers?.["User-Agent"] ?? "?"}; url=${request?.url ?? "?"}`);
+    throw new UserFacingError(`${what} ${SOLVE_SECURITY_CHECK}`);
 }
 
 async function requestSignedUrl(requestManager: RequestManager, url: string): Promise<Response> {
@@ -203,22 +207,25 @@ async function requestSignedUrl(requestManager: RequestManager, url: string): Pr
     }));
 }
 
-function checkSignedResponseError(response: Response, requestManager: RequestManager): void {
+/**
+ * Reject a comix response that isn't usable JSON — the security-check wall, a
+ * non-2xx status, or an HTML page — with a message that says what to do. The
+ * status line, headers and body preview go to the log for bug reports.
+ */
+export function checkComixResponse(response: Response, requestManager?: RequestManager): void {
     throwIfSecurityCheck(response, requestManager);
     const data = response.data ?? "";
-    const preview = data.substring(0, 200).replace(/\s+/g, " ");
+    const badStatus = response.status < 200 || response.status >= 300;
+    const html = data.trimStart().startsWith("<");
+    if (!badStatus && !html) return;
+
     const headers = response.headers ?? {};
     const ct = (headers["Content-Type"] ?? headers["content-type"] ?? "?") as string;
     const cfRay = (headers["Cf-Ray"] ?? headers["cf-ray"] ?? "?") as string;
     const reqUrl = (response as any).request?.url ?? "?";
-    const ctx = `status=${response.status} ct=${ct} cf-ray=${cfRay} url=${reqUrl} preview="${preview}"`;
-
-    if (response.status < 200 || response.status >= 300) {
-        throw new Error(`HTTP ${response.status}: Unexpected response from server [${ctx}]`);
-    }
-    if (data.trimStart().startsWith("<")) {
-        throw new Error(`Cloudflare challenge page returned [${ctx}]`);
-    }
+    diag(`bad response: status=${response.status} ct=${ct} cf-ray=${cfRay} url=${reqUrl} preview="${data.substring(0, 200).replace(/\s+/g, " ")}"`);
+    if (badStatus) throw new UserFacingError(isRetiredKey(response) ? keysChangedMessage(`HTTP ${response.status}`) : httpErrorMessage(response.status));
+    throw new UserFacingError(GOT_WEB_PAGE);
 }
 
 /**
@@ -234,6 +241,20 @@ function checkSignedResponseError(response: Response, requestManager: RequestMan
  */
 class ComixDecryptError extends Error {}
 
+/** comix's own `{status:"error", message}` reply, in the reader's words. */
+function apiError(status: unknown, message: unknown): UserFacingError {
+    diag(`comix API status=${String(status)} message=${typeof message === "string" ? message : "none"}`);
+    const text = typeof message === "string" ? message.trim() : "";
+    if (text) return new UserFacingError(`Comix reported an error: ${/[.!?]$/.test(text) ? text : text + "."}`);
+    return new UserFacingError("Comix reported an error without details. Try again in a moment; if it keeps happening, check for an update to the ComixTo extension.");
+}
+
+/** A response we recognised as encrypted but could not decrypt, even with fresh keys. */
+function unreadable(error: Error): UserFacingError {
+    diag(`decrypt failed: ${error.message}`);
+    return new UserFacingError(CANT_READ_DATA);
+}
+
 export function decodeComixResponse<T>(
     apiPath: string,
     response: Response,
@@ -245,13 +266,13 @@ export function decodeComixResponse<T>(
     if (timing) timing.parseMs = Date.now() - parseStart;
 
     if (json && typeof json === "object" && "e" in json) {
-        if (typeof json.e !== "string" || !json.e) throw new Error("Invalid Comix encrypted envelope");
+        if (typeof json.e !== "string" || !json.e) throw new UserFacingError(`Comix sent data this version can't read (bad encrypted envelope). ${CHECK_FOR_UPDATE}`);
         const decryptStart = Date.now();
         let decrypted: any;
         try { decrypted = fastDecryptComixPayload(apiPath, json, response.headers ?? {}, table); }
         catch (error: any) { throw new ComixDecryptError(error?.message ?? String(error)); }
         if (decrypted && typeof decrypted === "object" && (decrypted.status === "error" || decrypted.status === "fail" || decrypted.status === "failed")) {
-            throw new Error(`Comix API ${decrypted.status}: ${decrypted.message ?? "no message"}`);
+            throw apiError(decrypted.status, decrypted.message);
         }
         if (timing) timing.decryptMs = Date.now() - decryptStart;
         // The interceptor unwraps `{ status: "ok", result: ... }` for us and
@@ -262,7 +283,7 @@ export function decodeComixResponse<T>(
     }
 
     if (json.status !== "ok") {
-        throw new Error(`Comix API ${json.status}: ${json.message ?? "no message"}`);
+        throw apiError(json.status, json.message);
     }
     return json.result as T;
 }
@@ -309,7 +330,7 @@ export function fetchSigned<T>(
                 status = response.status;
                 bytes = (response.data ?? "").length;
                 if (!isRetiredKey(response) || attempt > 0) {
-                    checkSignedResponseError(response, requestManager);
+                    checkComixResponse(response, requestManager);
                     try {
                         const result = decodeComixResponse<T>(apiPath, response, timing, record?.keys.table);
                         if (candidate) await manager.activate(candidate);
@@ -322,21 +343,29 @@ export function fetchSigned<T>(
                         const enc = Object.keys(headers).find(k => k.toLowerCase() === "x-enc");
                         let encrypted = false;
                         try { encrypted = typeof JSON.parse(response.data ?? "{}").e === "string"; } catch { /* malformed JSON */ }
-                        if (attempt > 0 || !encrypted || (enc && String(headers[enc]) !== "2")) throw error;
+                        if (attempt > 0 || !encrypted || (enc && String(headers[enc]) !== "2")) throw unreadable(error);
                     }
                 }
-                candidate = await manager.discover(async (url) => {
-                    // Already inside the queue: don't recursively scheduleComix.
-                    const response = await performComix(requestManager, App.createRequest({
-                        url, method: "GET", headers: { "Referer": "https://comix.to/", "Cache-Control": "no-cache" },
-                    }));
-                    throwIfSecurityCheck(response, requestManager);
-                    if (response.status < 200 || response.status >= 300) throw new Error(`Comix key discovery HTTP ${response.status}`);
-                    return response.data ?? "";
-                });
+                try {
+                    candidate = await manager.discover(async (url) => {
+                        // Already inside the queue: don't recursively scheduleComix.
+                        const response = await performComix(requestManager, App.createRequest({
+                            url, method: "GET", headers: { "Referer": "https://comix.to/", "Cache-Control": "no-cache" },
+                        }));
+                        throwIfSecurityCheck(response, requestManager);
+                        if (response.status < 200 || response.status >= 300) throw new Error(`key discovery HTTP ${response.status} for ${url}`);
+                        return response.data ?? "";
+                    });
+                } catch (error: any) {
+                    // A security-check error already tells the reader what to do; any
+                    // other failure (asset fetch, extraction, validation) needs a new build.
+                    if (error instanceof UserFacingError) throw error;
+                    diag(`key refresh failed: ${error?.message ?? String(error)}`);
+                    throw new UserFacingError(keysChangedMessage());
+                }
                 record = candidate;
             }
-            throw new Error("Comix key refresh retry exhausted");
+            throw new UserFacingError(keysChangedMessage());
         } finally {
             emit({ label, path, status, bytes, signMs, fetchMs, ...timing, totalMs: Date.now() - totalStart });
         }

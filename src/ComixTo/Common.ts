@@ -2,6 +2,17 @@ export const API_BASE = "https://comix.to/api/v1";
 export const DOMAIN = "https://comix.to";
 
 /**
+ * Make a site-relative path absolute ("/images/covers/…", which is how the API
+ * returns posters since 2026-11). Absolute and protocol-relative URLs pass
+ * through unchanged.
+ */
+export function resolveSiteUrl(path: string): string {
+  if (/^https?:\/\//i.test(path)) return path;
+  if (path.startsWith("//")) return `https:${path}`;
+  return `${DOMAIN}${path.startsWith("/") ? "" : "/"}${path}`;
+}
+
+/**
  * Normalizes iOS smart quotes/apostrophes to their ASCII equivalents.
  * iOS autocorrect replaces ' with ' (U+2019), " with " / " (U+201C/U+201D),
  * which breaks search queries and string comparisons against API data.
@@ -25,9 +36,12 @@ export interface APIMangaItem {
   title: string;
   altTitles?: string[];
   synopsis: string;
-  poster: {
-    medium: string;
-    large: string;
+  // Site-relative since 2026-11 ("/images/covers/<sha>@280.jpg" and
+  // "/images/covers/<sha>.jpg"); earlier builds returned absolute URLs.
+  // Resolve with resolveSiteUrl before handing to Paperback.
+  poster?: {
+    medium?: string;
+    large?: string;
   };
   status: string;
   latestChapter: number;

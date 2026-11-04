@@ -15,6 +15,7 @@
 // /@waf/verify, or a Cloudflare Turnstile check, which only a real browser can
 // pass — for that the user still has to use the cloud button (web view).
 
+import { CHECK_FOR_UPDATE, SOLVE_SECURITY_CHECK } from "./UserErrors";
 import { Request, RequestManager, Response } from "@paperback/types";
 import { base64ToBytes, decodeDataUrl, Pixels } from "./ImageDecode";
 
@@ -396,10 +397,23 @@ export const planClick = (challenge: Challenge): Plan => {
 // ---------------------------------------------------------------------------
 // Talking to the WAF
 
-export class WafSolveError extends Error {}
+/**
+ * Why the in-app solver gave up. `reason` is a short phrase ("its picture
+ * captcha couldn't be solved") for the settings status row; the message adds
+ * what the reader can do instead.
+ */
+export class WafSolveError extends Error {
+    readonly reason: string;
+    constructor(reason: string, advice: string = SOLVE_SECURITY_CHECK) {
+        super(`Couldn't pass Comix's security check: ${reason}. ${advice}`);
+        this.reason = reason;
+    }
+}
+
+const changedCaptcha = () => new WafSolveError("Comix changed its captcha", `${SOLVE_SECURITY_CHECK} ${CHECK_FOR_UPDATE}`);
 
 const json = (response: Response): any => {
-    if (response.status < 200 || response.status >= 300) throw new Error(`HTTP error ${response.status}`);
+    if (response.status < 200 || response.status >= 300) throw new WafSolveError(`the check page returned HTTP ${response.status}`);
     return JSON.parse(response.data ?? "null");
 };
 
@@ -411,11 +425,11 @@ const round = async (requestManager: RequestManager): Promise<boolean> => {
     let best: (Plan & { challenge: Challenge }) | null = null;
     for (let i = 0; i < CHALLENGES_PER_ROUND; i++) {
         const challenge = json(await get(requestManager, "/@waf/generate", { Accept: "application/json" })) as Challenge;
-        if (!challenge?.image_base64 || !challenge.thumb_base64) throw new WafSolveError("The site changed its captcha");
+        if (!challenge?.image_base64 || !challenge.thumb_base64) throw changedCaptcha();
         let plan: (c: Challenge) => Plan;
         if ((challenge.count ?? 0) > 0) plan = planClick;
         else if ((challenge.thumb_size ?? 0) > 0) plan = planRotate;
-        else throw new WafSolveError("The site changed its captcha");
+        else throw changedCaptcha();
         const attempt = { challenge, ...plan(challenge) };
         if (!best || attempt.margin > best.margin) best = attempt;
         if (best.margin >= CONFIDENT_MARGIN) break;
@@ -472,16 +486,16 @@ function storeWafPass(requestManager: RequestManager, response: Response): void 
 export async function solveWafCaptcha(requestManager: RequestManager, challengePath = "/@waf/challenge"): Promise<void> {
     try {
         const page = await get(requestManager, challengePath.startsWith("/") ? challengePath : "/@waf/challenge");
-        if (page.status >= 400 && page.status !== 403) throw new Error(`HTTP error ${page.status}`);
+        if (page.status >= 400 && page.status !== 403) throw new WafSolveError(`the check page returned HTTP ${page.status}`);
         if ((page.data ?? "").includes(TURNSTILE_SCRIPT)) {
-            throw new WafSolveError("comix is showing a Cloudflare Turnstile check, which can't be solved automatically. Tap the cloud / globe button to pass it in the web view");
+            throw new WafSolveError("Comix is showing a Cloudflare check that only the web view can pass");
         }
         for (let i = 0; i < ROUNDS; i++) {
             if (await round(requestManager)) return;
         }
-        throw new WafSolveError("Couldn't solve the site's captcha. Tap the cloud / globe button to solve it in the web view");
+        throw new WafSolveError("its picture captcha couldn't be solved");
     } catch (error: any) {
         if (error instanceof WafSolveError) throw error;
-        throw new WafSolveError(`Couldn't solve the site's captcha (${error?.message ?? String(error)}). Tap the cloud / globe button to solve it in the web view`);
+        throw new WafSolveError(`its captcha couldn't be read (${error?.message ?? String(error)})`);
     }
 }

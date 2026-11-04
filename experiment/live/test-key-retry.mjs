@@ -130,11 +130,11 @@ test('nonstring encrypted envelopes never confirm a candidate', async () => {
 
 test('decrypted API errors are not treated as successful key confirmation', async () => {
     const x = setup({ mode: 'apiError' });
-    await assert.rejects(x.hash.fetchSigned(x.manager, 'https://comix.to/api/v1/manga/one'), /Comix API error: API rejected request/);
+    await assert.rejects(x.hash.fetchSigned(x.manager, 'https://comix.to/api/v1/manga/one'), /Comix reported an error: API rejected request/);
     assert.equal(x.state.size, 0);
     const initial = setup();
     await initial.hash.fetchSigned(initial.manager, 'https://comix.to/api/v1/manga/one');
     const confirmed = setup({ mode: 'apiError', state: initial.state });
-    await assert.rejects(confirmed.hash.fetchSigned(confirmed.manager, 'https://comix.to/api/v1/manga/one'), /Comix API error/);
+    await assert.rejects(confirmed.hash.fetchSigned(confirmed.manager, 'https://comix.to/api/v1/manga/one'), /Comix reported an error/);
     assert.equal(confirmed.calls.length, 1, 'a decoded API error is not a stale-key signal');
 });
