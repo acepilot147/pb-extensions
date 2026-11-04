@@ -732,6 +732,11 @@ var _Sources = (() => {
   // src/ComixTo/Common.ts
   var API_BASE = "https://comix.to/api/v1";
   var DOMAIN = "https://comix.to";
+  function resolveSiteUrl(path) {
+    if (/^https?:\/\//i.test(path)) return path;
+    if (path.startsWith("//")) return `https:${path}`;
+    return `${DOMAIN}${path.startsWith("/") ? "" : "/"}${path}`;
+  }
   function normalizeString(str) {
     return str.replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'").replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"');
   }
@@ -791,7 +796,11 @@ var _Sources = (() => {
   ];
 
   // src/ComixTo/Parser.ts
-  var NO_POSTER = "https://comix.to/images/no-poster.png";
+  var NO_POSTER = "";
+  var posterUrl = (poster) => {
+    const path = poster?.large || poster?.medium;
+    return path ? resolveSiteUrl(path) : NO_POSTER;
+  };
   var isNsfw = (rating) => rating != null && rating !== "safe";
   var Parser = class {
     parseMangaDetails(data, mangaId) {
@@ -812,7 +821,7 @@ var _Sources = (() => {
         id: mangaId,
         mangaInfo: App.createMangaInfo({
           titles: [data.title, ...data.altTitles ?? []],
-          image: data.poster?.large || data.poster?.medium || NO_POSTER,
+          image: posterUrl(data.poster),
           status: data.status,
           desc: data.synopsis,
           author: data.authors?.map((a) => a.title).join(", ") ?? "",
@@ -883,7 +892,7 @@ var _Sources = (() => {
         mangaList.push(
           App.createPartialSourceManga({
             mangaId: item.hid,
-            image: item.poster?.large || item.poster?.medium || NO_POSTER,
+            image: posterUrl(item.poster),
             title: item.title,
             subtitle: item.latestChapter ? `Ch. ${item.latestChapter}` : void 0
           })
@@ -2149,6 +2158,30 @@ var _Sources = (() => {
     }
   }
 
+  // src/ComixTo/UserErrors.ts
+  var SOLVE_SECURITY_CHECK = `Tap the cloud button at the top right, finish the "Verify you're human" check, then try again.`;
+  var CHECK_FOR_UPDATE = "Check for an update to the ComixTo extension.";
+  var CANT_READ_DATA = `Comix changed how it protects its data and this version can't read it. ${CHECK_FOR_UPDATE}`;
+  var GOT_WEB_PAGE = `Comix sent a web page instead of data, which usually means a security check. ${SOLVE_SECURITY_CHECK}`;
+  function keysChangedMessage(detail) {
+    return `Comix changed its access keys and this version couldn't pick up the new ones${detail ? ` (${detail})` : ""}. ${CHECK_FOR_UPDATE}`;
+  }
+  function httpErrorMessage(status) {
+    if (status === 403) return `Comix refused this request (HTTP 403). ${SOLVE_SECURITY_CHECK} If that doesn't help, check for an update to the ComixTo extension.`;
+    if (status === 404) return "Comix couldn't find this title or chapter (HTTP 404). It may have been removed; try searching for it again.";
+    if (status === 429) return "Comix is asking you to slow down (HTTP 429). Wait a minute, then try again.";
+    if (status >= 500) return `Comix's server had a problem (HTTP ${status}). Wait a moment, then try again.`;
+    return `Comix sent an unexpected response (HTTP ${status}). Try again in a moment; if it keeps happening, check for an update to the ComixTo extension.`;
+  }
+  var UserFacingError = class extends Error {
+  };
+  function diag(detail) {
+    try {
+      if (typeof console !== "undefined") console.log(`[ComixTo] ${detail}`);
+    } catch {
+    }
+  }
+
   // src/ComixTo/ImageDecode.ts
   var B64_CHARS3 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   var B64_LOOKUP = new Int16Array(128).fill(-1);
@@ -3042,9 +3075,14 @@ var _Sources = (() => {
     };
   };
   var WafSolveError = class extends Error {
+    constructor(reason, advice = SOLVE_SECURITY_CHECK) {
+      super(`Couldn't pass Comix's security check: ${reason}. ${advice}`);
+      this.reason = reason;
+    }
   };
+  var changedCaptcha = () => new WafSolveError("Comix changed its captcha", `${SOLVE_SECURITY_CHECK} ${CHECK_FOR_UPDATE}`);
   var json = (response) => {
-    if (response.status < 200 || response.status >= 300) throw new Error(`HTTP error ${response.status}`);
+    if (response.status < 200 || response.status >= 300) throw new WafSolveError(`the check page returned HTTP ${response.status}`);
     return JSON.parse(response.data ?? "null");
   };
   var get = (requestManager, path, headers = {}) => requestManager.schedule(App.createRequest({ url: `${DOMAIN2}${path}`, method: "GET", headers }), 1);
@@ -3052,11 +3090,11 @@ var _Sources = (() => {
     let best = null;
     for (let i = 0; i < CHALLENGES_PER_ROUND; i++) {
       const challenge = json(await get(requestManager, "/@waf/generate", { Accept: "application/json" }));
-      if (!challenge?.image_base64 || !challenge.thumb_base64) throw new WafSolveError("The site changed its captcha");
+      if (!challenge?.image_base64 || !challenge.thumb_base64) throw changedCaptcha();
       let plan;
       if ((challenge.count ?? 0) > 0) plan = planClick;
       else if ((challenge.thumb_size ?? 0) > 0) plan = planRotate;
-      else throw new WafSolveError("The site changed its captcha");
+      else throw changedCaptcha();
       const attempt = { challenge, ...plan(challenge) };
       if (!best || attempt.margin > best.margin) best = attempt;
       if (best.margin >= CONFIDENT_MARGIN) break;
@@ -3100,17 +3138,17 @@ var _Sources = (() => {
   async function solveWafCaptcha(requestManager, challengePath = "/@waf/challenge") {
     try {
       const page = await get(requestManager, challengePath.startsWith("/") ? challengePath : "/@waf/challenge");
-      if (page.status >= 400 && page.status !== 403) throw new Error(`HTTP error ${page.status}`);
+      if (page.status >= 400 && page.status !== 403) throw new WafSolveError(`the check page returned HTTP ${page.status}`);
       if ((page.data ?? "").includes(TURNSTILE_SCRIPT)) {
-        throw new WafSolveError("comix is showing a Cloudflare Turnstile check, which can't be solved automatically. Tap the cloud / globe button to pass it in the web view");
+        throw new WafSolveError("Comix is showing a Cloudflare check that only the web view can pass");
       }
       for (let i = 0; i < ROUNDS; i++) {
         if (await round(requestManager)) return;
       }
-      throw new WafSolveError("Couldn't solve the site's captcha. Tap the cloud / globe button to solve it in the web view");
+      throw new WafSolveError("its picture captcha couldn't be solved");
     } catch (error) {
       if (error instanceof WafSolveError) throw error;
-      throw new WafSolveError(`Couldn't solve the site's captcha (${error?.message ?? String(error)}). Tap the cloud / globe button to solve it in the web view`);
+      throw new WafSolveError(`its captcha couldn't be read (${error?.message ?? String(error)})`);
     }
   }
 
@@ -3160,7 +3198,7 @@ var _Sources = (() => {
     if (!lastWafSolve) return "Not needed yet";
     const mins = Math.round((Date.now() - lastWafSolve.at) / 6e4);
     const when = mins < 1 ? "just now" : `${mins} min ago`;
-    return lastWafSolve.ok ? `Solved ${when}` : `Failed ${when}: ${lastWafSolve.message}`;
+    return lastWafSolve.ok ? `Solved ${when}` : `Failed ${when}: ${lastWafSolve.reason}`;
   }
   function isSecurityCheck(response) {
     const data = response.data ?? "";
@@ -3177,9 +3215,9 @@ var _Sources = (() => {
   async function solveWaf(requestManager, challengePath) {
     try {
       await solveWafCaptcha(requestManager, challengePath);
-      lastWafSolve = { at: Date.now(), ok: true, message: "" };
+      lastWafSolve = { at: Date.now(), ok: true, reason: "" };
     } catch (error) {
-      lastWafSolve = { at: Date.now(), ok: false, message: error?.message ?? String(error) };
+      lastWafSolve = { at: Date.now(), ok: false, reason: typeof error?.reason === "string" ? error.reason : error?.message ?? String(error) };
       throw error;
     }
   }
@@ -3205,8 +3243,6 @@ var _Sources = (() => {
   }
   function throwIfSecurityCheck(response, requestManager) {
     if (!isSecurityCheck(response)) return;
-    const solve = `tap the cloud / globe button and complete the "Verify you're human" check it opens (or open any title in the web view), then retry`;
-    let detail;
     let cookies = null;
     try {
       cookies = requestManager?.cookieStore?.getAllCookies() ?? null;
@@ -3214,24 +3250,23 @@ var _Sources = (() => {
       cookies = null;
     }
     const pass = cookies?.find((c) => c.name === "waf_pass" && c.domain.replace(/^\./, "").endsWith("comix.to"));
-    if (!cookies) {
-      detail = `Please ${solve} within 5 minutes.`;
+    const expiry = pass ? wafPassExpiry(pass) : null;
+    const now = Date.now();
+    const autoSolveFailure = lastWafSolve && !lastWafSolve.ok && now - lastWafSolve.at < SOLVE_RETRY_MS ? lastWafSolve.reason : null;
+    let what;
+    if (autoSolveFailure) {
+      what = `Comix wants to check that you're human, and auto-solve couldn't pass it (${autoSolveFailure}).`;
     } else if (!pass) {
-      detail = `No security pass (waf_pass) found. Please ${solve}. If you just did, Paperback may not be sharing the web view's cookies with this source.`;
+      what = "Comix wants to check that you're human.";
+    } else if (expiry !== null && expiry <= now) {
+      what = "Your Comix security pass expired (they last about 5 minutes).";
     } else {
-      const expiry = wafPassExpiry(pass);
-      const now = Date.now();
-      if (expiry !== null && expiry <= now) {
-        const mins = Math.max(1, Math.round((now - expiry) / 6e4));
-        detail = `Your security pass expired ${mins} min ago (passes last about 5 minutes). Please ${solve}.`;
-      } else {
-        const left = expiry !== null ? ` (valid ~${Math.max(0, Math.round((expiry - now) / 1e3))}s more)` : "";
-        detail = `A security pass was found${left} but comix rejected it. Passes only work with the User-Agent they were issued to: if you changed Settings > Custom User-Agent after passing the check, or the web view uses a different User-Agent, ${solve}.`;
-      }
+      what = "Comix rejected your security pass, usually because the User-Agent setting changed after you passed the check.";
     }
-    const autoSolve = lastWafSolve && !lastWafSolve.ok && Date.now() - lastWafSolve.at < SOLVE_RETRY_MS ? ` Auto-solve failed: ${lastWafSolve.message}.` : "";
-    const ua = response.request?.headers?.["User-Agent"];
-    throw new Error(`Comix security check required: comix.to is asking to verify you're human.${autoSolve} ${detail}${ua ? ` [UA: ${ua}]` : ""}`);
+    const passState = !cookies ? "cookie store unavailable" : !pass ? "no waf_pass cookie" : expiry === null ? "waf_pass without expiry" : expiry <= now ? `waf_pass expired ${Math.max(1, Math.round((now - expiry) / 6e4))} min ago` : `waf_pass valid ${Math.max(0, Math.round((expiry - now) / 1e3))}s more`;
+    const request = response.request;
+    diag(`security check: ${passState}; auto-solve=${autoSolveFailure ?? "not attempted"}; ua=${request?.headers?.["User-Agent"] ?? "?"}; url=${request?.url ?? "?"}`);
+    throw new UserFacingError(`${what} ${SOLVE_SECURITY_CHECK}`);
   }
   async function requestSignedUrl(requestManager, url) {
     return performComix(requestManager, App.createRequest({
@@ -3244,30 +3279,38 @@ var _Sources = (() => {
       }
     }));
   }
-  function checkSignedResponseError(response, requestManager) {
+  function checkComixResponse(response, requestManager) {
     throwIfSecurityCheck(response, requestManager);
     const data = response.data ?? "";
-    const preview = data.substring(0, 200).replace(/\s+/g, " ");
+    const badStatus = response.status < 200 || response.status >= 300;
+    const html = data.trimStart().startsWith("<");
+    if (!badStatus && !html) return;
     const headers = response.headers ?? {};
     const ct = headers["Content-Type"] ?? headers["content-type"] ?? "?";
     const cfRay = headers["Cf-Ray"] ?? headers["cf-ray"] ?? "?";
     const reqUrl = response.request?.url ?? "?";
-    const ctx = `status=${response.status} ct=${ct} cf-ray=${cfRay} url=${reqUrl} preview="${preview}"`;
-    if (response.status < 200 || response.status >= 300) {
-      throw new Error(`HTTP ${response.status}: Unexpected response from server [${ctx}]`);
-    }
-    if (data.trimStart().startsWith("<")) {
-      throw new Error(`Cloudflare challenge page returned [${ctx}]`);
-    }
+    diag(`bad response: status=${response.status} ct=${ct} cf-ray=${cfRay} url=${reqUrl} preview="${data.substring(0, 200).replace(/\s+/g, " ")}"`);
+    if (badStatus) throw new UserFacingError(isRetiredKey(response) ? keysChangedMessage(`HTTP ${response.status}`) : httpErrorMessage(response.status));
+    throw new UserFacingError(GOT_WEB_PAGE);
   }
   var ComixDecryptError = class extends Error {
   };
+  function apiError(status, message) {
+    diag(`comix API status=${String(status)} message=${typeof message === "string" ? message : "none"}`);
+    const text = typeof message === "string" ? message.trim() : "";
+    if (text) return new UserFacingError(`Comix reported an error: ${/[.!?]$/.test(text) ? text : text + "."}`);
+    return new UserFacingError("Comix reported an error without details. Try again in a moment; if it keeps happening, check for an update to the ComixTo extension.");
+  }
+  function unreadable(error) {
+    diag(`decrypt failed: ${error.message}`);
+    return new UserFacingError(CANT_READ_DATA);
+  }
   function decodeComixResponse(apiPath, response, timing, table) {
     const parseStart = Date.now();
     const json2 = JSON.parse(response.data ?? "{}");
     if (timing) timing.parseMs = Date.now() - parseStart;
     if (json2 && typeof json2 === "object" && "e" in json2) {
-      if (typeof json2.e !== "string" || !json2.e) throw new Error("Invalid Comix encrypted envelope");
+      if (typeof json2.e !== "string" || !json2.e) throw new UserFacingError(`Comix sent data this version can't read (bad encrypted envelope). ${CHECK_FOR_UPDATE}`);
       const decryptStart = Date.now();
       let decrypted;
       try {
@@ -3276,13 +3319,13 @@ var _Sources = (() => {
         throw new ComixDecryptError(error?.message ?? String(error));
       }
       if (decrypted && typeof decrypted === "object" && (decrypted.status === "error" || decrypted.status === "fail" || decrypted.status === "failed")) {
-        throw new Error(`Comix API ${decrypted.status}: ${decrypted.message ?? "no message"}`);
+        throw apiError(decrypted.status, decrypted.message);
       }
       if (timing) timing.decryptMs = Date.now() - decryptStart;
       return decrypted && typeof decrypted === "object" && "result" in decrypted && decrypted.status === "ok" ? decrypted.result : decrypted;
     }
     if (json2.status !== "ok") {
-      throw new Error(`Comix API ${json2.status}: ${json2.message ?? "no message"}`);
+      throw apiError(json2.status, json2.message);
     }
     return json2.result;
   }
@@ -3321,7 +3364,7 @@ var _Sources = (() => {
           status = response.status;
           bytes = (response.data ?? "").length;
           if (!isRetiredKey(response) || attempt > 0) {
-            checkSignedResponseError(response, requestManager);
+            checkComixResponse(response, requestManager);
             try {
               const result = decodeComixResponse(apiPath, response, timing, record?.keys.table);
               if (candidate) await manager.activate(candidate);
@@ -3335,22 +3378,28 @@ var _Sources = (() => {
                 encrypted = typeof JSON.parse(response.data ?? "{}").e === "string";
               } catch {
               }
-              if (attempt > 0 || !encrypted || enc && String(headers[enc]) !== "2") throw error;
+              if (attempt > 0 || !encrypted || enc && String(headers[enc]) !== "2") throw unreadable(error);
             }
           }
-          candidate = await manager.discover(async (url) => {
-            const response2 = await performComix(requestManager, App.createRequest({
-              url,
-              method: "GET",
-              headers: { "Referer": "https://comix.to/", "Cache-Control": "no-cache" }
-            }));
-            throwIfSecurityCheck(response2, requestManager);
-            if (response2.status < 200 || response2.status >= 300) throw new Error(`Comix key discovery HTTP ${response2.status}`);
-            return response2.data ?? "";
-          });
+          try {
+            candidate = await manager.discover(async (url) => {
+              const response2 = await performComix(requestManager, App.createRequest({
+                url,
+                method: "GET",
+                headers: { "Referer": "https://comix.to/", "Cache-Control": "no-cache" }
+              }));
+              throwIfSecurityCheck(response2, requestManager);
+              if (response2.status < 200 || response2.status >= 300) throw new Error(`key discovery HTTP ${response2.status} for ${url}`);
+              return response2.data ?? "";
+            });
+          } catch (error) {
+            if (error instanceof UserFacingError) throw error;
+            diag(`key refresh failed: ${error?.message ?? String(error)}`);
+            throw new UserFacingError(keysChangedMessage());
+          }
           record = candidate;
         }
-        throw new Error("Comix key refresh retry exhausted");
+        throw new UserFacingError(keysChangedMessage());
       } finally {
         emit({ label, path, status, bytes, signMs, fetchMs, ...timing, totalMs: Date.now() - totalStart });
       }
@@ -4099,7 +4148,7 @@ var _Sources = (() => {
     return /^https?:\/\/([^/]+\.)?comix\.to(\/|$|\?|#)/i.test(url ?? "");
   }
   var ComixToInfo = {
-    version: "1.9.33",
+    version: "1.9.34",
     name: "ComixTo",
     icon: "icon.png",
     author: "acepilot147",
@@ -4566,22 +4615,10 @@ var _Sources = (() => {
     async userAgent() {
       return await getUserAgentOverride(this.stateManager) || await this.requestManager.getDefaultUserAgent();
     }
+    // Plain-words errors for a security check, a non-2xx status or an HTML body;
+    // the technical context goes to the log (UserErrors.diag), not the alert.
     checkResponseError(response) {
-      const data = response.data ?? "";
-      const preview = data.substring(0, 200).replace(/\s+/g, " ");
-      const headers = response.headers ?? {};
-      const ct = headers["Content-Type"] ?? headers["content-type"] ?? "?";
-      const server = headers["Server"] ?? headers["server"] ?? "?";
-      const cfRay = headers["Cf-Ray"] ?? headers["cf-ray"] ?? "?";
-      const reqUrl = response.request?.url ?? "?";
-      const ctx = `status=${response.status} ct=${ct} server=${server} cf-ray=${cfRay} url=${reqUrl} preview="${preview}"`;
-      throwIfSecurityCheck(response, this.requestManager);
-      if (response.status < 200 || response.status >= 300) {
-        throw new Error(`HTTP ${response.status}: Unexpected response from server [${ctx}]`);
-      }
-      if (data.trimStart().startsWith("<")) {
-        throw new Error(`Cloudflare challenge page returned [${ctx}]`);
-      }
+      checkComixResponse(response, this.requestManager);
     }
   };
   return __toCommonJS(ComixTo_exports);
